@@ -5,18 +5,29 @@
 
 #include "Entity.h"
 
+class PickDropMessage {
+	private:
+		PickDropMessage() {}
+		~PickDropMessage() {}
+	public:
+		static const BYTE OKAY = 0x00;
+		static const BYTE NOT_OWNER = 0x02;
+		static const BYTE INVENTORY_FULL = 0x03;
+};
+
 class Drop : public Entity {
 	private:
+		Entity* owner;
 		Item item;
-		DWORD zuly;
-
-		bool isDropZulies;
-		void construct(const WORD mapId, const Position& pos);
+		void construct(Entity* dropGiver, bool isPublicDomain);
+			
 	public:
-		Drop(const WORD mapId, const Position& pos, DWORD zulyAmount);
-		Drop(const WORD mapId, const Position& pos, const Item& itemToDrop);
+		Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain);
+		Drop(Entity* dropGiver, const Item& itemToDrop, bool isPublicDomain);
+		~Drop();
 
-		__inline bool isZulyDrop() const { return this->isDropZulies; }
+		__inline bool isZulyDrop() const { return this->item.type == ItemType::MONEY; }
+		__inline Entity* getOwner() const { return this->owner; }
 		__inline const Item& getItem() const { return this->item; }
 };
 

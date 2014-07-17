@@ -105,7 +105,9 @@ class Player : public Entity, public ClientSocket {
 		bool pakSpawnPlayer( Player* player );
 		bool pakSpawnNPC( class NPC* npc );
 		bool pakSpawnMonster(class Monster* monster);
+		bool pakSpawnDrop(class Drop* drop);
 		bool pakRemoveEntityVisually(Entity* entity);
+		bool pakUpdateInventory( BYTE slotAmount, WORD* slotIds );
 
 		//Packets which are requested to be handled
 		bool pakPing();
@@ -121,11 +123,14 @@ class Player : public Entity, public ClientSocket {
 		bool pakLocalChat();
 		bool pakShoutChat();
 		bool pakTelegate();
+		bool pakEquipmentChange();
+		bool pakPickDrop();
 		
 		void addSectorVisually(MapSector* newSector);
 		void removeSectorVisually(MapSector* toRemove);
 		void addEntityVisually(Entity* entity);
 		
+		const WORD findSlot( const Item& item );
 		const CharInfo::VisualTraits& getVisualTraits() const { return this->charInfo.visualTraits; }
 	public:
 		Player(SOCKET sock, ServerSocket* server);

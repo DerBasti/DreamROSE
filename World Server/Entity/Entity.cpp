@@ -12,7 +12,7 @@ bool Entity::isAllied( Entity* entity ) {
 		case Entity::TYPE_MONSTER:
 			return this->isAllied( dynamic_cast<Monster*>(entity) );
 	}
-	return false;
+	return true;
 }
 
 
@@ -52,7 +52,7 @@ bool Entity::movementRoutine() {
 
 bool Entity::checkForNewSector() {
 	if (this->getLastSectorCheckTime() >= MapSector::DEFAULT_CHECK_TIME) {
-		MapSector* nearestSector =    mainServer->getMap(this->getMapId())->getSector(this->getPositionCurrent());
+		MapSector* nearestSector =  mainServer->getMap(this->getMapId())->getSector(this->getPositionCurrent());
 		if(nearestSector != this->entityInfo.getSector()) {
 			this->setSector(nearestSector);
 			//this->entityInfo.setSector(nearestSector);
@@ -65,6 +65,8 @@ bool Entity::checkForNewSector() {
 }
 
 void Entity::checkVisuality() {
+	if(!this->getSector())
+		return;
 	Map* currentMap = mainServer->getMap(this->getMapId());
 	UniqueSortedList<DWORD, MapSector*> newSectorList;
 

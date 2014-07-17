@@ -36,6 +36,7 @@ class Entity {
 		struct _posStruct {
 			Position current;
 			Position destination;
+			Position source;
 			clock_t lastCheckTime;
 			clock_t lastSectorCheckTime;
 

@@ -234,13 +234,36 @@ struct _entityInfo {
 	__inline BYTE getType() const { return this->type; }
 };
 
+class ItemType {
+	private:
+		ItemType() { };
+		~ItemType() { };
+	public:
+		const static WORD FACE = 1;
+		const static WORD HEADGEAR = 2;
+		const static WORD ARMOR = 3;
+		const static WORD GLOVES = 4;
+		const static WORD SHOES = 5;
+		const static WORD BACK = 6;
+		const static WORD JEWELS = 7;
+		const static WORD WEAPON = 8;
+		const static WORD SHIELD = 9;
+		const static WORD CONSUMABLES = 10;
+		const static WORD JEWELRY = 11;
+		const static WORD OTHER = 12;
+		const static WORD QUEST = 13;
+		const static WORD PAT = 14;
+		const static WORD MONEY = 31; //Why 31?
+	
+};
+
 struct Item {
 	WORD type;
 	DWORD id;
 	bool isAppraised;
 	bool isSocketed;
 	WORD lifespan;
-	WORD amount;
+	DWORD amount;
 	BYTE durability;
 	WORD refine;
 	WORD gem;
@@ -250,9 +273,10 @@ struct Item {
 		this->clear();
 	}
 	void clear() {
-		this->type = this->lifespan = this->amount = this->gem = this->stats = this->refine = 0x00;
+		this->type = this->lifespan = this->gem = this->stats = this->refine = 0x00;
 		this->id = 0x00;
 		this->isAppraised = this->isSocketed = false;
+		this->amount = 0x00;
 		this->durability = 0x00;
 	}
 };
@@ -286,6 +310,8 @@ class Inventory {
 		const static WORD OTHER = 12;
 		const static WORD QUEST = 13;
 		const static WORD PAT = 14;
+
+		const static WORD TAB_SIZE = 30;
 
 		const static WORD ARROWS = 132;
 		const static WORD BULLETS = 133;

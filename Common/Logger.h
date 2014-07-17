@@ -3,8 +3,8 @@
 #ifndef __PRIVATE_LOGGER__
 #define __PRIVATE_LOGGER__
 
-#include "D:\Programmieren\QuickInfos\QuickInfo.h"
-#include "D:\Programmieren\CMyFile\MyFile.h"
+#include "..\QuickInfos\QuickInfo.h"
+#include "..\CMyFile\MyFile.h"
 
 class Logger {
 	private:

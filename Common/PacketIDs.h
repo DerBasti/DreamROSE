@@ -107,6 +107,8 @@ class PacketID {
 						const static WORD REMOVE_VISIBLE_PLAYER = 0x794;
 						const static WORD MOVEMENT = 0x79A;
 						const static WORD TELEGATE = 0x7A8;
+						const static WORD EQUIPMENT_CHANGE = 0x7A5;
+						const static WORD PICK_DROP = 0x7A7;
 						const static WORD CLAN_MANAGER = 0x7E0;
 						const static WORD MESSAGE_MANAGER = 0x7E1;
 				};
@@ -120,6 +122,7 @@ class PacketID {
 						const static WORD IDENFITY = 0x70C;
 						const static WORD PLAYER_INFOS = 0x715;
 						const static WORD PLAYER_INVENTORY = 0x716;
+						const static WORD UPDATE_INVENTORY = 0x718;
 						const static WORD RETURN_TO_CHARSERVER = 0x71C;
 						const static WORD QUEST_DATA = 0x71B;
 						const static WORD UNKNOWN = 0x721;
@@ -139,6 +142,9 @@ class PacketID {
 						const static WORD MOVEMENT = 0x79A;
 						const static WORD SHOW_MONSTER_HP = 0x79F;
 						const static WORD TELEGATE = 0x7A8;
+						const static WORD EQUIPMENT_CHANGE = 0x7A5;
+						const static WORD SPAWN_DROP = 0x7A6;
+						const static WORD PICK_DROP = 0x7A7;
 						const static WORD GAMING_PLAN = 0x7DE;
 						const static WORD CLAN_MANAGER = 0x7E0;
 						const static WORD MESSAGE_MANAGER = 0x7E1;

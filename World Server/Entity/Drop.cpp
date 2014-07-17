@@ -1,24 +1,40 @@
 #include "Drop.h"
 #include "..\WorldServer.h"
 
-void Drop::construct(const WORD mapId, const Position& pos) {
-	this->setMapId(mapId);
-	this->position.current = pos;
-	this->position.destination = pos;
+void Drop::construct(Entity* giver, bool isPublicDomain) {
+	if(!isPublicDomain)
+		this->owner = giver;
+	
+	this->setMapId(giver->getMapId());
+	this->position.current = giver->getPositionCurrent();
+	this->position.destination = this->position.current;
+
+	mainServer->assignClientID(this);
 
 	this->entityInfo.type = Entity::TYPE_DROP;
+
+	MapSector *sector = giver->getSector();
+	this->setSector(sector);
+	this->checkVisuality();
 }
 
-Drop::Drop(const WORD mapId, const Position& pos, DWORD zulyAmount) {
-	this->isDropZulies = true;
-	this->zuly = zulyAmount;
-
-	this->construct(mapId, pos);
+Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {
+	this->item.type = ItemType::MONEY;
+	this->item.id = 0x00;
+	this->item.amount = zulyAmount;
+	
+	this->construct(dropGiver, isPublicDomain);
 }
 
-Drop::Drop(const WORD mapId, const Position& pos, const Item& item) {
-	this->isDropZulies = false;
+Drop::~Drop() {
+	if(this->getSector()) {
+		this->getSector()->removeEntity(this);
+	}
+	mainServer->freeClientId(this);
+}
+
+Drop::Drop(Entity* dropGiver, const Item& item, bool isPublicDomain) {
 	this->item = item;
 	
-	this->construct(mapId, pos);
+	this->construct(dropGiver, isPublicDomain);
 }

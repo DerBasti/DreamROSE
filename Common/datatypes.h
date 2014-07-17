@@ -22,8 +22,6 @@ typedef unsigned short WORD;
 typedef unsigned long DWORD;
 typedef unsigned long long QWORD;
 
-
-
 class Packet {
 public:
 	const static DWORD DEFAULT_DATA_MAX = 0x400;

@@ -1,5 +1,6 @@
 #include "WorldServer.h"
 #include "Entity\Player.h"
+#include "Entity\Drop.h"
 #include "Entity\Monster.h"
 #include "FileTypes\ZON.h"
 
@@ -363,8 +364,10 @@ bool WorldServer::loadAI() {
 
 WORD WorldServer::assignClientID(Entity* newEntity) {
 	if(!newEntity)																																																																																																																																
-		return 0xFFFF;
-	for(unsigned int i=0;i<0x10000;i++) {
+		return 0;
+
+	//ClientID 0 = invalid state.
+	for(unsigned int i=1;i<0x10000;i++) {
 		Entity*& entity = this->clientIDs[i].second;
 		if(!entity) {
 			this->clientIDs[i].second = newEntity;
@@ -372,7 +375,7 @@ WORD WorldServer::assignClientID(Entity* newEntity) {
 			return i;
 		}
 	}
-	return 0xFFFF;
+	return 0;
 }
 
 void WorldServer::freeClientId(Entity* toDelete) {
@@ -385,6 +388,15 @@ void WorldServer::convertTo(NPC* npc, WORD npcDataId) {
 	
 }
 
+
+bool WorldServer::isValidItem(const WORD itemType, const WORD itemId) {
+	if(itemType == 0 || itemType > ItemType::PAT || itemId >= this->equipmentFile[itemType]->getRowCount())
+		return false;
+
+	//I don't know what that column means, but it is a legit indicator
+	//("Reversed" via STB<->STL entry comparison)
+	return (this->equipmentFile[itemType]->getRow(itemId).getColumnAsInt(0x09) > 0);
+}
 
 DWORD WorldServer::buildItemVisually(const Item& item) {
 	DWORD basicResult = (item.id | item.refine * 0x10000);
@@ -401,7 +413,7 @@ WORD WorldServer::buildItemHead(const Item& item) {
 }
 
 DWORD WorldServer::buildItemData(const Item& item) {
-	if ((item.type >= 10 && item.type <= 13) || item.amount == 0) {
+	if ((item.type >= ItemType::CONSUMABLES && item.type <= ItemType::QUEST) || item.type == ItemType::MONEY || item.amount == 0) {
 		return item.amount;
 	}
 	DWORD refinePart = (item.refine >> 4) << 28;
@@ -464,6 +476,28 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 		float coordY = atoi(curValue.c_str()) * 100.0f;
 
 		gm->pakTelegate(mapId, Position(coordX, coordY));
+	}
+	else if(WANTED_COMMAND("drop")) {
+		WORD itemType = atoi(curValue.c_str()); SPLIT();
+		if(curValue.length() == 0) {
+			//Drop money
+			new Drop(gm, itemType, false);
+		} else {
+			//Drop item
+			WORD itemNum = atoi(curValue.c_str()); SPLIT();
+			if(itemNum == 0)
+				return;
+			WORD amount = curValue.length() == 0 ? 0x00 : atoi(curValue.c_str());
+
+			Item item; 
+			item.type = itemType;
+			item.id = itemNum;
+			item.amount = amount;
+			item.durability = 120;
+			item.isAppraised = true;
+			item.lifespan = 1000;
+			new Drop(gm, item, false);
+		}
 	}
 #undef STRCMP
 #undef SPLIT

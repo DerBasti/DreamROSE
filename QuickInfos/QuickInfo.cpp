@@ -1,5 +1,5 @@
 #include "QuickInfo.h"
-#include "D:\Programmieren\\MessageBox\MessageBox.h"
+#include "D:\Programmieren\MessageBox\MessageBox.h"
 
 namespace QuickInfo {
 	const wchar_t *windowName = nullptr;

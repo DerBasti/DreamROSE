@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Monster.h"
+#include "Drop.h"
 #include "..\WorldServer.h"
 #include <stdlib.h>
 
@@ -50,6 +51,44 @@ bool Entity::setPositionVisually(const Position& newPos) {
 	return this->sendToVisible(pak);
 }
 
+const WORD Player::findSlot( const Item& item ) {
+	BYTE inventoryTab = 0x00;
+	switch(item.type) {
+		case ItemType::CONSUMABLES:
+			inventoryTab = 0x01;
+		break;
+		case ItemType::JEWELRY:
+		case ItemType::OTHER:
+			inventoryTab = 0x02;
+		break;
+		case ItemType::PAT:
+			inventoryTab = 0x03;
+		break;
+		default:
+			if(item.type == 0x00 || item.type >= ItemType::PAT)
+				return std::numeric_limits<WORD>::max();
+	}	
+	WORD slotId = 12 + (Inventory::TAB_SIZE * inventoryTab);
+	if(inventoryTab == 0x01 || inventoryTab == 0x02) {
+		DWORD totalCount = 0x00;
+		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
+			if(this->inventory[slotId].id == item.id && this->inventory[slotId].type == item.type) {
+				totalCount = this->inventory[slotId].amount + item.amount;
+				if(totalCount < 1000)
+					return slotId;
+			}
+			slotId++;
+		}
+	} else {
+		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
+			if(this->inventory[slotId].type == 0x00 && this->inventory[slotId].amount == 0x00)
+				return slotId;
+			slotId++;
+		}
+	}
+	return std::numeric_limits<WORD>::max();
+}
+
 void Player::addSectorVisually(MapSector* sector) {
 	LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
 	//visualityLog.putStringWithVarOnly("New Sector %i: [%f, %f][%f, %f]\n", this->getSector()->getId(), this->getSector()->getCenter().x, this->getSector()->getCenter().x, this->getCurrentX(), this->getCurrentY());
@@ -91,6 +130,9 @@ void Player::addEntityVisually(Entity* entity) {
 		break;
 		case Entity::TYPE_MONSTER:
 			this->pakSpawnMonster(dynamic_cast<Monster*>(entity));
+		break;
+		case Entity::TYPE_DROP:
+			this->pakSpawnDrop(dynamic_cast<Drop*>(entity));
 		break;
 	}
 }
@@ -333,6 +375,17 @@ bool Player::loadInfos() {
 	mainServer->sqlFinishQuery();
 
 	return true;
+}
+
+bool Player::pakUpdateInventory( BYTE slotAmount, WORD* slotIds ) {
+	Packet pak(PacketID::World::Response::UPDATE_INVENTORY);
+	pak.addByte( slotAmount );
+	for(unsigned int i=0;i<slotAmount;i++) {
+		pak.addWord( slotIds[i] );
+		pak.addWord( mainServer->buildItemHead( this->inventory[ slotIds[i] ] ) );
+		pak.addDWord( mainServer->buildItemData( this->inventory[ slotIds[i] ] ) );
+	}
+	return this->sendData(pak);
 }
 
 bool Player::pakPing() {
@@ -673,6 +726,89 @@ bool Player::pakSpawnMonster(Monster* monster) {
 	return this->sendData(pak);
 }
 
+bool Player::pakSpawnDrop( Drop* drop ) {
+	Packet pak(PacketID::World::Response::SPAWN_DROP);
+	pak.addFloat(drop->getCurrentX());
+	pak.addFloat(drop->getCurrentY());
+	pak.addWord(mainServer->buildItemHead(drop->getItem()) );
+	pak.addDWord(drop->getItem().amount);
+	pak.addWord(drop->getClientId());
+	pak.addDWord( mainServer->buildItemData(drop->getItem()) );
+	pak.addWord( (drop->getOwner() == nullptr ? 0x00 : drop->getOwner()->getClientId()) ); //OwnerClientId (?)
+	return this->sendData(pak);
+}
+
+bool Player::pakEquipmentChange() {
+	WORD sourceSlot = this->packet.getWord(0x00);
+	WORD destSlot = this->packet.getWord(0x02);
+	if(destSlot == 0x00) {
+		destSlot = this->findSlot( this->inventory[sourceSlot] );
+	}
+	if(destSlot == std::numeric_limits<WORD>::max())
+		return true;
+	
+	Packet pak( PacketID::World::Response::EQUIPMENT_CHANGE);
+	pak.addWord( this->getClientId() );
+	pak.addWord( sourceSlot );
+	pak.addDWord( mainServer->buildItemVisually( this->inventory[sourceSlot] ) );
+	pak.addWord( this->getMovementSpeed() );
+
+	Item tmpItem = this->inventory[sourceSlot];
+	this->inventory[sourceSlot] = this->inventory[destSlot];
+	this->inventory[destSlot] = tmpItem;
+
+	this->sendToVisible( pak );
+	
+	this->pakUpdateInventory( 0x01, &sourceSlot );
+	this->pakUpdateInventory( 0x01, &destSlot );
+	return true; //Safe?
+}
+
+bool Player::pakPickDrop() {
+	WORD dropId = this->packet.getWord(0x00);
+	Entity *entityDrop = mainServer->getEntity(dropId);
+	if(entityDrop->getEntityType() != Entity::TYPE_DROP)
+		return false;
+	Drop* drop = dynamic_cast<Drop*>(entityDrop);
+	if(!drop)
+		return false;
+	
+	Packet pak(PacketID::World::Response::PICK_DROP);
+	pak.addWord( drop->getClientId() );
+
+	//In case the drop is not publicly available for everyone
+	if(drop->getOwner() != nullptr && drop->getOwner() != this) {
+		pak.addWord( PickDropMessage::NOT_OWNER );
+		return this->sendData(pak);
+	}
+	//In case we're the owner, find a fitting inventory slot
+	WORD inventorySlotId = 0x00;
+	if(drop->isZulyDrop()) {
+		this->charInfo.zulies += drop->getItem().amount;
+	} else {
+		inventorySlotId = this->findSlot( drop->getItem() );
+
+		//In case we don't have a free (suiting) slot, tell the client
+		if(inventorySlotId == std::numeric_limits<WORD>::max()) {
+			pak.addByte( PickDropMessage::INVENTORY_FULL );
+			return this->sendData(pak);
+		}
+	}
+	pak.addByte( PickDropMessage::OKAY );
+	pak.addWord( inventorySlotId ); //SlotId
+	pak.addWord( mainServer->buildItemHead(drop->getItem()) );
+	pak.addDWord( mainServer->buildItemData(drop->getItem()) );
+	
+	DWORD previousAmount = this->inventory[inventorySlotId].amount;
+	this->inventory[inventorySlotId] = drop->getItem();
+	this->inventory[inventorySlotId].amount += previousAmount;
+
+	delete drop;
+	drop = nullptr;
+
+	return this->sendData(pak); 
+}
+
 bool Player::pakTelegate() {
 	WORD telegateId = this->packet.getWord(0x00);
 	Telegate& gate = mainServer->getGate(telegateId);
@@ -716,6 +852,9 @@ bool Player::handlePacket() {
 		case PacketID::World::Request::CHANGE_STANCE:
 			return this->pakChangeStance();
 
+		case PacketID::World::Request::EQUIPMENT_CHANGE:
+			return this->pakEquipmentChange();
+
 		case PacketID::World::Request::EXIT:
 			return false; //DISCONNECT
 
@@ -733,6 +872,9 @@ bool Player::handlePacket() {
 
 		case PacketID::World::Request::RETURN_TO_CHARSERVER:
 			return this->pakReturnToCharServer();
+
+		case PacketID::World::Request::PICK_DROP:
+			return this->pakPickDrop();
 
 		case PacketID::World::Request::SET_EMOTION:
 			return this->pakSetEmotion();

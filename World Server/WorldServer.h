@@ -81,6 +81,8 @@ class WorldServer : public ServerSocket {
 		WORD assignClientID(Entity*);
 		void freeClientId(Entity*);
 
+		bool isValidItem(const WORD itemType, const WORD itemId);
+
 		Map* getMap(const WORD mapId) const {
 			 if (mapId >= this->mapData.capacity())
 				return nullptr;
@@ -115,6 +117,7 @@ class WorldServer : public ServerSocket {
 		DWORD buildItemData(const Item& item);
 
 		__inline ZoneSTB* getZoneSTB() const { return this->zoneFile; }
+		__inline Entity* getEntity(const WORD clientId) const { return this->clientIDs[clientId].second; }
 
 		__inline void dumpSectors(const WORD mapId, const char* filePath) {
 			return this->mapData[mapId]->dumpSectors(filePath);

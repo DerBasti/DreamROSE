@@ -15,12 +15,15 @@ Monster::~Monster() {
 	this->ai = nullptr;
 	this->owner = nullptr;
 }
+
 bool Monster::isAllied( Entity* entity ) {
-	Player* player = dynamic_cast<Player*>(entity);
-	if(player)
-		return this->isAllied(player);
-	NPC* npc = dynamic_cast<NPC*>(entity);
-	if(npc)
-		return this->isAllied(npc);
-	return this->isAllied(dynamic_cast<Monster*>(entity)); 
+	switch(entity->getEntityType()) {
+		case Entity::TYPE_PLAYER:
+			return this->isAllied(dynamic_cast<Player*>(entity));
+		case Entity::TYPE_NPC:
+			return this->isAllied(dynamic_cast<NPC*>(entity));
+		case Entity::TYPE_MONSTER:
+			return this->isAllied(dynamic_cast<Monster*>(entity));
+	}
+	return true;
 }
