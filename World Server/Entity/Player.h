@@ -126,9 +126,8 @@ class Player : public Entity, public ClientSocket {
 		bool pakEquipmentChange();
 		bool pakPickDrop();
 		
-		void addSectorVisually(MapSector* newSector);
-		void removeSectorVisually(MapSector* toRemove);
 		void addEntityVisually(Entity* entity);
+		void removeEntityVisually(Entity* entity);
 		
 		const WORD findSlot( const Item& item );
 		const CharInfo::VisualTraits& getVisualTraits() const { return this->charInfo.visualTraits; }

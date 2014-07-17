@@ -16,6 +16,8 @@ void Drop::construct(Entity* giver, bool isPublicDomain) {
 	MapSector *sector = giver->getSector();
 	this->setSector(sector);
 	this->checkVisuality();
+
+	this->
 }
 
 Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {

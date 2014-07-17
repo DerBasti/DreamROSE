@@ -84,32 +84,6 @@ const WORD Player::findSlot( const Item& item ) {
 	return std::numeric_limits<WORD>::max();
 }
 
-void Player::addSectorVisually(MapSector* sector) {
-	LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
-	//visualityLog.putStringWithVarOnly("New Sector %i: [%f, %f][%f, %f]\n", this->getSector()->getId(), this->getSector()->getCenter().x, this->getSector()->getCenter().x, this->getCurrentX(), this->getCurrentY());
-	while(eNode) {
-		Entity *curEntity = eNode->getValue();
-		eNode = eNode->getNextNode();				//??? just in case
-		if(!curEntity || !curEntity->isIngame() || curEntity == this) {
-			continue;
-		}
-		//visualityLog.putStringWithVarOnly("Add Monster[%s]: [%i @Sector %i [%f, %f]][%f, %f]\n", curEntity->getName().c_str(), curEntity->getClientId(), curEntity->getSector()->getId(), curEntity->getSector()->getCenter().x, curEntity->getSector()->getCenter().x,  curEntity->getCurrentX(), curEntity->getCurrentY());
-		this->addEntityVisually(curEntity);
-	}
-}
-
-void Player::removeSectorVisually(MapSector* sector) {
-	LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
-	while(eNode) {
-		Entity *curEntity = eNode->getValue();
-		eNode = eNode->getNextNode();
-		if(!curEntity || !curEntity->isIngame() || curEntity == this)
-			continue;
-		//visualityLog.putStringWithVarOnly("Remove Monster[%s]: [%i @Sector %i [%f, %f]][%f, %f]\n", curEntity->getName().c_str(), curEntity->getClientId(), curEntity->getSector()->getId(), curEntity->getSector()->getCenter().x, curEntity->getSector()->getCenter().x,  curEntity->getCurrentX(), curEntity->getCurrentY());
-		this->pakRemoveEntityVisually(curEntity);
-	}
-}
-
 void Player::addEntityVisually(Entity* entity) {
 	if(!entity || entity == this)
 		return;
@@ -117,8 +91,8 @@ void Player::addEntityVisually(Entity* entity) {
 	switch(entity->getEntityType()) {
 		case Entity::TYPE_PLAYER:
 			player = dynamic_cast<Player*>(entity);
-			//this->pakSpawnPlayer(player);
-			//player->pakSpawnPlayer(this);
+			this->pakSpawnPlayer(player);
+			player->pakSpawnPlayer(this);
 		break;
 		case Entity::TYPE_NPC:
 			this->pakSpawnNPC(dynamic_cast<NPC*>(entity));
@@ -131,8 +105,15 @@ void Player::addEntityVisually(Entity* entity) {
 		break;
 	}
 }
-		
+
+//Delegate
+void Player::removeEntityVisually(Entity* entity) {
+	this->pakRemoveEntityVisually(entity);
+}
+
 bool Player::pakRemoveEntityVisually(Entity* entity) {
+	if(!entity)
+		return false;
 	Packet pak(PacketID::World::Response::REMOVE_VISIBLE_PLAYER);
 	pak.addWord(entity->getClientId());
 	return this->sendData(pak);

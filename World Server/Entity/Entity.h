@@ -51,10 +51,11 @@ class Entity {
 		UniqueSortedList<DWORD, MapSector*> visibleSectors;
 		virtual bool setPositionVisually(const Position& pos);
 
-		virtual void addSectorVisually(MapSector* newSector) { }
-		virtual void removeSectorVisually(MapSector* toRemove) { }
-
+		virtual void addSectorVisually(MapSector* newSector);
+		virtual void removeSectorVisually(MapSector* toRemove);
+		
 		virtual void addEntityVisually(Entity* entity) { }
+		virtual void removeEntityVisually(Entity* entity) { }
 
 	public:
 		const static BYTE TYPE_PLAYER = 0x00;

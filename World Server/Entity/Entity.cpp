@@ -128,6 +128,27 @@ void Entity::checkVisuality() {
 	//visualityLog.putStringWithVarOnly("-=-=-=-=-=-=-=-=-\n\n", sector->getId(), sector->getCenter().x, sector->getCenter().y);
 }
 
+void Entity::addSectorVisually(MapSector* newSector) {
+	LinkedList<Entity*>::Node* pNode = newSector->getFirstPlayer();
+	while(pNode) {
+		Entity* player = pNode->getValue();
+		pNode = newSector->getNextPlayer(pNode);
+		if(!player || !player->isIngame())
+			continue;
+		player->addEntityVisually(this);
+	}
+}
+
+void Entity::removeSectorVisually(MapSector* toRemove) {
+	LinkedList<Entity*>::Node* pNode = toRemove->getFirstPlayer();
+	while(pNode) {
+		Entity* player = pNode->getValue();
+		pNode = toRemove->getNextPlayer(pNode);
+		if(!player || !player->isIngame())
+			continue;
+		player->removeEntityVisually(this);
+	}
+}
 
 bool Entity::sendToVisible(Packet& pak) {
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
