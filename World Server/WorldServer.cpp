@@ -316,9 +316,10 @@ bool WorldServer::loadIFOs(Map* curMap) {
 		}
 		//Add all (IFO-)NPCs to the map
 		for (unsigned int k = 0; k < ifo.getNPCAmount(); k++) {
-			IFONPC& npc = ifo.getNPC(k);
-			NPCData& npcData = this->npcData.at(npc.getObjectId());
-			NPC *newNpc = new NPC(&npcData, &this->aiData.getValue(npcData.getAIId()), curMap->getId(), npc.getPosition());
+			IFONPC& npcINFO = ifo.getNPC(k);
+			NPCData& npcData = this->npcData.at(npcINFO.getObjectId());
+			NPC *newNpc = new NPC(&npcData, &this->aiData.getValue(npcData.getAIId()), curMap->getId(), npcINFO.getPosition());
+			newNpc->setDirection( npcINFO.getDirection() );
 			newNpc->setSector(curMap->getSector(newNpc->getPositionCurrent()));
 		}
 		//Create telegates from the previously read IFO-info

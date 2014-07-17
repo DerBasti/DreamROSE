@@ -120,6 +120,7 @@ class IFONPC : public _basicIFOEntry {
 	private:
 		friend class IFO;
 		DWORD unknown;
+		float dir;
 		std::string conFile;
 	public:
 		IFONPC() {
@@ -128,10 +129,14 @@ class IFONPC : public _basicIFOEntry {
 		IFONPC(_basicIFOEntry& newEntry) {
 			this->setBasicInfos(newEntry);
 		}
-		void setOtherInfo(DWORD unknown, const char* conFile) {
+		void setOtherInfo(DWORD unknown, float direction, const char* conFile) {
 			this->unknown = unknown;
+			this->dir = direction;
 			this->conFile = std::string(conFile);
 		}
+		__inline DWORD getUnknownSecond() const { return this->unknown; }
+		__inline float getDirection() const { return this->dir; }
+		__inline std::string getCONFile() const { return this->conFile; }
 };
 
 class IFOSpawnEntry {

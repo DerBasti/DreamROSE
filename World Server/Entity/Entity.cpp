@@ -14,11 +14,8 @@ Entity::Entity() {
 }
 
 Entity::~Entity() {
-	Map* map = mainServer->getMap(this->getMapId());
-	if(map) {
-		MapSector* sector = map->getSector(this->getPositionCurrent());
-		if(sector) 
-			sector->removeEntity(this);
+	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
+		this->removeSectorVisually(this->visibleSectors.getValue(i));
 	}
 	this->entityInfo.ingame = false;
 }

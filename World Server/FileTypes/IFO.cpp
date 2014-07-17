@@ -48,6 +48,20 @@ bool IFO::loadInfos() {
 			__READ__(&basic.scaleY, 4);
 			__READ__(&basic.scaleZ, 4);
 
+			
+			float qw2 = pow(basic.quatW,2);
+			float qx2 = pow(basic.quatX,2);
+			float qy2 = pow(basic.quatY,2);
+			float qz2 = pow(basic.quatZ,2);
+			float rad = atan2(basic.quatZ * basic.quatY,qz2-qy2);
+#ifndef PI
+#define PI 3.1415
+#endif
+			//Bogenmaﬂ auf Winkel
+			float dir = rad * 180.0f / PI;
+			if(dir < 0.0f)
+				dir += 360.0f;
+
 			IFONPC npc;
 			IFOSpawn spawn;
 			IFOTelegate telegate;
@@ -58,7 +72,7 @@ bool IFO::loadInfos() {
 					__READ__(&dTmp, 4); //UNKNOWN
 					__STRING_READ__(bTmp, buf);
 
-					npc.setOtherInfo(dTmp, buf);
+					npc.setOtherInfo(dTmp, dir, buf);
 
 					this->npcs.push_back(npc);
 				break;
