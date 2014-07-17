@@ -27,10 +27,7 @@ Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {
 }
 
 Drop::~Drop() {
-	if(this->getSector()) {
-		this->getSector()->removeEntity(this);
-	}
-	mainServer->freeClientId(this);
+
 }
 
 Drop::Drop(Entity* dropGiver, const Item& item, bool isPublicDomain) {

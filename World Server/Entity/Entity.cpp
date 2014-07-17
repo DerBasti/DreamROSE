@@ -3,6 +3,23 @@
 #include "Monster.h"
 #include "..\WorldServer.h"
 
+Entity::Entity() {
+	this->status.buffs.clearBuff();
+	this->visibleSectors.clear();
+	this->position.lastSectorCheckTime = 0x00;
+	this->updateStats();
+	this->entityInfo.nearestSector = nullptr;
+	this->entityInfo.ingame = true;
+	this->entityInfo.id = 0x00; //invalid id
+}
+
+Entity::~Entity() {
+	if(this->getSector()) {
+		this->getSector()->removeEntity(this);
+	}
+	mainServer->freeClientId(this);
+}
+
 bool Entity::isAllied( Entity* entity ) {
 	switch(entity->getEntityType()) {
 		case Entity::TYPE_PLAYER:

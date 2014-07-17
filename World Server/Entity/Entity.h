@@ -61,17 +61,10 @@ class Entity {
 		const static BYTE TYPE_NPC = 0x01;
 		const static BYTE TYPE_MONSTER = 0x02;
 		const static BYTE TYPE_DROP = 0x03;
-		Entity() {
-			this->status.buffs.clearBuff();
-			this->visibleSectors.clear();
-			this->position.lastSectorCheckTime = 0x00;
-			this->updateStats();
-			this->entityInfo.nearestSector = nullptr;
-			this->entityInfo.ingame = true;
-		}
-		virtual ~Entity() {
-			//...?
-		}
+		
+		Entity();
+		virtual ~Entity();
+
 		virtual void updateAttackpower() {}
 		virtual void updateDefense() {}
 		virtual void updateMagicDefense() {}
