@@ -22,6 +22,21 @@ Entity::~Entity() {
 	this->entityInfo.ingame = false;
 }
 
+void Entity::setPositionCurrent(const Position& newPos) { 
+	this->position.current = newPos; 
+}
+
+void Entity::setPositionDest(const Position& newPos) { 
+	this->position.destination = newPos; 
+	this->setPositionVisually(newPos);
+}
+
+void Entity::setTarget(Entity* target) { 
+	if(target)
+		this->setPositionDest(target->getPositionCurrent());
+	this->combat.setTarget(target); 
+}
+
 bool Entity::isAllied( Entity* entity ) {
 	switch(entity->getEntityType()) {
 		case Entity::TYPE_PLAYER:
@@ -37,9 +52,18 @@ bool Entity::isAllied( Entity* entity ) {
 
 bool Entity::movementRoutine() {
 	//In case there is no change in the wanted position, do nothing
-	if(this->position.current == this->position.destination) {
-		this->position.lastCheckTime = clock();
-		return false;
+	if(this->getTarget() == nullptr) {
+		if(this->position.current == this->position.destination) {
+			this->position.lastCheckTime = clock();
+			return false;
+		}
+	} else { //We have a target, let's find out if we're in attack range
+		this->position.destination = this->getTarget()->getPositionCurrent();
+		float distToTarget = this->position.current.distanceTo(this->position.destination);
+		if(distToTarget <= this->getAttackRange()) {
+			this->position.lastCheckTime = clock();
+			return false;
+		}
 	}
 	//Calculate the difference between each point (x and y)
 	float fX = this->position.destination.x - this->position.current.x;
@@ -67,6 +91,32 @@ bool Entity::movementRoutine() {
 	}
 	this->position.lastCheckTime = clock();
 	return true;
+}
+
+bool Entity::attackRoutine() {
+	if(this->getTarget() == nullptr)
+		return false;
+	if(clock() - this->combat.lastAttackTime <= this->intervalBetweenAttacks())
+		return false;
+	return this->attackEnemy();
+}
+
+bool Player::attackEnemy() { 
+	Entity *enemy = this->getTarget();
+	WORD damage = 10;
+	WORD flag = 0x2000; //0x2000 = hit; 0x4000 = crit, = 0x8000 = Dead
+	//enemy->addDamage( damage );
+	
+	if(enemy->getEntityType() == Entity::TYPE_MONSTER) {
+		AIService::run(dynamic_cast<Monster*>(enemy), AIP::ON_DAMAGED, nullptr, damage );
+	}
+
+	this->combat.lastAttackTime = clock();
+	Packet pak(PacketID::World::Response::BASIC_ATTACK);
+	pak.addWord( this->getClientId() );
+	pak.addWord( enemy->getClientId() );
+	pak.addWord ( (damage & 0x7FF) | 0x2000 );
+	return this->sendToVisible( pak );
 }
 
 bool Entity::checkForNewSector() {

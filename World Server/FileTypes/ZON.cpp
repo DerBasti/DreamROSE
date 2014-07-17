@@ -105,8 +105,6 @@ bool ZON::loadEconomyInfos(CMyFile& file) {
 }
 
 void ZON::setZoneInfo(WORD minX, WORD minY, WORD maxX, WORD maxY) {
-	this->MapInfo.totalMapSize = mainServer->getZoneSTB()->getZoneSize(this->mapId);
-	
 	this->MapInfo.sectorBeginX = minX;
 	this->MapInfo.sectorBeginY = minY;
 	this->MapInfo.sectorCountX = (maxX - minX) + 1;

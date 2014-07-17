@@ -87,14 +87,11 @@ void NPC::updateMovementSpeed() {
 	}
 }
 
-void NPC::setPositionCurrent(const Position& newPos) {
-	this->position.current = newPos;
-	this->setPositionVisually(newPos);
-}
-
-void NPC::setPositionDest(const Position& newPos) {
-	this->position.destination = newPos;
-	this->setPositionVisually(newPos);
+float NPC::getAttackRange() {
+	if(this->data) {
+		return this->data->getAttackRange();
+	}
+	return 100.0f; //1m
 }
 
 bool NPC::setPositionVisually(const Position& pos) {

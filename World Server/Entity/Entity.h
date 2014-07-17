@@ -49,7 +49,7 @@ class Entity {
 		Combat combat;
 
 		UniqueSortedList<DWORD, MapSector*> visibleSectors;
-		virtual bool setPositionVisually(const Position& pos);
+		virtual bool setPositionVisually(const Position& pos) { return true; }
 
 		virtual void addSectorVisually(MapSector* newSector);
 		virtual void removeSectorVisually(MapSector* toRemove);
@@ -57,6 +57,7 @@ class Entity {
 		virtual void addEntityVisually(Entity* entity) { }
 		virtual void removeEntityVisually(Entity* entity) { }
 
+		virtual bool attackEnemy();
 	public:
 		const static BYTE TYPE_PLAYER = 0x00;
 		const static BYTE TYPE_NPC = 0x01;
@@ -95,6 +96,7 @@ class Entity {
 
 		__inline virtual WORD getAttackPower() const { return this->stats.getAttackPower(); }
 		__inline virtual WORD getAttackSpeed() const { return this->stats.getAttackSpeed(); }
+		virtual float getAttackRange() { return 100.0f; } //1meter
 		__inline virtual WORD getDefensePhysical() const { return this->stats.getDefensePhysical(); }
 		__inline virtual WORD getDefenseMagical() const { return this->stats.getDefenseMagical(); }
 		__inline virtual WORD getMovementSpeed() const { return this->stats.getMovementSpeed(); }
@@ -134,7 +136,7 @@ class Entity {
 		virtual void setSector(class MapSector* newSector);
 
 		__inline virtual Entity* getTarget() const { return this->combat.getTarget(); }
-		__inline virtual void setTarget(Entity* target) { return this->combat.setTarget(target); }
+		virtual void setTarget(Entity* target);
 		
 		virtual bool isAllied( Entity* entity );
 		__inline virtual bool isAllied( class NPC* npc ) { return true; }
@@ -148,14 +150,16 @@ class Entity {
 		__inline virtual Position getPositionCurrent() const { return Position(this->position.current); }
 		__inline virtual Position getPositionDest() const { return Position(this->position.destination); }
 
-		virtual __inline void setPositionCurrent(const Position& newPos) { this->position.current = newPos; }
-		virtual __inline void setPositionDest(const Position& newPos) { this->position.destination = newPos; }
-		
+		virtual void setPositionCurrent(const Position& newPos);
+		virtual void setPositionDest(const Position& newPos);
+
 		virtual bool checkForNewSector();
 		virtual void checkVisuality();
 		virtual __inline DWORD getLastSectorCheckTime() const { return clock() - this->position.lastSectorCheckTime; }
 
 		bool movementRoutine();
+		bool attackRoutine();
+		__inline clock_t intervalBetweenAttacks() { return 1000; }
 
 		bool sendToVisible(class Packet& pak);
 		bool sendToMap(class Packet& pak);

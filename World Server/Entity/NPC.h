@@ -41,8 +41,6 @@ class NPC : public Entity {
 		virtual void updateDodgerate();
 		virtual void updateMovementSpeed();
 
-		virtual void setPositionCurrent(const Position& newPos);
-		virtual void setPositionDest(const Position& newPos);
 		__inline virtual Position getSpawnPosition() const { return this->position.source; }
 
 		virtual bool isAllied( Entity* entity );
@@ -59,6 +57,7 @@ class NPC : public Entity {
 		__inline bool isNPC() const { return this->data->getIsNPC(); }
 		__inline void addDamage(const DWORD amount) { this->stats.curHP -= static_cast<WORD>(amount > this->stats.curHP ? this->stats.curHP : amount); }
 		__inline BYTE getLevel() const { return this->data->getLevel(); }
+		virtual float getAttackRange();
 		__inline float getDirection() const { return this->direction; }
 		__inline void setDirection(const float newVal) { this->direction = newVal; }
 		__inline bool hasDialogId() const { return (this->data->getDialogId() > 0); }

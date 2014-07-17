@@ -284,8 +284,12 @@ struct Item {
 
 struct Combat {
 	class Entity* target;
+	clock_t lastAttackTime;
 
-	Combat() { this->target = nullptr; }
+	Combat() { 
+		this->target = nullptr; 
+		this->lastAttackTime = 0x00;
+	}
 
 	__inline Entity* getTarget() const { return this->target; }
 	__inline void setTarget( Entity* newTarget ) { this->target = newTarget; }

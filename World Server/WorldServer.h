@@ -116,6 +116,7 @@ class WorldServer : public ServerSocket {
 		WORD buildItemHead(const Item& item);
 		DWORD buildItemData(const Item& item);
 
+		STBEntry& getEquipmentEntry(BYTE itemType, DWORD itemId);
 		__inline ZoneSTB* getZoneSTB() const { return this->zoneFile; }
 		__inline Entity* getEntity(const WORD clientId) const { return this->clientIDs[clientId].second; }
 

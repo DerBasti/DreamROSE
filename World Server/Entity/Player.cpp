@@ -30,10 +30,10 @@ void Player::setPositionDest(const Position& newPos) {
 	this->setPositionVisually(newPos);
 }
 
-bool Entity::setPositionVisually(const Position& newPos) {
+bool Player::setPositionVisually(const Position& newPos) {
 	Entity* target = this->combat.getTarget();
 
-	Packet pak(PacketID::World::Response::MOVEMENT);
+	Packet pak(PacketID::World::Response::MOVEMENT_PLAYER);
 	pak.addWord( this->getClientId() );
 	pak.addWord( target != nullptr ? target->getClientId() : 0x00 );
 	pak.addWord( this->getMovementSpeed() );
@@ -145,6 +145,13 @@ void Player::updateCritrate() {
 }
 void Player::updateMovementSpeed() {
 	this->stats.movementSpeed = 425;
+}
+
+float Player::getAttackRange() {
+	if(this->inventory[ItemType::WEAPON].amount == 0x00)
+		return 100.0f;
+	STBEntry& weapon = mainServer->getEquipmentEntry(ItemType::WEAPON, this->inventory[ItemType::WEAPON].id);
+	return std::max(100.0f, weapon.getColumn<float>(EquipmentSTB::ATTACK_RANGE));
 }
 
 bool Player::isAllied( Entity* entity ) {
@@ -702,6 +709,32 @@ bool Player::pakSpawnMonster(Monster* monster) {
 	return this->sendData(pak);
 }
 
+bool Player::pakShowMonsterHP(Monster* mon) {
+	Packet pak(PacketID::World::Response::SHOW_MONSTER_HP);
+	pak.addWord(mon->getClientId());
+	pak.addDWord(mon->getCurrentHP());
+	return this->sendData(pak);
+}
+
+bool Player::pakInitBasicAttack() {
+	WORD clientId = this->packet.getWord(0x00);
+
+	//In case we target ourselves, do nothing
+	if(this->getClientId() == clientId)
+		return true; 
+
+	Entity* entity = mainServer->getEntity(clientId);
+	if(!entity)
+		return true; //TODO
+
+	if(entity->getEntityType() == Entity::TYPE_MONSTER) {
+		bool tmpResult = this->pakShowMonsterHP(dynamic_cast<Monster*>(entity));
+		if(!tmpResult)
+			return false;
+	}
+	this->setTarget(entity);
+}
+
 bool Player::pakSpawnDrop( Drop* drop ) {
 	Packet pak(PacketID::World::Response::SPAWN_DROP);
 	pak.addFloat(drop->getCurrentX());
@@ -843,7 +876,7 @@ bool Player::handlePacket() {
 		case PacketID::World::Request::LOCAL_CHAT:
 			return this->pakLocalChat();
 
-		case PacketID::World::Request::MOVEMENT:
+		case PacketID::World::Request::MOVEMENT_PLAYER:
 			return this->pakMoveCharacter();
 
 		case PacketID::World::Request::RETURN_TO_CHARSERVER:

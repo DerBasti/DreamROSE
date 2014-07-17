@@ -28,7 +28,6 @@ class Monster : public NPC {
 		__inline void setOwner(Entity* newOwner) { this->owner = newOwner; }
 
 		__inline DWORD getMaxHP() const { return this->data->getMaxHP(); }
-		bool pakShowHP();
 };
 
 #endif //__ROSE_MONSTER__

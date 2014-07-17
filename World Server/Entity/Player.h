@@ -87,6 +87,7 @@ class Player : public Entity, public ClientSocket {
 			}
 		} charInfo;
 
+
 		Item inventory[Inventory::MAXIMUM];
 
 		struct BasicSkills {
@@ -118,6 +119,8 @@ class Player : public Entity, public ClientSocket {
 		bool pakAssignID();
 		bool pakTerrainCollision();
 		bool pakSetEmotion();
+		bool pakInitBasicAttack();
+		bool pakShowMonsterHP(Monster *mon);
 		bool pakMoveCharacter();
 		bool pakChangeStance();
 		bool pakLocalChat();
@@ -128,7 +131,10 @@ class Player : public Entity, public ClientSocket {
 		
 		void addEntityVisually(Entity* entity);
 		void removeEntityVisually(Entity* entity);
-		
+		bool setPositionVisually(const Position& pos);
+
+		bool attackEnemy();
+
 		const WORD findSlot( const Item& item );
 		const CharInfo::VisualTraits& getVisualTraits() const { return this->charInfo.visualTraits; }
 	public:
@@ -179,6 +185,9 @@ class Player : public Entity, public ClientSocket {
 		
 		__inline WORD getSensibility() const { return this->attributes.getSensibility(); }
 		__inline WORD getSensibilityTotal() { return this->attributes.getSensibilityTotal(); }
+
+		float getAttackRange();
+		__inline clock_t intervalBetweenAttacks() { return 60000 / this->getAttackSpeed(); }
 };
 
 #endif //__ROSE_PLAYER__

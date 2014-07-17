@@ -226,6 +226,30 @@ class ZoneSTB : public STBFile {
 			return 4000;
 		}
 };
+
+class EquipmentSTB {
+	private:
+		EquipmentSTB() { }
+		~EquipmentSTB() { }
+	public:
+		const static WORD TYPE = 0x04;
+		const static WORD PRICE = 0x05;
+		const static WORD PRICE_RATE = 0x06;
+		const static WORD WEIGHT = 0x07;
+		const static WORD QUALITY = 0x08;
+		const static WORD REQUIRED_LEVEL = 0x0D;
+		const static WORD CRAFTING_STB_REFERENCE = 0x0E;
+		const static WORD UNION_POINTS = 0x0F;
+		const static WORD DURABILITY_MINIMUM = 0x1D;
+		const static WORD DEFENSE_PHYISCAL = 0x1F;
+		const static WORD DEFENSE_MAGICAL = 0x20;
+		const static WORD ATTACK_RANGE = 0x21;
+		const static WORD MOVEMENT_SPEED = 0x21;
+		const static WORD ATTACK_POWER_PHYSICAL = 0x23;
+		const static WORD ATTACK_SPEED = 0x24;
+		const static WORD ATTACK_POWER_MAGICAL = 0x25;
+};
+
 class SkillSTB : public STBFile {
 	public:
 		const static BYTE CONDITIONS_MAX_NUM = 0x02;

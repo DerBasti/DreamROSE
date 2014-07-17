@@ -431,6 +431,15 @@ DWORD WorldServer::buildItemData(const Item& item) {
 	return (refinePart | appraisePart | socketPart | lifeSpanPart | durabilityPart | stats | gem);
 }
 
+STBEntry& WorldServer::getEquipmentEntry(BYTE itemType, DWORD itemId) {
+	if(itemType == 0x00 || itemType >= ItemType::PAT)
+		throw TraceableExceptionARGS("Invalid ItemType: %i", itemType);
+	STBFile *eqFile = this->equipmentFile[itemType];
+	if(itemId >= eqFile->getRowCount())
+		throw TraceableExceptionARGS("Invalid Item [%i, %i]!", itemType, itemId);
+	return eqFile->getRow(itemId);
+}
+
 bool ChatService::sendMessage(Entity* sender, const char* msg) {
 	Packet pak(PacketID::World::Response::LOCAL_CHAT);
 	pak.addWord(sender->getClientId());
