@@ -133,8 +133,6 @@ class Player : public Entity, public ClientSocket {
 		void removeEntityVisually(Entity* entity);
 		bool setPositionVisually(const Position& pos);
 
-		bool attackEnemy();
-
 		const WORD findSlot( const Item& item );
 		const CharInfo::VisualTraits& getVisualTraits() const { return this->charInfo.visualTraits; }
 	public:
