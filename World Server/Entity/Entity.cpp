@@ -14,6 +14,8 @@ Entity::Entity() {
 }
 
 Entity::~Entity() {
+	if(this->getSector())
+		this->getSector()->removeEntity(this);
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
 		this->removeSectorVisually(this->visibleSectors.getValue(i));
 	}
