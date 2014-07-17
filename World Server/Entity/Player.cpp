@@ -11,6 +11,7 @@ Player::Player(SOCKET sock, ServerSocket* server){
 	this->socket = sock;
 	this->serverDelegate = server;
 	this->entityInfo.type = Entity::TYPE_PLAYER;
+	this->entityInfo.ingame = false;
 	for (unsigned int i = 0; i < Inventory::MAXIMUM; i++) {
 		this->inventory[i].clear();
 	}

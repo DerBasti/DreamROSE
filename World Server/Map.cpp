@@ -5,8 +5,7 @@ MapSector::MapSector() {
 #ifdef __MAPSECTOR_LL__
 	this->entitiesInSector.clear();
 #endif
-	this->SectorSize.center = Position(520000, 520000);
-	this->SectorSize.widthAndHeight = 25600;
+	this->center = Position(520000, 520000);
 }
 
 MapSector::MapSector(const MapSector& rhs) {
@@ -26,8 +25,7 @@ MapSector& MapSector::operator=(const MapSector& rhs) {
 #ifdef __MAPSECTOR_LL__
 	this->entitiesInSector.clear();
 #endif
-	this->SectorSize.center = rhs.SectorSize.center;
-	this->SectorSize.widthAndHeight = rhs.SectorSize.widthAndHeight;
+	this->center = rhs.center;
 	return (*this);
 }
 
@@ -73,6 +71,7 @@ Map::Map() {
 	this->isPVPOn = false;
 	this->dayCycle.length = 0x01;
 	this->mapPath = std::string("");
+	this->sectorSize = IFO::CUSTOMIZED_SECTOR_SIZE;
 }
 
 Map::Map(const Map& rhs) {
@@ -120,8 +119,8 @@ MapSector* Map::getSector(const WORD sectorId) {
 
 MapSector* Map::getSector(const Position& pos) {
 	MapSector* firstSector = this->mapSectors.getValue(0x00, 0x00);
-	int firstIdTmp = QuickInfo::round<int>((pos.x - firstSector->getCenter().x) / IFO::CUSTOMIZED_SECTOR_SIZE);
-	int secondIdTmp = QuickInfo::round<int>((pos.y - firstSector->getCenter().y) / IFO::CUSTOMIZED_SECTOR_SIZE);
+	int firstIdTmp = QuickInfo::round<int>((pos.x - firstSector->getCenter().x) / this->getSectorWidthAndHeight());
+	int secondIdTmp = QuickInfo::round<int>((pos.y - firstSector->getCenter().y) / this->getSectorWidthAndHeight());
 	WORD realFirstId = 0x00;
 	WORD realSecondId = 0x00;
 	if(firstIdTmp < 0)
@@ -240,20 +239,19 @@ void Map::createSectors(std::vector<std::string>& files) {
 				);
 	
 	//New sector count = Default_Sector_Offsets / Custom_sector_size (8000)
-	int sectorCountX = static_cast<int>((max.x - min.x) / IFO::CUSTOMIZED_SECTOR_SIZE)+1;
-	int sectorCountY = static_cast<int>((max.y - min.y) / IFO::CUSTOMIZED_SECTOR_SIZE)+1;
+	int sectorCountX = static_cast<int>((max.x - min.x) / this->getSectorWidthAndHeight())+1;
+	int sectorCountY = static_cast<int>((max.y - min.y) / this->getSectorWidthAndHeight())+1;
 	this->mapSectors.reserve(sectorCountX, sectorCountY);
 
 	//Calculate all sector center positions
 	for(int i=0;i<sectorCountX;i++) {
 		for(int j=0;j<sectorCountY;j++) {
-			float cX = min.x + i * IFO::CUSTOMIZED_SECTOR_SIZE;
-			float cY = min.y + j * IFO::CUSTOMIZED_SECTOR_SIZE;
+			float cX = min.x + i * this->getSectorWidthAndHeight();
+			float cY = min.y + j * this->getSectorWidthAndHeight();
 
 			MapSector* newSector = new MapSector();
 			newSector->id = i * sectorCountY + j;
 			newSector->setCenter( Position(cX, cY) );
-			newSector->setZoneWidthAndHeight( IFO::CUSTOMIZED_SECTOR_SIZE );
 			
 #ifdef __MAPSECTOR_DEBUG__
 			newSector->mapId = this->id;
@@ -269,7 +267,7 @@ void Map::dumpSectors(const char* filePath) {
 	file.putStringWithVarOnly("MapID: %i\n", this->getId());
 	for(unsigned int i=0;i<totalSectorCount;i++) {
 		MapSector* sector = this->getSector(i);
-		file.putStringWithVarOnly("[Sector %i of %i]: %f, %f with verticelength %i\n", i, totalSectorCount, sector->getCenter().x, sector->getCenter().y, sector->getZoneWidthAndHeight());
+		file.putStringWithVarOnly("[Sector %i of %i]: %f, %f with verticelength %i\n", i, totalSectorCount, sector->getCenter().x, sector->getCenter().y, this->getSectorWidthAndHeight());
 	}
 	file.putString("\n\n");
 }

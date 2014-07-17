@@ -303,6 +303,7 @@ bool WorldServer::loadIFOs(Map* curMap) {
 		this->teleGates.addValue(Telegate());
 
 	/** ASSIGN SECTORS **/
+	curMap->setSectorWidthAndHeight(this->zoneFile->getZoneSize(curMap->getId()));
 	curMap->createSectors(files);
 
 	//Iterate through all *.ifo files

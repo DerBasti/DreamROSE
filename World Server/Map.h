@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Structures.h"
+#include ".\FileTypes\IFO.h"
 
 #define __MAPSECTOR_LL__
 #define __MAPSECTOR_DEBUG__
@@ -11,10 +12,7 @@ class MapSector {
 #ifdef __MAPSECTOR_DEBUG__
 		WORD mapId;
 #endif //__MAPSECTOR_DEBUG__
-		struct sectorSize {
-			Position center;
-			DWORD widthAndHeight;
-		} SectorSize;
+		Position center;
 		DWORD id;
 
 #ifdef __MAPSECTOR_LL__
@@ -57,11 +55,8 @@ class MapSector {
 		}
 #endif
 		__inline DWORD getId() const { return this->id; }
-		__inline Position getCenter() const { return Position(this->SectorSize.center); }
-		__inline void setCenter(const Position& pos) { this->SectorSize.center = pos; }
-
-		__inline DWORD getZoneWidthAndHeight() const { return this->SectorSize.widthAndHeight; }
-		__inline void setZoneWidthAndHeight(const DWORD newWH) { this->SectorSize.widthAndHeight = newWH; }
+		__inline Position getCenter() const { return Position(this->center); }
+		__inline void setCenter(const Position& pos) { this->center = pos; }
 };
 
 class Map {
@@ -77,6 +72,7 @@ class Map {
 			DWORD night; //Column 17
 		} dayCycle;
 		std::string mapPath;
+		float sectorSize;
 		FixedArray2D<MapSector*> mapSectors;
 		std::vector<class IFOSpawn*> monsterSpawns;
 		LinkedList<Entity*> entitiesOnMap;
@@ -132,5 +128,9 @@ class Map {
 		__inline const DWORD getEntityCount() const { 
 			return this->entitiesOnMap.getNodeCount();
 		}
+
+		__inline float getSectorWidthAndHeight() const { return this->sectorSize; }
+		__inline void setSectorWidthAndHeight(const DWORD newWH) { this->sectorSize = static_cast<float>(std::max(newWH, IFO::CUSTOMIZED_SECTOR_SIZE)); }
+
 };
 

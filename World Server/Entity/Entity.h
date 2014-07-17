@@ -67,6 +67,7 @@ class Entity {
 			this->position.lastSectorCheckTime = 0x00;
 			this->updateStats();
 			this->entityInfo.nearestSector = nullptr;
+			this->entityInfo.ingame = true;
 		}
 		virtual ~Entity() {
 			//...?

@@ -265,7 +265,7 @@ class IFO {
 		bool loadInfos();
 	public:
 		const static DWORD DEFAULT_SECTOR_SIZE = 16000;
-		const static DWORD CUSTOMIZED_SECTOR_SIZE = 8000;
+		const static DWORD CUSTOMIZED_SECTOR_SIZE = 4000;
 		IFO(const char* filePath) {
 			this->filePath = filePath;
 			this->loadInfos();

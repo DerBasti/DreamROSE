@@ -217,9 +217,9 @@ class ZoneSTB : public STBFile {
 		__inline WORD getNoonTime(const WORD row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NOON_BEGIN); }
 		__inline WORD getEveningTime(const WORD row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::EVENING_BEGIN); }
 		__inline WORD getNight(const WORD row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NIGHT_BEGIN); }
-		__inline float getZoneSize(const WORD row) {
+		__inline DWORD getZoneSize(const WORD row) {
 			try {
-				return this->entries.at(row).getColumn<float>(ZoneSTB::ZONESIZE_COLUMN);
+				return this->entries.at(row).getColumn<DWORD>(ZoneSTB::ZONESIZE_COLUMN);
 			}
 			catch (...) {
 			}
