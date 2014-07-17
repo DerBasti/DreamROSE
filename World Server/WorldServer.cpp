@@ -3,7 +3,7 @@
 #include "Entity\Monster.h"
 #include "FileTypes\ZON.h"
 
-#include "D:\Programmieren\ConfigReader\Config.h"
+#include "ConfigReader\Config.h"
 
 WorldServer* mainServer;
 

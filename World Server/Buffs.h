@@ -3,7 +3,7 @@
 #ifndef __ROSE_BUFFS__
 #define __ROSE_BUFFS__
 
-#include "D:\Programmieren\QuickInfos\QuickInfo.h"
+#include "..\QuickInfos\QuickInfo.h"
 #include <time.h>
 
 //TODO: ADD GETBUFF WITH STATIC VALUES

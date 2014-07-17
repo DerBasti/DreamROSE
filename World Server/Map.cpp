@@ -226,7 +226,7 @@ void Map::createSectors(std::vector<std::string>& files) {
 	//Just as precaution for having the same high and low values.
 	//e.g. 30 for min and max -> 0 sectors difference.
 	//Even if we get "unnecessary" sectors, it won't really take up
-	//that much more RAM.
+	//that much more memory.
 	minMaxX[1]++;
 	minMaxY[1]++;
 
