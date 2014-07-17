@@ -17,7 +17,8 @@ Entity::~Entity() {
 	Map* map = mainServer->getMap(this->getMapId());
 	if(map) {
 		MapSector* sector = map->getSector(this->getPositionCurrent());
-		if(sector) sector->removeEntity(this);
+		if(sector) 
+			sector->removeEntity(this);
 	}
 	this->entityInfo.ingame = false;
 }

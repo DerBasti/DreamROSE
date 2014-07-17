@@ -11,7 +11,7 @@ typedef unsigned long DWORD;
 
 #include <vector>
 #include <string>
-#include "D:\Programmieren\QuickInfos\Trackable.hpp"
+#include "..\..\QuickInfos\Trackable.hpp"
 
 class STLEntryMULTI {
 	private:
