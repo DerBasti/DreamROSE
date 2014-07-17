@@ -733,6 +733,7 @@ bool Player::pakInitBasicAttack() {
 			return false;
 	}
 	this->setTarget(entity);
+	return true;
 }
 
 bool Player::pakSpawnDrop( Drop* drop ) {

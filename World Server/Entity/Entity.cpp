@@ -101,7 +101,7 @@ bool Entity::attackRoutine() {
 	return this->attackEnemy();
 }
 
-bool Player::attackEnemy() { 
+bool Entity::attackEnemy() { 
 	Entity *enemy = this->getTarget();
 	WORD damage = 10;
 	WORD flag = 0x2000; //0x2000 = hit; 0x4000 = crit, = 0x8000 = Dead
