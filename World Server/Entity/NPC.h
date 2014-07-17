@@ -43,7 +43,7 @@ class NPC : public Entity {
 
 		virtual void setPositionCurrent(const Position& newPos);
 		virtual void setPositionDest(const Position& newPos);
-		__inline virtual Position getSpawnPosition() const { return (this->spawn == nullptr ? Position(520000.f, 520000.0f) : this->spawn->getPosition()); }
+		__inline virtual Position getSpawnPosition() const { return this->position.source; }
 		
 		virtual bool isAllied( Entity* entity );
 		__inline virtual bool isAllied( NPC* npc ) { return true; }
