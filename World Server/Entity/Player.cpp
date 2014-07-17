@@ -18,12 +18,6 @@ Player::Player(SOCKET sock, ServerSocket* server){
 }
 
 Player::~Player() {
-	Map* map = mainServer->getMap(this->getMapId());
-	if(map) {
-		MapSector* sector = map->getSector(this->getPositionCurrent());
-		if(sector) sector->removeEntity(this);
-	}
-	this->entityInfo.ingame = false;
 }
 
 void Player::setPositionCurrent(const Position& newPos) {

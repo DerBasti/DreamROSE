@@ -14,10 +14,12 @@ Entity::Entity() {
 }
 
 Entity::~Entity() {
-	if(this->getSector()) {
-		this->getSector()->removeEntity(this);
+	Map* map = mainServer->getMap(this->getMapId());
+	if(map) {
+		MapSector* sector = map->getSector(this->getPositionCurrent());
+		if(sector) sector->removeEntity(this);
 	}
-	mainServer->freeClientId(this);
+	this->entityInfo.ingame = false;
 }
 
 bool Entity::isAllied( Entity* entity ) {
