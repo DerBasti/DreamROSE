@@ -1,6 +1,5 @@
 #pragma once
 
-
 #ifndef __ROSE_NPC__
 #define __ROSE_NPC__
 
