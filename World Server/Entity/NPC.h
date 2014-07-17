@@ -22,7 +22,7 @@ class NPC : public Entity {
 		const IFOSpawn* spawn;
 		const NPCData* data;
 		NPC() {
-			this->constructor(nullptr, nullptr, 0x01, Position(520000, 520000));
+			//Empty for now.
 		}
 		virtual void constructor(const NPCData* newData, const AIP* newAi, const WORD mapId, const Position& pos);
 		virtual bool setPositionVisually(const Position& pos);

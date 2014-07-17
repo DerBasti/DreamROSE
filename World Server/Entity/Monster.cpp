@@ -3,9 +3,9 @@
 #include "..\WorldServer.h"
 
 Monster::Monster(const NPCData* newData, const AIP* newAi, const WORD mapId, const Position& pos) {
+	this->entityInfo.type = Entity::TYPE_MONSTER;
 	this->constructor(newData, newAi, mapId, pos);
 	this->updateStats();
-	this->entityInfo.type = Entity::TYPE_MONSTER;
 
 	this->owner = nullptr;
 }

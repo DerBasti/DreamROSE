@@ -55,7 +55,7 @@ bool IFO::loadInfos() {
 			float qz2 = pow(basic.quatZ,2);
 			float rad = atan2(basic.quatZ * basic.quatY,qz2-qy2);
 #ifndef PI
-#define PI 3.1415
+#define PI 3.1415f
 #endif
 			//Bogenmaﬂ auf Winkel
 			float dir = rad * 180.0f / PI;
