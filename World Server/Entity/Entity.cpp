@@ -112,11 +112,18 @@ bool Entity::attackEnemy() {
 		AIService::run(dynamic_cast<Monster*>(enemy), AIP::ON_DAMAGED, nullptr, damage );
 	}
 
+	if(damage >= enemy->getCurrentHP()) {
+		enemy->stats.curHP = 0x00;
+		flag |= 0x8000;
+	} else {
+		enemy->stats.curHP -= damage;
+	}
+
 	this->combat.lastAttackTime = clock();
 	Packet pak(PacketID::World::Response::BASIC_ATTACK);
 	pak.addWord( this->getClientId() );
 	pak.addWord( enemy->getClientId() );
-	pak.addWord ( (damage & 0x7FF) | 0x2000 );
+	pak.addWord ( (damage & 0x7FF) | flag );
 	return this->sendToVisible( pak );
 }
 
@@ -179,24 +186,28 @@ void Entity::checkVisuality() {
 }
 
 void Entity::addSectorVisually(MapSector* newSector) {
-	LinkedList<Entity*>::Node* pNode = newSector->getFirstPlayer();
+	LinkedList<Entity*>::Node* pNode = newSector->getFirstEntity();
 	while(pNode) {
-		Entity* player = pNode->getValue();
-		pNode = newSector->getNextPlayer(pNode);
-		if(!player || !player->isIngame())
+		Entity* entity = pNode->getValue();
+		pNode = pNode->getNextNode();
+		if(!entity || !entity->isIngame())
 			continue;
-		player->addEntityVisually(this);
+		this->addEntityVisually(entity);
+		entity->addEntityVisually(this);
 	}
 }
 
 void Entity::removeSectorVisually(MapSector* toRemove) {
-	LinkedList<Entity*>::Node* pNode = toRemove->getFirstPlayer();
+	LinkedList<Entity*>::Node* pNode = toRemove->getFirstEntity();
 	while(pNode) {
-		Entity* player = pNode->getValue();
-		pNode = toRemove->getNextPlayer(pNode);
-		if(!player || !player->isIngame())
+		Entity* entity = pNode->getValue();
+		pNode = pNode->getNextNode();
+		if(!entity || !entity->isIngame())
 			continue;
-		player->removeEntityVisually(this);
+
+		//Two-way removal
+		this->removeEntityVisually(entity);
+		entity->removeEntityVisually(this);
 	}
 }
 

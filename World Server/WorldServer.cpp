@@ -421,7 +421,7 @@ DWORD WorldServer::buildItemData(const Item& item) {
 	DWORD refinePart = (item.refine >> 4) << 28;
 	DWORD appraisePart = item.isAppraised << 27;
 	DWORD socketPart = item.isSocketed << 26;
-	DWORD lifeSpanPart = (item.lifespan * 10) << 16;
+	DWORD lifeSpanPart = item.lifespan << 16;
 	DWORD durabilityPart = item.durability << 9;
 	DWORD stats = item.stats;
 	DWORD gem = item.gem;
