@@ -33,7 +33,6 @@ MapSector& MapSector::operator=(const MapSector& rhs) {
 LinkedList<Entity*>::Node* MapSector::getNext(LinkedList<Entity*>::Node* curNode, BYTE entityType) {
 	if(!curNode)
 		return nullptr;
-	curNode = curNode->getNextNode();
 	while (curNode) {
 		if (curNode->getValue() && curNode->getValue()->getEntityType() == entityType)
 			return curNode;
@@ -58,7 +57,7 @@ LinkedList<Entity*>::Node* MapSector::getFirstPlayer() {
 }
 		
 LinkedList<Entity*>::Node* MapSector::getNextPlayer(LinkedList<Entity*>::Node* curNode) {
-	return this->getNext(curNode, Entity::TYPE_PLAYER);
+	return this->getNext((curNode == nullptr : nullptr : curNode->getNextNode()), Entity::TYPE_PLAYER);
 }
 	
 LinkedList<Entity*>::Node* MapSector::getFirstNPC() {
@@ -66,7 +65,7 @@ LinkedList<Entity*>::Node* MapSector::getFirstNPC() {
 }
 
 LinkedList<Entity*>::Node* MapSector::getNextNPC(LinkedList<Entity*>::Node* curNode) {
-	return this->getNext(curNode, Entity::TYPE_NPC);
+	return this->getNext((curNode == nullptr : nullptr : curNode->getNextNode()), Entity::TYPE_NPC);
 }
 #endif
 
