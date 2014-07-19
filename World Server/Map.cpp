@@ -31,6 +31,9 @@ MapSector& MapSector::operator=(const MapSector& rhs) {
 
 #ifdef __MAPSECTOR_LL__
 LinkedList<Entity*>::Node* MapSector::getNext(LinkedList<Entity*>::Node* curNode, BYTE entityType) {
+	if(!curNode)
+		return nullptr;
+	curNode = curNode->getNextNode();
 	while (curNode) {
 		if (curNode->getValue() && curNode->getValue()->getEntityType() == entityType)
 			return curNode;

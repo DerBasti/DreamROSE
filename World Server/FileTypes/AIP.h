@@ -137,6 +137,10 @@ struct AITransfer {
 	class Entity* target;
 	class Entity* nearestEntity;
 	class Entity* lastFound;
+
+	AITransfer() {
+		this->designatedTarget = target = nearestEntity = lastFound = nullptr;
+	}
 };
 
 class AIService {

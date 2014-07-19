@@ -4,6 +4,7 @@
 #include "..\WorldServer.h"
 
 Entity::Entity() {
+	this->combat.target = nullptr;
 	this->status.buffs.clearBuff();
 	this->visibleSectors.clear();
 	this->position.lastSectorCheckTime = 0x00;
