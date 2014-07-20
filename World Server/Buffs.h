@@ -87,12 +87,12 @@ class Buffs {
 		Buffs& operator=(const Buffs& rhs);
 		void clearBuff(BYTE clearType = 0xFF);
 		bool addBuff(BYTE bitFromVisuality, WORD amount, DWORD durationInMilliseconds);
-		
 		__inline void removeBuff(const size_t pos);
 		
 		//Returns true if a buff was deleted
 		bool checkBuffs();
 		
+		const DWORD getStatusAmount(BYTE bitFromVisuality);
 		const DWORD getVisuality(BYTE );
 };
 

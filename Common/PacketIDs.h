@@ -105,7 +105,8 @@ class PacketID {
 						const static WORD LOCAL_CHAT = 0x783;
 						const static WORD SHOUT_CHAT = 0x785;
 						const static WORD REMOVE_VISIBLE_PLAYER = 0x794;
-						const static WORD MOVEMENT = 0x79A;
+						const static WORD INIT_BASIC_ATTACK = 0x798;
+						const static WORD MOVEMENT_PLAYER = 0x79A;
 						const static WORD TELEGATE = 0x7A8;
 						const static WORD EQUIPMENT_CHANGE = 0x7A5;
 						const static WORD PICK_DROP = 0x7A7;
@@ -139,7 +140,9 @@ class PacketID {
 						const static WORD SPAWN_PLAYER = 0x0793;
 						const static WORD REMOVE_VISIBLE_PLAYER = 0x794;
 						const static WORD MOVEMENT_MONSTER = 0x797;
-						const static WORD MOVEMENT = 0x79A;
+						const static WORD INIT_BASIC_ATTACK = 0x798;
+						const static WORD BASIC_ATTACK = 0x799;
+						const static WORD MOVEMENT_PLAYER = 0x79A;
 						const static WORD SHOW_MONSTER_HP = 0x79F;
 						const static WORD TELEGATE = 0x7A8;
 						const static WORD EQUIPMENT_CHANGE = 0x7A5;

@@ -71,7 +71,7 @@ class NPC : public Entity {
 		
 		__inline WORD getAIVar(BYTE idx) { return this->aiVar[idx % MAX_AIVAR]; }
 		__inline void setAIVar(BYTE idx, int val) {
-			this->aiVar[idx] = (static_cast<WORD>(val) < 0x00) ? 0x00 : val;
+			this->aiVar[idx] = (val < 0x00) ? 0x00 : val;
 			if(aiVar[idx] > 500)
 				aiVar[idx] = 500;
 		}

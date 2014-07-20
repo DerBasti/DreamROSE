@@ -85,6 +85,7 @@ void WorldServer::runMap(Map* curMap) {
 	if(!curMap)
 		return;
 	Player* curPlayer = nullptr;
+	NPC* curNPC = nullptr;
 	for(unsigned int i=0;i<curMap->getSectorCount();i++) {
 		MapSector* curSector = curMap->getSector(i);
 		LinkedList<Entity*>::Node* entityNode = curSector->getFirstEntity();
@@ -109,16 +110,27 @@ void WorldServer::runMap(Map* curMap) {
 				break;
 				case Entity::TYPE_NPC:
 				case Entity::TYPE_MONSTER:
-					if (isIdling && curEntity->getTarget() == NULL) {
+					curNPC = dynamic_cast<NPC*>(curEntity);
+					if (isIdling) {
 						//In case the NPC/Monster is idling
 						//run AI with state "IDLE"
-						NPC* curNPC = dynamic_cast<NPC*>(curEntity);
-						AIService::run(curNPC, AIP::ON_IDLE);
+						if(curEntity->getTarget() == NULL) {
+							AIService::run(curNPC, AIP::ON_IDLE);
+						}
+					} else {
+						//In case it's walking and has no target
+						//i.e. walking around/away
+						if(curEntity->getTarget() == NULL)
+							curNPC->setTimeAICheck();
 					}
 				break;
 			}
+			//In case we're idling and have a target --> attack!
+			if(isIdling && curEntity->getTarget() != nullptr)
+				curEntity->attackRoutine();
 		}
 	}
+	this->checkSpawns(curMap);
 }
 
 bool WorldServer::checkSpawns(Map* currentMap) {
@@ -411,6 +423,8 @@ DWORD WorldServer::buildItemVisually(const Item& item) {
 WORD WorldServer::buildItemHead(const Item& item) {
 	if (item.amount == 0x00)
 		return 0;
+	if(item.type == ItemType::MONEY) //static
+		return 0xCCDF; //0xCCC0 | ItemType::MONEY
 	return static_cast<WORD>(((item.id & 0x7FFF) << 5) | (item.type & 0x1F));
 }
 
@@ -418,6 +432,11 @@ DWORD WorldServer::buildItemData(const Item& item) {
 	if ((item.type >= ItemType::CONSUMABLES && item.type <= ItemType::QUEST) || item.type == ItemType::MONEY || item.amount == 0) {
 		return item.amount;
 	}
+
+	//Static
+	if(item.type == ItemType::MONEY)
+		return (0x5F900000);
+
 	DWORD refinePart = (item.refine >> 4) << 28;
 	DWORD appraisePart = item.isAppraised << 27;
 	DWORD socketPart = item.isSocketed << 26;
@@ -431,7 +450,51 @@ DWORD WorldServer::buildItemData(const Item& item) {
 	return (refinePart | appraisePart | socketPart | lifeSpanPart | durabilityPart | stats | gem);
 }
 
-STBEntry& WorldServer::getEquipmentEntry(BYTE itemType, DWORD itemId) {
+const WORD WorldServer::getQuality(const BYTE itemType, const DWORD itemId) {
+	try {
+		STBEntry& entry = this->getEquipmentEntry(itemType, itemId);
+		WORD result = entry.getColumn<WORD>(0x08);
+		return result;
+	} catch(std::exception& e) {
+		std::cout << e.what() << "\n";
+	}
+	return 0x00;
+}
+
+const WORD WorldServer::getSubType(const BYTE itemType, const DWORD itemId) {
+	try {
+		STBEntry& entry = this->getEquipmentEntry( itemType, itemId );
+		WORD atkPower = entry.getColumn<WORD>(0x04);
+		return atkPower;
+	} catch(std::exception& ex) {
+		std::cout << ex.what() << "\n";
+	}
+	return 0x00;
+}
+
+const WORD WorldServer::getWeaponAttackpower(const DWORD itemId) {
+	try {
+		STBEntry& entry = this->getEquipmentEntry( ItemType::WEAPON, itemId );
+		WORD atkPower = entry.getColumn<WORD>(0x23);
+		return atkPower;
+	} catch(std::exception& ex) {
+		std::cout << ex.what() << "\n";
+	}
+	return 0x00;
+}
+
+const int WorldServer::getWeaponAttackspeed(const DWORD itemId) {
+	try {
+		STBEntry& entry = this->getEquipmentEntry( ItemType::WEAPON, itemId );
+		int atkSpeed = entry.getColumn<int>(0x24);
+		return atkSpeed;
+	} catch(std::exception& ex) {
+		std::cout << ex.what() << "\n";
+	}
+	return 0x00;
+}
+
+STBEntry& WorldServer::getEquipmentEntry(const BYTE itemType, const DWORD itemId) {
 	if(itemType == 0x00 || itemType >= ItemType::PAT)
 		throw TraceableExceptionARGS("Invalid ItemType: %i", itemType);
 	STBFile *eqFile = this->equipmentFile[itemType];
@@ -470,7 +533,9 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 	std::string curValue = msg.substr(0, (msg.find(" ") == -1 ? msg.length() : msg.find(" ")));
 
 #define WANTED_COMMAND(c2) (_stricmp(command.c_str(), c2)==0)
-#define SPLIT() msg = msg.substr(msg.find(" ")+1); curValue = msg.substr(0, (msg.find(" ") == -1 ? msg.length() : msg.find(" ")));
+#define SPLIT() \
+	msg = (msg.find(" ") == -1 ? "" : msg.substr(msg.find(" ")+1)); \
+	curValue = msg.length() > 0 ? msg.substr(0, msg.find(" ")) : msg;
 
 	SPLIT();
 	if (WANTED_COMMAND("mon")) {
@@ -487,6 +552,31 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 		float coordY = atoi(curValue.c_str()) * 100.0f;
 
 		gm->pakTelegate(mapId, Position(coordX, coordY));
+	}
+	else if(WANTED_COMMAND("heal")) {
+		gm->setCurrentHP(gm->getMaxHP());
+	} else if(WANTED_COMMAND("equip")) {
+		WORD itemType = atoi(curValue.c_str()); 
+		if(itemType == 0 && curValue.length() > 0) {
+			for(unsigned int k=ItemType::FACE;k<=ItemType::SHIELD;k++) {
+				STBFile* file = mainServer->getEquipmentSTB(k);
+				for(unsigned int m=0;m<file->getRowCount();m++) {
+					STBEntry& entry = file->getRow(m);
+					std::string name = entry.getColumn(0x00);
+					if(name.find(curValue.c_str()) != -1) {
+						Item item;
+						item.amount = 1; item.durability = 120;
+						item.id = m; item.type = k;
+						item.lifespan = 1000;
+						item.refine = 144;
+						gm->setInventoryItem(k, item);
+
+						return;
+					}
+				}
+			}
+		}
+		SPLIT();
 	}
 	else if(WANTED_COMMAND("drop")) {
 		WORD itemType = atoi(curValue.c_str()); SPLIT();

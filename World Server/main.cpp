@@ -2,12 +2,15 @@
 #include "Entity\Monster.h"
 #include "FileTypes\ZON.h"
 
-int main() { 
+
+int main() {
+
 	MYSQL mysql;
 	WorldServer server(29200, &mysql);
 	//server.dumpTelegates("D:\\Games\\iROSE Online Server\\telegates.log");
 	server.loadEncryption();
 	server.start();
+	
 	/*
 	std::cout << "Input allowed now!\n";
 	std::string input = "";

@@ -33,8 +33,16 @@ void Entity::setPositionDest(const Position& newPos) {
 }
 
 void Entity::setTarget(Entity* target) { 
-	if(target)
-		this->setPositionDest(target->getPositionCurrent());
+	if(target) {
+		Packet pak( PacketID::World::Response::INIT_BASIC_ATTACK);
+		pak.addWord( this->getClientId() );
+		pak.addWord( target->getClientId() );
+		pak.addWord ( this->getMovementSpeed() );
+		pak.addFloat( target->getCurrentX() );
+		pak.addFloat( target->getCurrentY() );
+
+		this->sendToVisible(pak);
+	}
 	this->combat.setTarget(target); 
 }
 
@@ -59,11 +67,12 @@ bool Entity::movementRoutine() {
 			return false;
 		}
 	} else { //We have a target, let's find out if we're in attack range
-		this->position.destination = this->getTarget()->getPositionCurrent();
-		float distToTarget = this->position.current.distanceTo(this->position.destination);
+		float distToTarget = this->position.current.distanceTo(this->getTarget()->getPositionCurrent());
 		if(distToTarget <= this->getAttackRange()) {
 			this->position.lastCheckTime = clock();
 			return false;
+		} else {
+			this->position.destination = this->getTarget()->getPositionCurrent();
 		}
 	}
 	//Calculate the difference between each point (x and y)
@@ -115,6 +124,8 @@ bool Entity::attackEnemy() {
 	if(damage >= enemy->getCurrentHP()) {
 		enemy->stats.curHP = 0x00;
 		flag |= 0x8000;
+
+		this->setTarget(nullptr);
 	} else {
 		enemy->stats.curHP -= damage;
 	}
@@ -190,8 +201,10 @@ void Entity::addSectorVisually(MapSector* newSector) {
 	while(pNode) {
 		Entity* entity = pNode->getValue();
 		pNode = pNode->getNextNode();
-		if(!entity || !entity->isIngame())
+		if(!entity || !entity->isIngame() || entity == this)
 			continue;
+
+		//Two-way removal
 		this->addEntityVisually(entity);
 		entity->addEntityVisually(this);
 	}
@@ -202,7 +215,7 @@ void Entity::removeSectorVisually(MapSector* toRemove) {
 	while(pNode) {
 		Entity* entity = pNode->getValue();
 		pNode = pNode->getNextNode();
-		if(!entity || !entity->isIngame())
+		if(!entity || !entity->isIngame() || entity == this)
 			continue;
 
 		//Two-way removal

@@ -27,6 +27,7 @@ void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId
 	this->updateStats();
 
 	if(this->data != nullptr && this->ai != nullptr) {
+		this->stats.maxHP = this->stats.curHP = this->data->getHPPerLevel() * this->data->getLevel();
 		Map* map = mainServer->getMap(this->getMapId());
 		MapSector* sector = map->getSector(this->getPositionCurrent());
 		this->setSector(sector);

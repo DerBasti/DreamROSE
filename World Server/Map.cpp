@@ -57,7 +57,7 @@ LinkedList<Entity*>::Node* MapSector::getFirstPlayer() {
 }
 		
 LinkedList<Entity*>::Node* MapSector::getNextPlayer(LinkedList<Entity*>::Node* curNode) {
-	return this->getNext((curNode == nullptr : nullptr : curNode->getNextNode()), Entity::TYPE_PLAYER);
+	return this->getNext((curNode == nullptr ? nullptr : curNode->getNextNode()), Entity::TYPE_PLAYER);
 }
 	
 LinkedList<Entity*>::Node* MapSector::getFirstNPC() {
@@ -65,7 +65,7 @@ LinkedList<Entity*>::Node* MapSector::getFirstNPC() {
 }
 
 LinkedList<Entity*>::Node* MapSector::getNextNPC(LinkedList<Entity*>::Node* curNode) {
-	return this->getNext((curNode == nullptr : nullptr : curNode->getNextNode()), Entity::TYPE_NPC);
+	return this->getNext((curNode == nullptr ? nullptr : curNode->getNextNode()), Entity::TYPE_NPC);
 }
 #endif
 

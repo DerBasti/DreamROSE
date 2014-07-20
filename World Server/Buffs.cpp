@@ -98,6 +98,14 @@ bool Buffs::checkBuffs() {
 	return result;
 }
 
+const DWORD Buffs::getStatusAmount(BYTE visualityBit) {
+	for(unsigned int i=0;i<this->buffs.size();i++) {
+		if(this->buffs.getValue(i).visuality == visualityBit)
+			return this->buffs.getValue(i).amount;
+	}
+	return 0x00;
+}
+
 const DWORD Buffs::getVisuality(BYTE type) {
 	DWORD result = 0x00;
 	//Iterate through all buff-bits and bit-shift it to get a 

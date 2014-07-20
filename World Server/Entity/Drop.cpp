@@ -20,7 +20,6 @@ void Drop::construct(Entity* giver, bool isPublicDomain) {
 
 Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {
 	this->item.type = ItemType::MONEY;
-	this->item.id = 0x00;
 	this->item.amount = zulyAmount;
 	
 	this->construct(dropGiver, isPublicDomain);

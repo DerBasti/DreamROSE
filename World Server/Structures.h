@@ -257,6 +257,27 @@ class ItemType {
 	
 };
 
+class WeaponType {
+	private:
+		WeaponType() {}
+		~WeaponType() {}
+	public:
+		const static WORD MELEE_ONE_HANDED_SWORD = 211;
+		const static WORD MELEE_ONE_HANDED_BLUNT = 212;
+		const static WORD MELEE_TWO_HANDED_SWORD = 221;
+		const static WORD MELEE_TWO_HANDED_SPEAR = 222;
+		const static WORD MELEE_TWO_HANDED_AXE = 223;
+		const static WORD RANGE_BOW = 231;
+		const static WORD RANGE_GUN = 232;
+		const static WORD RANGE_LAUNCHER = 233;
+		const static WORD MAGIC_WAND = 241;
+		const static WORD MAGIC_STAFF = 242;
+		const static WORD MELEE_KATAR = 251;
+		const static WORD MELEE_DOUBLE_SWORD = 252;
+		const static WORD RANGE_DUAL_GUN = 253;
+		const static WORD RANGE_CROSSBOW = 271;
+};
+
 struct Item {
 	WORD type;
 	DWORD id;
@@ -278,6 +299,13 @@ struct Item {
 		this->isAppraised = this->isSocketed = false;
 		this->amount = 0x00;
 		this->durability = 0x00;
+	}
+	bool isValid() {
+		if((this->type > 0 && this->type < ItemType::PAT) || this->type == ItemType::MONEY) {
+			if(this->id > 0 && this->amount>0)
+				return true;
+		}
+		return false;
 	}
 };
 

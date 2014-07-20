@@ -89,6 +89,9 @@ class Entity {
 		
 		__inline virtual WORD getCurrentHP() const { return this->stats.getCurrentHP(); }
 		__inline virtual WORD getCurrentMP() const { return this->stats.getCurrentMP(); }
+		__inline virtual void setCurrentHP(DWORD newHP) { this->stats.curHP = static_cast<WORD>(std::min(newHP, this->stats.getMaxHP())); }
+		__inline virtual void setCurrentMP(DWORD newMP) { this->stats.curMP = static_cast<WORD>(std::min(newMP, this->stats.getMaxMP())); }
+
 		__inline virtual DWORD getMaxHP() const { return this->stats.getMaxHP(); }
 		__inline virtual DWORD getMaxMP() const { return this->stats.getMaxMP(); }
 		
@@ -164,4 +167,5 @@ class Entity {
 		bool sendToVisible(class Packet& pak);
 		bool sendToMap(class Packet& pak);
 };
+
 #endif //__ROSE_ENTITY__

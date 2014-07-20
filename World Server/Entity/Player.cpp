@@ -121,7 +121,86 @@ bool Player::pakRemoveEntityVisually(Entity* entity) {
 
 
 void Player::updateAttackpower() {
-	this->stats.attackPower = 15;
+	WORD totalAttackpower = 0x00;
+	WORD weaponAtkPower = 0x00;
+	WORD weaponType = 0x00;
+	if(this->inventory[Inventory::WEAPON].isValid()) {
+		weaponAtkPower += mainServer->getWeaponAttackpower( this->inventory[Inventory::WEAPON].id );
+		weaponType = mainServer->getSubType( ItemType::WEAPON, this->inventory[Inventory::WEAPON].id );
+	} else {
+		WORD dexPart = (this->attributes.getDexterityTotal() * 0.3);
+		WORD strPart = (this->attributes.getStrengthTotal() * 0.5);
+		WORD lvlPart = (this->charInfo.level * 0.2);
+
+		totalAttackpower = dexPart + strPart + lvlPart;
+	}
+	switch( weaponType ) {
+		case WeaponType::MELEE_ONE_HANDED_SWORD:
+		case WeaponType::MELEE_ONE_HANDED_BLUNT:
+		case WeaponType::MELEE_TWO_HANDED_AXE:
+		case WeaponType::MELEE_TWO_HANDED_SPEAR:
+		case WeaponType::MELEE_TWO_HANDED_SWORD:
+			totalAttackpower += (this->attributes.getStrengthTotal() * 0.75) + 
+				(this->getLevel() * 0.2) +
+				((this->attributes.getStrengthTotal() * 0.05) + 29) *
+				weaponAtkPower / 30.0;
+		break;
+		case WeaponType::MELEE_DOUBLE_SWORD:
+			totalAttackpower += this->getLevel() * 0.2 + 
+				this->attributes.getStrengthTotal() * 0.63 +
+				this->attributes.getDexterityTotal() * 0.45 + 
+				(this->attributes.getDexterityTotal() * 0.05 + 25) * weaponAtkPower / 26.0;
+		break;
+		case WeaponType::MELEE_KATAR:
+			totalAttackpower += this->getLevel() * 0.2 +
+				this->attributes.getStrengthTotal() * 0.42 +
+				this->attributes.getDexterityTotal() * 0.55 +
+				(this->attributes.getDexterityTotal() * 0.05 + 20) * weaponAtkPower / 21;
+		break;
+		case WeaponType::RANGE_BOW:
+			totalAttackpower += ((this->attributes.getStrengthTotal() + this->getLevel()) * 0.1) +
+				((this->attributes.getDexterityTotal() * 0.04) + (this->attributes.getSensibilityTotal() * 0.03 + 29)) * weaponAtkPower / 30.0 +
+				(this->attributes.getDexterityTotal() * 0.52) + (mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::ARROWS].id) * 0.5);
+		break;
+		case WeaponType::RANGE_GUN:
+		case WeaponType::RANGE_DUAL_GUN:
+			totalAttackpower += (this->attributes.getSensibilityTotal() * 0.47) +
+				mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::BULLETS].id) * 0.8 +
+				this->getLevel() * 0.1 +
+				this->attributes.getDexterityTotal() * 0.3 +
+				(this->attributes.getConcentrationTotal() * 0.04 + this->attributes.getSensibilityTotal() * 0.05 + 29) * weaponAtkPower / 30.0;
+
+		break;
+		case WeaponType::RANGE_LAUNCHER:
+			totalAttackpower += (this->attributes.getConcentrationTotal() * 0.47) +
+				mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::CANNONSHELLS].id) + 
+				(this->attributes.getStrengthTotal() * 0.32) + 
+				(this->attributes.getConcentrationTotal() * 0.45) +
+				(this->attributes.getConcentrationTotal() * 0.04 +
+				this->attributes.getSensibilityTotal() * 0.05 + 29) * weaponAtkPower / 30.0;
+		break;
+		case WeaponType::RANGE_CROSSBOW:
+			totalAttackpower += (this->attributes.getStrengthTotal() + this->getLevel()) * 0.1 +
+				this->attributes.getDexterityTotal() * 0.04 +
+				(this->attributes.getSensibilityTotal() * 0.03 + 29) * weaponAtkPower / 30 +
+				this->attributes.getDexterityTotal() * 0.52 +
+				mainServer->getQuality( ItemType::OTHER, this->inventory[Inventory::ARROWS].id ) * 0.5;
+		break;
+		case WeaponType::MAGIC_WAND:
+			totalAttackpower += this->getLevel() * 0.2 +
+				this->attributes.getIntelligenceTotal() * 0.6 +
+				((this->attributes.getSensibilityTotal() * 0.1 + 26) * weaponAtkPower / 27);
+		break;
+		case WeaponType::MAGIC_STAFF:
+			totalAttackpower += this->getLevel() * 0.2 +
+				(this->attributes.getIntelligenceTotal() + this->attributes.getStrengthTotal()) * 0.4 +
+				(this->attributes.getIntelligenceTotal() * 0.05 + 29) * weaponAtkPower / 30.0;
+		break;
+	}
+	totalAttackpower += this->getBuffStatus( Buffs::Visuality::ATTACKPOWER_UP );
+	totalAttackpower -= this->getBuffStatus( Buffs::Visuality::ATTACKPOWER_DOWN );
+
+	this->stats.attackPower = totalAttackpower;
 }
 
 void Player::updateDefense() {
@@ -133,9 +212,30 @@ void Player::updateMagicDefense() {
 }
 
 void Player::updateHitrate() {
-	this->stats.hitRate = 100;
+	WORD newHitrate = 0x00;
+	if(this->isWeaponEquipped()) {
+		WORD statPart = static_cast<WORD>((this->attributes.getConcentrationTotal()+10)*0.8f);
+		WORD qualityPart = mainServer->getQuality(ItemType::WEAPON, this->inventory[Inventory::WEAPON].id) * 0.6;
+		WORD durabilityPart = this->inventory[Inventory::WEAPON].durability * 0.8;
 
+		newHitrate = statPart + qualityPart + durabilityPart;
+	} else {
+		newHitrate = ((this->attributes.getConcentrationTotal() + 10)*0.5) + 15;
+	}
+	for(unsigned int i=Inventory::FACE;i<Inventory::OTHER;i++) {
+		if(this->inventory[i].isValid()) {
+			//TODO: CLOTHES STATS
+		}
+	}
+	for(unsigned int i=0;i<30;i++) {
+		//TODO: SKILL MAY INCREASE STAT
+	}
+	newHitrate += this->getBuffStatus( Buffs::Visuality::HITRATE_UP );
+	newHitrate -= this->getBuffStatus( Buffs::Visuality::HITRATE_DOWN );
+
+	this->stats.hitRate = newHitrate;
 }
+
 void Player::updateDodgerate() {
 	this->stats.dodgeRate = 100;
 }
@@ -360,7 +460,7 @@ bool Player::loadInfos() {
 	return true;
 }
 
-bool Player::pakUpdateInventory( BYTE slotAmount, WORD* slotIds ) {
+bool Player::pakUpdateInventory( const BYTE slotAmount, const WORD* slotIds ) {
 	Packet pak(PacketID::World::Response::UPDATE_INVENTORY);
 	pak.addByte( slotAmount );
 	for(unsigned int i=0;i<slotAmount;i++) {
@@ -428,14 +528,6 @@ bool Player::pakAssignID(){
 	if(!this->sendData(pak))
 		return false;
 
-	pak.newPacket(PacketID::World::Response::SPAWN_ON_MAP);
-	pak.addWord(0x05);
-
-	//Friendly map
-	pak.addDWord(1085514317);
-	if(!this->sendData(pak))
-		return false;
-
 	pak.newPacket(PacketID::World::Response::ASSIGN_ID);
 	pak.addWord(this->entityInfo.id);
 	pak.addWord(this->stats.curHP);
@@ -452,7 +544,7 @@ bool Player::pakAssignID(){
 	pak.addDWord(0x35323232);
 
 	//PVP-MAP (0 = false, 1 = true)
-	pak.addWord(0x00);
+	pak.addDWord(0x00);
 
 	//MAP TIME
 	pak.addDWord(mainServer->getMapTime(this->getMapId()));
@@ -654,21 +746,9 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 		pak.addWord( EntitySpawnsVisually::IS_STANDING );
 	}
 	pak.addWord( npc->getTarget() != nullptr ? npc->getTarget()->getClientId() : 0x00 );
-	switch(npc->getStance().asBYTE()) {
-		case Stance::WALKING:
-			pak.addByte( EntitySpawnsVisually::STANCE_WALKING );
-		break;
-		case Stance::RUNNING:
-			pak.addByte( EntitySpawnsVisually::STANCE_RUNNING );
-		break;
-		case Stance::DRIVING:
-			pak.addByte( EntitySpawnsVisually::STANCE_DRIVING );
-		break;
-		default:
-			pak.addByte( EntitySpawnsVisually::STANCE_HITCHHIKER );
-	}
+	pak.addByte( npc->getStance().asBYTE() );
 	pak.addDWord( npc->getCurrentHP() );
-	pak.addDWord( 0x00 ); //FRIENDLY
+	pak.addDWord(0x01);
 	pak.addDWord( npc->getBuffsVisuality() );
 	pak.addWord(npc->getTypeId());
 	if(npc->hasDialogId())
@@ -745,7 +825,7 @@ bool Player::pakSpawnDrop( Drop* drop ) {
 	pak.addWord(drop->getClientId());
 	pak.addDWord( mainServer->buildItemData(drop->getItem()) );
 	pak.addWord( (drop->getOwner() == nullptr ? 0x00 : drop->getOwner()->getClientId()) ); //OwnerClientId (?)
-	return this->sendData(pak);
+	return this->sendData(pak); 
 }
 
 bool Player::pakEquipmentChange() {
@@ -858,6 +938,9 @@ bool Player::handlePacket() {
 	switch (this->packet.getCommand()) {
 		case PacketID::World::Request::PING:
 			return true;
+
+		case PacketID::World::Request::INIT_BASIC_ATTACK:
+			return this->pakInitBasicAttack();
 
 		case PacketID::World::Request::CHANGE_STANCE:
 			return this->pakChangeStance();

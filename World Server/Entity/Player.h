@@ -32,6 +32,9 @@ class Player : public Entity, public ClientSocket {
 			Attributes() {
 				this->concentration = this->dexterity = this->intelligence = this->strength = 0x0F;
 				this->charm = this->sensibility = 0x0A;
+
+				this->charmEx = this->concentrationEx = this->dexterityEx = 
+				this->intelligenceEx = this->sensibilityEx = this->strengthEx = 0x00;
 			}
 
 			__inline WORD getStrength() const { return this->strength; }
@@ -108,7 +111,7 @@ class Player : public Entity, public ClientSocket {
 		bool pakSpawnMonster(class Monster* monster);
 		bool pakSpawnDrop(class Drop* drop);
 		bool pakRemoveEntityVisually(Entity* entity);
-		bool pakUpdateInventory( BYTE slotAmount, WORD* slotIds );
+		bool pakUpdateInventory( const BYTE slotAmount, const WORD* slotIds );
 
 		//Packets which are requested to be handled
 		bool pakPing();
@@ -153,6 +156,8 @@ class Player : public Entity, public ClientSocket {
 		void updateCritrate();
 		void updateMovementSpeed();
 
+		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
+
 		bool isAllied(Entity* entity);
 		bool isAllied( class NPC* npc ) { return true; }
 		bool isAllied( class Monster* mon ) { return false; }
@@ -183,6 +188,8 @@ class Player : public Entity, public ClientSocket {
 		
 		__inline WORD getSensibility() const { return this->attributes.getSensibility(); }
 		__inline WORD getSensibilityTotal() { return this->attributes.getSensibilityTotal(); }
+
+		__inline void setInventoryItem(const WORD slot, const Item& item) { this->inventory[slot] = item; this->pakUpdateInventory(1, &slot); }
 
 		float getAttackRange();
 		__inline clock_t intervalBetweenAttacks() { return 60000 / this->getAttackSpeed(); }
