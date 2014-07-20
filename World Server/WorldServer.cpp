@@ -568,7 +568,7 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 						item.amount = 1; item.durability = 120;
 						item.id = m; item.type = k;
 						item.lifespan = 1000;
-						item.refine = 144;
+						item.refine = 0;
 						gm->setInventoryItem(k, item);
 
 						return;

@@ -296,7 +296,8 @@ struct Item {
 	void clear() {
 		this->type = this->lifespan = this->gem = this->stats = this->refine = 0x00;
 		this->id = 0x00;
-		this->isAppraised = this->isSocketed = false;
+		this->isAppraised = true;
+		this->isSocketed = false;
 		this->amount = 0x00;
 		this->durability = 0x00;
 	}
