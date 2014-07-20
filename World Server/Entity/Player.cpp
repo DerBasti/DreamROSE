@@ -22,7 +22,6 @@ Player::~Player() {
 
 void Player::setPositionCurrent(const Position& newPos) {
 	this->position.current = newPos;
-	this->setPositionVisually(newPos);
 }
 
 void Player::setPositionDest(const Position& newPos) {
@@ -46,7 +45,7 @@ bool Player::setPositionVisually(const Position& newPos) {
 	return this->sendToVisible(pak);
 }
 
-const WORD Player::findSlot( const Item& item ) {
+const BYTE Player::findSlot( const Item& item ) {
 	BYTE inventoryTab = 0x00;
 	switch(item.type) {
 		case ItemType::CONSUMABLES:
@@ -63,7 +62,7 @@ const WORD Player::findSlot( const Item& item ) {
 			if(item.type == 0x00 || item.type >= ItemType::PAT)
 				return std::numeric_limits<WORD>::max();
 	}	
-	WORD slotId = 12 + (Inventory::TAB_SIZE * inventoryTab);
+	BYTE slotId = 12 + (Inventory::TAB_SIZE * inventoryTab);
 	if(inventoryTab == 0x01 || inventoryTab == 0x02) {
 		DWORD totalCount = 0x00;
 		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
@@ -81,7 +80,7 @@ const WORD Player::findSlot( const Item& item ) {
 			slotId++;
 		}
 	}
-	return std::numeric_limits<WORD>::max();
+	return std::numeric_limits<BYTE>::max();
 }
 
 void Player::addEntityVisually(Entity* entity) {
@@ -460,11 +459,11 @@ bool Player::loadInfos() {
 	return true;
 }
 
-bool Player::pakUpdateInventory( const BYTE slotAmount, const WORD* slotIds ) {
+bool Player::pakUpdateInventory( const BYTE slotAmount, const BYTE* slotIds ) {
 	Packet pak(PacketID::World::Response::UPDATE_INVENTORY);
 	pak.addByte( slotAmount );
 	for(unsigned int i=0;i<slotAmount;i++) {
-		pak.addWord( slotIds[i] );
+		pak.addByte( slotIds[i] );
 		pak.addWord( mainServer->buildItemHead( this->inventory[ slotIds[i] ] ) );
 		pak.addDWord( mainServer->buildItemData( this->inventory[ slotIds[i] ] ) );
 	}
@@ -829,12 +828,12 @@ bool Player::pakSpawnDrop( Drop* drop ) {
 }
 
 bool Player::pakEquipmentChange() {
-	WORD sourceSlot = this->packet.getWord(0x00);
-	WORD destSlot = this->packet.getWord(0x02);
+	BYTE sourceSlot = static_cast<BYTE>(this->packet.getWord(0x00));
+	BYTE destSlot = static_cast<BYTE>(this->packet.getWord(0x02));
 	if(destSlot == 0x00) {
 		destSlot = this->findSlot( this->inventory[sourceSlot] );
 	}
-	if(destSlot == std::numeric_limits<WORD>::max())
+	if(destSlot == std::numeric_limits<BYTE>::max())
 		return true;
 	
 	Packet pak( PacketID::World::Response::EQUIPMENT_CHANGE);

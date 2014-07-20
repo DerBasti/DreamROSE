@@ -71,8 +71,8 @@ bool ZON::loadEventInfos(CMyFile& file) {
 	for (unsigned int i = 0; i < entryCount; i++) {
 		EventInfo info;
 		info.x = file.read<float>() + 520000.0f;
+		info.z = file.read<float>() + 520000.0f;
 		info.y = file.read<float>() + 520000.0f;
-		info.z = file.read<float>();
 		char buf[0x100] = { 0x00 };
 		file.readString(buf);
 

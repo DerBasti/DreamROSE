@@ -608,6 +608,9 @@ void WorldServer::dumpTelegates(const char* filePath) {
 	CMyFile file(filePath, "a+");
 	for(unsigned int i=0;i<this->teleGates.size();i++) {
 		Telegate& gate = this->teleGates.getValue(i);
+		if(gate.getSourceMap() == std::numeric_limits<WORD>::max() ||
+			gate.getDestMap() == std::numeric_limits<WORD>::max())
+			continue;
 		file.putStringWithVarOnly("[Gate %i]: From[%i;%f,%f] - To[%i;%f,%f]\n", i, gate.getSourceMap(), gate.getSourcePosition().x, gate.getSourcePosition().y, gate.getDestMap(), gate.getDestPosition().x, gate.getDestPosition().y);
 	}
 }

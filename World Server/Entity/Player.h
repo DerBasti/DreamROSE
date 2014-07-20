@@ -111,7 +111,7 @@ class Player : public Entity, public ClientSocket {
 		bool pakSpawnMonster(class Monster* monster);
 		bool pakSpawnDrop(class Drop* drop);
 		bool pakRemoveEntityVisually(Entity* entity);
-		bool pakUpdateInventory( const BYTE slotAmount, const WORD* slotIds );
+		bool pakUpdateInventory( const BYTE slotAmount, const BYTE* slotIds );
 
 		//Packets which are requested to be handled
 		bool pakPing();
@@ -136,7 +136,7 @@ class Player : public Entity, public ClientSocket {
 		void removeEntityVisually(Entity* entity);
 		bool setPositionVisually(const Position& pos);
 
-		const WORD findSlot( const Item& item );
+		const BYTE findSlot( const Item& item );
 		const CharInfo::VisualTraits& getVisualTraits() const { return this->charInfo.visualTraits; }
 	public:
 		Player(SOCKET sock, ServerSocket* server);
@@ -189,7 +189,7 @@ class Player : public Entity, public ClientSocket {
 		__inline WORD getSensibility() const { return this->attributes.getSensibility(); }
 		__inline WORD getSensibilityTotal() { return this->attributes.getSensibilityTotal(); }
 
-		__inline void setInventoryItem(const WORD slot, const Item& item) { this->inventory[slot] = item; this->pakUpdateInventory(1, &slot); }
+		__inline void setInventoryItem(const BYTE slot, const Item& item) { this->inventory[slot] = item; this->pakUpdateInventory(1, &slot); }
 
 		float getAttackRange();
 		__inline clock_t intervalBetweenAttacks() { return 60000 / this->getAttackSpeed(); }
