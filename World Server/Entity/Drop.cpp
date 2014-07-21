@@ -19,6 +19,7 @@ void Drop::construct(Entity* giver, bool isPublicDomain) {
 }
 
 Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {
+	this->item.id = 0xCCCC;
 	this->item.type = ItemType::MONEY;
 	this->item.amount = zulyAmount;
 	
@@ -26,7 +27,9 @@ Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {
 }
 
 Drop::~Drop() {
-
+	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
+		this->removeSectorVisually(this->visibleSectors.getValue(i));
+	}
 }
 
 Drop::Drop(Entity* dropGiver, const Item& item, bool isPublicDomain) {

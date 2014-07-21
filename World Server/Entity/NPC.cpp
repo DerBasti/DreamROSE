@@ -111,17 +111,6 @@ bool NPC::setPositionVisually(const Position& pos) {
 	return true;
 }
 
-bool NPC::isAllied( Entity* entity ) {
-	Player* player = dynamic_cast<Player*>(entity);
-	if(player)
-		return this->isAllied(player);
-	NPC* npc = dynamic_cast<NPC*>(entity);
-	if(npc)
-		return this->isAllied(npc);
-	return this->isAllied(dynamic_cast<Monster*>(entity)); 
-}
-
-
 void NPC::setObjVar(BYTE idx, WORD newVal) { 
 	if(idx == 0x00) {
 		int before = this->getObjVar(idx);

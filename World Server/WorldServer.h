@@ -11,7 +11,6 @@
 #include "FileTypes\STB.h"
 #include "FileTypes\AIP.h"
 #include "Map.h"
-#include <list>
 
 extern class WorldServer* mainServer;
 
@@ -61,6 +60,10 @@ class WorldServer : public ServerSocket {
 				~ChatService() {}
 			public:
 				static bool sendMessage(Entity* entity, const char* msg);
+				static bool sendWhisper(Player* from, Player* to, const char *msg);
+
+				//for server internal stuff.
+				static bool sendWhisper(const char* from, Player* to, const char *msg, ...);
 				static bool sendShout(Entity* entity, const char* msg);
 				static bool sendAnnouncement(Entity* entity, const char* msg);
 		};

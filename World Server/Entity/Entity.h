@@ -68,6 +68,7 @@ class Entity {
 		virtual ~Entity();
 
 		virtual void updateAttackpower() {}
+		virtual void updateAttackSpeed() {}
 		virtual void updateDefense() {}
 		virtual void updateMagicDefense() {}
 		virtual void updateHitrate() {}
@@ -76,6 +77,7 @@ class Entity {
 		virtual void updateMovementSpeed() {}
 		virtual void updateStats() {
 			this->updateAttackpower();
+			this->updateAttackSpeed();
 			this->updateDefense();
 			this->updateMagicDefense();
 			this->updateHitrate();
@@ -102,6 +104,8 @@ class Entity {
 		virtual float getAttackRange() { return 100.0f; } //1meter
 		__inline virtual WORD getDefensePhysical() const { return this->stats.getDefensePhysical(); }
 		__inline virtual WORD getDefenseMagical() const { return this->stats.getDefenseMagical(); }
+		__inline virtual WORD getHitrate() const { return this->stats.getHitrate(); }
+		__inline virtual WORD getDodgerate() const { return this->stats.getDodgerate(); }
 		__inline virtual WORD getMovementSpeed() const { return this->stats.getMovementSpeed(); }
 		__inline virtual WORD getStamina() const { return this->stats.getStamina(); }
 
@@ -140,7 +144,11 @@ class Entity {
 
 		__inline virtual Entity* getTarget() const { return this->combat.getTarget(); }
 		virtual void setTarget(Entity* target);
-		
+
+		virtual void addDamage(Entity* enemy, const DWORD amount) { }
+		virtual void onTargetDead() { };
+		virtual void onDeath() { };
+
 		virtual bool isAllied( Entity* entity );
 		__inline virtual bool isAllied( class NPC* npc ) { return true; }
 		__inline virtual bool isAllied( class Monster* mon ) { return true; }
@@ -156,13 +164,13 @@ class Entity {
 		virtual void setPositionCurrent(const Position& newPos);
 		virtual void setPositionDest(const Position& newPos);
 
-		virtual bool checkForNewSector();
+		virtual MapSector* checkForNewSector();
 		virtual void checkVisuality();
 		virtual __inline DWORD getLastSectorCheckTime() const { return clock() - this->position.lastSectorCheckTime; }
 
 		bool movementRoutine();
 		bool attackRoutine();
-		__inline clock_t intervalBetweenAttacks() { return 1000; }
+		__inline clock_t intervalBetweenAttacks() { return 100000 / this->getAttackSpeed(); }
 
 		bool sendToVisible(class Packet& pak);
 		bool sendToMap(class Packet& pak);

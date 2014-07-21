@@ -103,10 +103,13 @@ class PacketID {
 						const static WORD SET_EMOTION = 0x781;
 						const static WORD CHANGE_STANCE = 0x782;
 						const static WORD LOCAL_CHAT = 0x783;
+						const static WORD WHISPER_CHAT = 0x784;
 						const static WORD SHOUT_CHAT = 0x785;
 						const static WORD REMOVE_VISIBLE_PLAYER = 0x794;
 						const static WORD INIT_BASIC_ATTACK = 0x798;
 						const static WORD MOVEMENT_PLAYER = 0x79A;
+						const static WORD UPDATE_EXPERIENCE = 0x79B;
+						const static WORD LEVEL_UP = 0x79E;
 						const static WORD TELEGATE = 0x7A8;
 						const static WORD EQUIPMENT_CHANGE = 0x7A5;
 						const static WORD PICK_DROP = 0x7A7;
@@ -134,6 +137,7 @@ class PacketID {
 						const static WORD SET_EMOTION = 0x781;
 						const static WORD CHANGE_STANCE = 0x782;
 						const static WORD LOCAL_CHAT = 0x783;
+						const static WORD WHISPER_CHAT = 0x784;
 						const static WORD SHOUT_CHAT = 0x785;
 						const static WORD SPAWN_NPC = 0x791;
 						const static WORD SPAWN_MONSTER = 0x792;
@@ -143,6 +147,8 @@ class PacketID {
 						const static WORD INIT_BASIC_ATTACK = 0x798;
 						const static WORD BASIC_ATTACK = 0x799;
 						const static WORD MOVEMENT_PLAYER = 0x79A;
+						const static WORD UPDATE_EXPERIENCE = 0x79B;
+						const static WORD LEVEL_UP = 0x79E;
 						const static WORD SHOW_MONSTER_HP = 0x79F;
 						const static WORD TELEGATE = 0x7A8;
 						const static WORD EQUIPMENT_CHANGE = 0x7A5;

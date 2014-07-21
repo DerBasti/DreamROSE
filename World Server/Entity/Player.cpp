@@ -18,6 +18,9 @@ Player::Player(SOCKET sock, ServerSocket* server){
 }
 
 Player::~Player() {
+	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
+		this->removeSectorVisually(this->visibleSectors.getValue(i));
+	}
 }
 
 void Player::setPositionCurrent(const Position& newPos) {
@@ -118,7 +121,15 @@ bool Player::pakRemoveEntityVisually(Entity* entity) {
 	return this->sendData(pak);
 }
 
-
+//Ex.: Atkpower + 10 - (Defense * 0.7)+5 = 
+//33 - 23 = ~10 Dmg Jelly Bean
+//43 - 34 = ~9 Dmg Mother Choropy
+//43 - 26 = ~17 Dmg
+//43 - 18 = ~25 Dmg
+//43 - 27 = ~16 Dmg (350 Hp ~ 20 hits)
+//43 - 33 = ~10 Dmg (360 Hp ~ 30 Hits)
+//52 - 33 = ~19 Dmg (360 hp ~ 15 hits)
+//170 - 93 = ~80 dmg (1188 hp ~ 15 hits)
 void Player::updateAttackpower() {
 	WORD totalAttackpower = 0x00;
 	WORD weaponAtkPower = 0x00;
@@ -202,6 +213,44 @@ void Player::updateAttackpower() {
 	this->stats.attackPower = totalAttackpower;
 }
 
+void Player::updateAttackSpeed() {
+	WORD atkSpeed = 115;
+	if(this->isWeaponEquipped()) {
+		//TODO
+		int speedType = mainServer->getWeaponAttackspeed(this->inventory[Inventory::WEAPON].id);
+		switch(speedType) {
+			case 6:
+				atkSpeed = 136;
+			break;
+			case 7:
+				atkSpeed = 125;
+			break;
+			case 8:
+				atkSpeed = 115;
+			break;
+			case 9:
+				atkSpeed = 107;
+			break;
+			case 10:
+				atkSpeed = 100;
+			break;
+			case 11:
+				atkSpeed = 93;
+			break;
+			case 12:
+				atkSpeed = 88;
+			break;
+			case 13:
+				atkSpeed = 83;
+			break;
+		}
+	}
+	atkSpeed += this->getBuffStatus( Buffs::Visuality::ATTACKSPEED_UP );
+	atkSpeed -= this->getBuffStatus( Buffs::Visuality::ATTACKSPEED_DOWN );
+
+	this->stats.attackSpeed = atkSpeed;
+}
+
 void Player::updateDefense() {
 	this->stats.defensePhysical = 100;
 }
@@ -221,7 +270,7 @@ void Player::updateHitrate() {
 	} else {
 		newHitrate = ((this->attributes.getConcentrationTotal() + 10)*0.5) + 15;
 	}
-	for(unsigned int i=Inventory::FACE;i<Inventory::OTHER;i++) {
+	for(unsigned int i=Inventory::FACE;i<=Inventory::SHIELD;i++) {
 		if(this->inventory[i].isValid()) {
 			//TODO: CLOTHES STATS
 		}
@@ -247,20 +296,70 @@ void Player::updateMovementSpeed() {
 }
 
 float Player::getAttackRange() {
-	if(this->inventory[ItemType::WEAPON].amount == 0x00)
+	if(this->inventory[Inventory::WEAPON].amount == 0x00)
 		return 100.0f;
-	STBEntry& weapon = mainServer->getEquipmentEntry(ItemType::WEAPON, this->inventory[ItemType::WEAPON].id);
+	STBEntry& weapon = mainServer->getEquipmentEntry(ItemType::WEAPON, this->inventory[Inventory::WEAPON].id);
 	return std::max(100.0f, weapon.getColumn<float>(EquipmentSTB::ATTACK_RANGE));
 }
 
-bool Player::isAllied( Entity* entity ) {
-	Player* player = dynamic_cast<Player*>(entity);
-	if(player)
-		return this->isAllied(player);
-	NPC* npc = dynamic_cast<NPC*>(entity);
-	if(npc)
-		return this->isAllied(npc);
-	return this->isAllied(dynamic_cast<Monster*>(entity)); 
+DWORD Player::getExperienceForLevelup() {
+	DWORD result = 0x00;
+	if(this->getLevel() <= 15) {
+		result = static_cast<DWORD>( (this->getLevel() + 10 ) * (this->getLevel() + 5) * (this->getLevel() + 3) * 0.7 );
+	} else if(this->getLevel() <= 50) {
+		result = static_cast<DWORD>( (this->getLevel() - 5 ) * (this->getLevel() + 2 ) * (this->getLevel() + 2 ) * 2.2 );
+	} else if(this->getLevel() <= 100 ) {
+		result = static_cast<DWORD>( (this->getLevel() - 38 ) * (this->getLevel() - 5 ) * (this->getLevel() + 2 ) * 9 );
+	} else if(this->getLevel() <= 139 ) {
+		result = static_cast<DWORD>( (this->getLevel() + 220 ) * (this->getLevel() + 34 ) * (this->getLevel() + 22 ) );
+	} else {
+		result = static_cast<DWORD>( (this->getLevel() - 126 ) * (this->getLevel() - 15 ) * (this->getLevel() + 7 ) * 41 ); 
+	}
+	return result;
+}
+
+void Player::addExperience(const DWORD additionalExp) {
+	this->charInfo.experience += additionalExp;
+
+	Packet pak(PacketID::World::Response::UPDATE_EXPERIENCE);
+	pak.addDWord( this->charInfo.experience );
+	pak.addWord( this->stats.stamina );
+	pak.addWord( 0x00 ); //DWORD Stamina?
+	if(!this->sendData(pak))
+		return;
+
+	//Level-Up occured
+	while(this->charInfo.experience >= this->getExperienceForLevelup()) {
+		this->charInfo.experience -= this->getExperienceForLevelup();
+		this->charInfo.level++;
+		this->charInfo.statPoints += (this->getLevel() * 10 / 8) + 10;
+		if(this->getLevel() == 10 || this->getLevel() == 14)
+			this->charInfo.skillPoints += 2;
+		else if(this->getLevel() == 18)
+			this->charInfo.skillPoints += 3;		
+		else if(this->getLevel() == 22)
+			this->charInfo.skillPoints += 4;
+		else if(this->getLevel() == 22 && ((this->getLevel() - 22) % 4) == 0)
+			this->charInfo.skillPoints += 5;
+		else if(this->getLevel() >= 100 && (this->getLevel() % 2) == 0)
+			this->charInfo.skillPoints += 5;
+
+		this->updateStats();
+
+		pak.newPacket( PacketID::World::Response::LEVEL_UP );
+		pak.addWord( this->getClientId() );
+		pak.addWord( this->getLevel() );
+		pak.addDWord( this->getExperience() );
+		pak.addWord( this->charInfo.statPoints );
+		pak.addWord( this->charInfo.skillPoints );
+		if(!this->sendData(pak))
+			return;
+
+		pak.newPacket( PacketID::World::Response::LEVEL_UP );
+		pak.addWord( this->getClientId() );
+		if(!this->sendToVisible( pak ))
+			return;
+	}
 }
 
 bool Player::pakExit() {
@@ -453,13 +552,14 @@ bool Player::loadInfos() {
 	this->basicSkills[idx].id = atoi(str.c_str());
 
 	this->entityInfo.mapId = 22;
+	this->updateStats();
 
 	mainServer->sqlFinishQuery();
 
 	return true;
 }
 
-bool Player::pakUpdateInventory( const BYTE slotAmount, const BYTE* slotIds ) {
+bool Player::pakUpdateInventoryVisually( const BYTE slotAmount, const BYTE* slotIds ) {
 	Packet pak(PacketID::World::Response::UPDATE_INVENTORY);
 	pak.addByte( slotAmount );
 	for(unsigned int i=0;i<slotAmount;i++) {
@@ -467,7 +567,26 @@ bool Player::pakUpdateInventory( const BYTE slotAmount, const BYTE* slotIds ) {
 		pak.addWord( mainServer->buildItemHead( this->inventory[ slotIds[i] ] ) );
 		pak.addDWord( mainServer->buildItemData( this->inventory[ slotIds[i] ] ) );
 	}
-	return this->sendData(pak);
+	bool result = this->sendData(pak);
+
+	for(unsigned int j=0;j<slotAmount;j++) {
+		if(slotIds[j] == 0 || slotIds[j] >= Inventory::SHIELD)
+			continue;
+		Packet pak( PacketID::World::Response::EQUIPMENT_CHANGE);
+		pak.addWord( this->getClientId() );
+		pak.addWord( slotIds[j] );
+		pak.addDWord( mainServer->buildItemVisually( this->inventory[slotIds[j]] ) );
+		pak.addWord( this->getMovementSpeed() );
+		this->sendToVisible( pak );
+	}
+	return result;
+}
+
+bool Player::equipItem(const Item& item) {
+	BYTE slotId = Inventory::fromItemType(item.type);
+	this->inventory[slotId] = item;
+	this->updateStats();
+	return this->pakUpdateInventoryVisually(1, &slotId); 
 }
 
 bool Player::pakPing() {
@@ -594,7 +713,7 @@ bool Player::pakSetEmotion() {
 }
 
 bool Player::pakMoveCharacter() {
-	this->combat.setTarget(nullptr);
+	this->combat.setTarget( mainServer->getEntity( this->packet.getWord(0x00) ) );
 	this->setPositionDest( Position(this->packet.getFloat(0x02), this->packet.getFloat(0x06)) );
 	return true;
 }
@@ -735,6 +854,22 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 	pak.addFloat(npc->getCurrentY());
 	pak.addFloat(npc->getDestinationX()); 
 	pak.addFloat(npc->getDestinationY()); 
+	pak.addByte(0x00);
+	pak.addWord(0x00);
+	pak.addWord(0x00);
+	pak.addWord(0x03E8);
+	pak.addWord(0x00);
+	pak.addWord(0x01);
+	pak.addWord(0x00);
+	pak.addDWord(0x00);
+	pak.addWord( npc->getTypeId() );
+	if(npc->hasDialogId())
+		pak.addWord( npc->getDialogId() );
+	else
+		pak.addWord( npc->getTypeId() - 900 );
+	pak.addFloat( npc->getDirection() );
+	pak.addWord(0x00);
+	/*
 	if(npc->getCurrentHP() == 0x00) {
 		pak.addWord( EntitySpawnsVisually::IS_DEAD );
 	} else if(npc->getPositionCurrent() != npc->getPositionDest()) {
@@ -745,9 +880,10 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 		pak.addWord( EntitySpawnsVisually::IS_STANDING );
 	}
 	pak.addWord( npc->getTarget() != nullptr ? npc->getTarget()->getClientId() : 0x00 );
-	pak.addByte( npc->getStance().asBYTE() );
+	pak.addByte( 0x00 ); //Stance
 	pak.addDWord( npc->getCurrentHP() );
-	pak.addDWord(0x01);
+	pak.addWord(0x01);
+	pak.addWord(0x00);
 	pak.addDWord( npc->getBuffsVisuality() );
 	pak.addWord(npc->getTypeId());
 	if(npc->hasDialogId())
@@ -758,7 +894,7 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 	pak.addFloat(npc->getDirection());
 	pak.addByte(0x00); //CLANFIELD OPEN/CLOSED FOR BURLAND (NPC: 1115)
 	pak.addByte(0x00);
-
+	*/
 	return this->sendData(pak);
 }
 
@@ -823,7 +959,7 @@ bool Player::pakSpawnDrop( Drop* drop ) {
 	pak.addDWord(drop->getItem().amount);
 	pak.addWord(drop->getClientId());
 	pak.addDWord( mainServer->buildItemData(drop->getItem()) );
-	pak.addWord( (drop->getOwner() == nullptr ? 0x00 : drop->getOwner()->getClientId()) ); //OwnerClientId (?)
+	//pak.addWord( (drop->getOwner() == nullptr ? 0x00 : drop->getOwner()->getClientId()) ); //OwnerClientId (?)
 	return this->sendData(pak); 
 }
 
@@ -835,26 +971,21 @@ bool Player::pakEquipmentChange() {
 	}
 	if(destSlot == std::numeric_limits<BYTE>::max())
 		return true;
-	
-	Packet pak( PacketID::World::Response::EQUIPMENT_CHANGE);
-	pak.addWord( this->getClientId() );
-	pak.addWord( sourceSlot );
-	pak.addDWord( mainServer->buildItemVisually( this->inventory[sourceSlot] ) );
-	pak.addWord( this->getMovementSpeed() );
 
 	Item tmpItem = this->inventory[sourceSlot];
 	this->inventory[sourceSlot] = this->inventory[destSlot];
 	this->inventory[destSlot] = tmpItem;
 
-	this->sendToVisible( pak );
-	
-	this->pakUpdateInventory( 0x01, &sourceSlot );
-	this->pakUpdateInventory( 0x01, &destSlot );
+	this->updateStats();
+
+	this->pakUpdateInventoryVisually( 0x01, &sourceSlot );
+	this->pakUpdateInventoryVisually( 0x01, &destSlot );
 	return true; //Safe?
 }
 
-bool Player::pakPickDrop() {
-	WORD dropId = this->packet.getWord(0x00);
+bool Player::pakPickDrop(const WORD dropId) {
+	this->setTarget(nullptr);
+
 	Entity *entityDrop = mainServer->getEntity(dropId);
 	if(entityDrop->getEntityType() != Entity::TYPE_DROP)
 		return false;
@@ -896,6 +1027,11 @@ bool Player::pakPickDrop() {
 	drop = nullptr;
 
 	return this->sendData(pak); 
+
+}
+
+bool Player::pakPickDrop() {
+	return this->pakPickDrop(this->packet.getWord(0x00));
 }
 
 bool Player::pakTelegate() {
@@ -948,7 +1084,7 @@ bool Player::handlePacket() {
 			return this->pakEquipmentChange();
 
 		case PacketID::World::Request::EXIT:
-			return false; //DISCONNECT
+			return this->pakExit(); //DISCONNECT
 
 		case PacketID::World::Request::GET_ID:
 			return this->pakAssignID();

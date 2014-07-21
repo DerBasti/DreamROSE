@@ -86,12 +86,13 @@ void WorldServer::runMap(Map* curMap) {
 		return;
 	Player* curPlayer = nullptr;
 	NPC* curNPC = nullptr;
+
+	LinkedList<Entity*> entityToRemove;
 	for(unsigned int i=0;i<curMap->getSectorCount();i++) {
 		MapSector* curSector = curMap->getSector(i);
 		LinkedList<Entity*>::Node* entityNode = curSector->getFirstEntity();
-		while (entityNode) {
+		for(;entityNode;entityNode = entityNode->getNextNode()) {
 			Entity* curEntity = entityNode->getValue();
-			entityNode = entityNode->getNextNode();
 			if (!curEntity || !curEntity->isIngame()) {
 				continue;
 			}
@@ -104,8 +105,8 @@ void WorldServer::runMap(Map* curMap) {
 					//Check whether we entered a new sector
 					//If so, change the visuality vector
 					/*bool newSector = */
- 					if(curEntity->checkForNewSector()) {
-						curPlayer->checkVisuality();
+ 					if(curEntity->checkForNewSector() != nullptr) {
+						entityToRemove.add(curEntity);
 					}
 				break;
 				case Entity::TYPE_NPC:
@@ -126,8 +127,20 @@ void WorldServer::runMap(Map* curMap) {
 				break;
 			}
 			//In case we're idling and have a target --> attack!
-			if(isIdling && curEntity->getTarget() != nullptr)
-				curEntity->attackRoutine();
+			if(isIdling && curEntity->getTarget() != nullptr) {
+				if(!curEntity->isAllied(curEntity->getTarget())) {
+					curEntity->attackRoutine();
+				}
+			}
+		}
+		while(entityToRemove.getNodeCount()>0) {
+			entityNode = entityToRemove.getHeadNode();
+			Entity* curEntity = entityNode->getValue();
+			curEntity->setSector( curMap->getSector( curEntity->getPositionCurrent() ) );
+			curEntity->checkVisuality();
+
+			entityNode = entityNode->getNextNode();
+			entityToRemove.removeAt(0x00);
 		}
 	}
 	this->checkSpawns(curMap);
@@ -186,58 +199,57 @@ bool WorldServer::loadSTBs() {
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::HEADGEAR] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_CAP.STB")).c_str());
+	this->equipmentFile[ItemType::HEADGEAR] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_CAP.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::ARMOR] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_BODY.STB")).c_str());
+	this->equipmentFile[ItemType::ARMOR] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_BODY.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::GLOVES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_ARMS.STB")).c_str());
+	this->equipmentFile[ItemType::GLOVES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_ARMS.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::BACK] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_BACK.STB")).c_str());
+	this->equipmentFile[ItemType::BACK] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_BACK.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::FACE] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_FACEITEM.STB")).c_str());
+	this->equipmentFile[ItemType::FACE] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_FACEITEM.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::SHOES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_FOOT.STB")).c_str());
+	this->equipmentFile[ItemType::SHOES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_FOOT.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::JEWELRY] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_JEMITEM.STB")).c_str());
+	this->equipmentFile[ItemType::JEWELS] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_JEMITEM.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::JEWELS] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_JEWEL.STB")).c_str());
+	this->equipmentFile[ItemType::JEWELRY] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_JEWEL.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::OTHER] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_NATURAL.STB")).c_str());
+	this->equipmentFile[ItemType::OTHER] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_NATURAL.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::PAT] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_PAT.STB")).c_str());
+	this->equipmentFile[ItemType::PAT] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_PAT.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::SHIELD] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_SUBWPN.STB")).c_str());
+	this->equipmentFile[ItemType::SHIELD] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_SUBWPN.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::CONSUMABLES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_USEITEM.STB")).c_str());
+	this->equipmentFile[ItemType::CONSUMABLES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_USEITEM.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
-	this->equipmentFile[Inventory::QUEST] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_QUESTITEM.STB")).c_str());
-	this->equipmentFile[Inventory::WEAPON] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_WEAPON.STB")).c_str());
+	this->equipmentFile[ItemType::QUEST] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_QUESTITEM.STB")).c_str());
+	this->equipmentFile[ItemType::WEAPON] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_WEAPON.STB")).c_str());
 	std::cout << "Finished reading all STBs!\r\n";
-
 	
 	return true;
 }
@@ -394,7 +406,7 @@ WORD WorldServer::assignClientID(Entity* newEntity) {
 
 void WorldServer::freeClientId(Entity* toDelete) {
 	this->clientIDs[toDelete->getClientId()].second = nullptr;
-	toDelete->setClientId(0xFFFF);
+	toDelete->setClientId(0x00);
 }
 
 
@@ -423,13 +435,12 @@ DWORD WorldServer::buildItemVisually(const Item& item) {
 WORD WorldServer::buildItemHead(const Item& item) {
 	if (item.amount == 0x00)
 		return 0;
-	if(item.type == ItemType::MONEY) //static
-		return 0xCCDF; //0xCCC0 | ItemType::MONEY
-	return static_cast<WORD>(((item.id & 0x7FFF) << 5) | (item.type & 0x1F));
+	WORD result = static_cast<WORD>((item.id << 5) & 0xFFE0);
+	return static_cast<WORD>(result | (item.type & 0x1F));
 }
 
 DWORD WorldServer::buildItemData(const Item& item) {
-	if ((item.type >= ItemType::CONSUMABLES && item.type <= ItemType::QUEST) || item.type == ItemType::MONEY || item.amount == 0) {
+	if ((item.type >= ItemType::CONSUMABLES && item.type <= ItemType::QUEST) || item.amount == 0) {
 		return item.amount;
 	}
 
@@ -437,6 +448,7 @@ DWORD WorldServer::buildItemData(const Item& item) {
 	if(item.type == ItemType::MONEY)
 		return (0x5F900000);
 
+	//0101 1111 1001 0000
 	DWORD refinePart = (item.refine >> 4) << 28;
 	DWORD appraisePart = item.isAppraised << 27;
 	DWORD socketPart = item.isSocketed << 26;
@@ -515,6 +527,31 @@ bool ChatService::sendMessage(Entity* sender, const char* msg) {
 	return sender->sendToVisible(pak);
 }
 
+bool ChatService::sendWhisper(Player* from, Player* to, const char *msg) {
+	if(from == nullptr)
+		return false;
+	Packet pak(PacketID::World::Response::WHISPER_CHAT);
+	pak.addString(from->getName()); pak.addByte(0x00);
+	if(!to) {
+		pak.addByte(0x00);
+		return from->sendData(pak);
+	}
+	pak.addString(msg); 
+	pak.addByte(0x00);
+	return to->sendData(pak);
+}
+
+
+bool ChatService::sendWhisper(const char* from, Player* to, const char *aMsg, ...) {
+	if(to == nullptr)
+		return false;
+	ArgConverterA(msg, aMsg);
+	Packet pak(PacketID::World::Response::WHISPER_CHAT);
+	pak.addString(from); pak.addByte(0x00);
+	pak.addString(msg); pak.addByte(0x00);
+	return to->sendData(pak);
+}
+
 bool ChatService::sendShout(Entity* entity, const char* msg) {
 	Packet pak(PacketID::World::Response::SHOUT_CHAT);
 	pak.addString(entity->getName().c_str());
@@ -552,12 +589,17 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 		float coordY = atoi(curValue.c_str()) * 100.0f;
 
 		gm->pakTelegate(mapId, Position(coordX, coordY));
+	} else if(WANTED_COMMAND("stats")) {
+		ChatService::sendWhisper("Server", gm, "AtkPower: %i\n", gm->getAttackPower());
+		ChatService::sendWhisper("Server", gm, "HP: %i/%i\n", gm->getCurrentHP(), gm->getMaxHP());
+		ChatService::sendWhisper("Server", gm, "Hitrate: %i\n", gm->getHitrate());
 	}
 	else if(WANTED_COMMAND("heal")) {
 		gm->setCurrentHP(gm->getMaxHP());
 	} else if(WANTED_COMMAND("equip")) {
 		WORD itemType = atoi(curValue.c_str()); 
 		if(itemType == 0 && curValue.length() > 0) {
+			curValue = msg;
 			for(unsigned int k=ItemType::FACE;k<=ItemType::SHIELD;k++) {
 				STBFile* file = mainServer->getEquipmentSTB(k);
 				for(unsigned int m=0;m<file->getRowCount();m++) {
@@ -569,7 +611,7 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 						item.id = m; item.type = k;
 						item.lifespan = 1000;
 						item.refine = 0;
-						gm->setInventoryItem(k, item);
+						gm->equipItem(item);
 
 						return;
 					}
@@ -588,7 +630,7 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 			WORD itemNum = atoi(curValue.c_str()); SPLIT();
 			if(itemNum == 0)
 				return;
-			WORD amount = curValue.length() == 0 ? 0x00 : atoi(curValue.c_str());
+			WORD amount = curValue.length() == 0 ? 0x01 : atoi(curValue.c_str());
 
 			Item item; 
 			item.type = itemType;

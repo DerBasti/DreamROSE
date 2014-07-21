@@ -343,7 +343,7 @@ bool AIService::conditionHasEnoughTargets(NPC *npc, const AICOND_02* cond, AITra
 		short levelDiff = curEntity->getLevel() - npc->getLevel();
 		if(cond->levelDiff[AICOND_02::LEVELDIFF_START] >= levelDiff &&
 			cond->levelDiff[AICOND_02::LEVELDIFF_END] <= levelDiff &&
-			npc->isAllied( curEntity ) == alliedStatus) {
+			dynamic_cast<Entity*>(npc)->isAllied( curEntity ) == alliedStatus) {
 				
 			targetCount++;
 			
@@ -406,13 +406,13 @@ bool AIService::conditionFindNearestEligibleTarget(NPC* npc, const AICOND_08* co
 	for(unsigned int i=0;i<sectors.size();i++) {
 		MapSector* currentSector = sectors.getValue(i);
 		LinkedList<Entity*>::Node* eNode = currentSector->getFirstEntity();
-		while(eNode) {
+		for(;eNode;eNode = eNode->getNextNode()) {
 			Entity* entity = eNode->getValue();
-			eNode = eNode->getNextNode();
-			if(!entity)
+			if(!entity || !entity->isIngame() || entity->getEntityType() == Entity::TYPE_DROP) {
 				continue;
+			}
 			short levelDiff = npc->getLevel() - entity->getLevel();
-			if(npc->isAllied(entity) == cond->isAllied && 
+			if(dynamic_cast<Entity*>(npc)->isAllied(entity) == cond->isAllied && 
 				cond->levelDifference[ AICOND_08::LEVELDIFF_START ] >= levelDiff &&
 				cond->levelDifference[ AICOND_08::LEVELDIFF_END ] <= levelDiff &&
 				npc->getPositionCurrent().distanceTo(entity->getPositionCurrent()) <= cond->getDistance()) {
@@ -493,9 +493,8 @@ bool AIService::conditionIsEconomyVarValid(const AICOND_16* cond) {
 bool AIService::conditionIsNPCNearby(NPC *npc, const AICOND_17* ai) {
 	Map* currentMap = mainServer->getMap(npc->getMapId());
 	LinkedList<Entity*>::Node* eNode = currentMap->getFirstEntity();
-	while(eNode) {
+	for(;eNode;eNode = eNode->getNextNode()) {
 		Entity* curEntity = eNode->getValue();
-		eNode = eNode->getNextNode();
 		if(!curEntity || curEntity->getEntityType() == Entity::TYPE_PLAYER) {
 			continue;
 		}
@@ -761,10 +760,10 @@ void AIService::actionAttackTarget(NPC* npc, const AIACTION_06* act) {
 	for(unsigned int i=0;i<sectors.size();i++) {
 		MapSector* sector = sectors.getValue(i);
 		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
-		while(eNode) {
-			Entity* curChar = eNode->getValue();
-			eNode = eNode->getNextNode();
-			if(!curChar || npc->isAllied(curChar))
+		
+		for(;eNode;eNode = eNode->getNextNode()) {
+		Entity* curChar = eNode->getValue();
+			if(!curChar || dynamic_cast<Entity*>(npc)->isAllied(curChar))
 				continue;
 
 			WORD value = AIService::getAbilityType(act->abilityType, curChar);
@@ -856,9 +855,8 @@ void AIService::actionCallEntireFamilyForAttack(NPC* npc) {
 	for(unsigned int i=0;i<sectors.size();i++) {
 		MapSector* sector = sectors.getValue(i);
 		LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
-		while(nNode) {
+		for(;nNode;nNode = sector->getNextNPC(nNode)) {
 			NPC *currentNPC = dynamic_cast<NPC*>(nNode->getValue());
-			nNode = sector->getNextNPC(nNode);
 			if(!currentNPC || currentNPC->getTypeId() != npcId)
 				continue;
 			if(npc->isAllied(currentNPC) && npc->getTarget() == nullptr) {
@@ -902,9 +900,8 @@ void AIService::actionCallFewFamilyMembersForAttack(NPC* npc, const AIACTION_18*
 	for(unsigned int i=0;i<sectors.size();i++) {
 		MapSector* sector = sectors.getValue(i);
 		LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
-		while(nNode) {
+		for(;nNode;nNode = sector->getNextNPC(nNode)) {
 			NPC* curNPC = dynamic_cast<NPC*>(nNode->getValue());
-			nNode = sector->getNextNPC(nNode);
 			if(!curNPC || curNPC->getTarget() != nullptr)
 				continue;
 			if(curNPC->getTypeId() == npc->getTypeId() &&

@@ -19,7 +19,7 @@ class NPC : public Entity {
 		WORD aiVar[MAX_AIVAR];
 		WORD objVar[MAX_OBJVAR];
 
-		const IFOSpawn* spawn;
+		IFOSpawn* spawn;
 		const NPCData* data;
 		NPC() {
 			//Empty for now.
@@ -43,7 +43,6 @@ class NPC : public Entity {
 
 		__inline virtual Position getSpawnPosition() const { return this->position.source; }
 
-		virtual bool isAllied( Entity* entity );
 		__inline virtual bool isAllied( NPC* npc ) { return true; }
 		__inline virtual bool isAllied( class Monster* mon ) { return true; }
 		__inline virtual bool isAllied( Player* player ) { return true; }
@@ -62,6 +61,8 @@ class NPC : public Entity {
 		__inline void setDirection(const float newVal) { this->direction = newVal; }
 		__inline bool hasDialogId() const { return (this->data->getDialogId() > 0); }
 		__inline WORD getDialogId() const { return this->data->getDialogId(); }
+
+		virtual void addDamage(Entity* enemy, const DWORD amount) { }
 
 		__inline virtual const IFOSpawn* getSpawn() const { return this->spawn; }
 

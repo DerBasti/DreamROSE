@@ -17,10 +17,8 @@ Entity::Entity() {
 Entity::~Entity() {
 	if(this->getSector())
 		this->getSector()->removeEntity(this);
-	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
-		this->removeSectorVisually(this->visibleSectors.getValue(i));
-	}
 	this->entityInfo.ingame = false;
+	mainServer->freeClientId(this);
 }
 
 void Entity::setPositionCurrent(const Position& newPos) { 
@@ -68,7 +66,11 @@ bool Entity::movementRoutine() {
 		}
 	} else { //We have a target, let's find out if we're in attack range
 		float distToTarget = this->position.current.distanceTo(this->getTarget()->getPositionCurrent());
-		if(distToTarget <= this->getAttackRange()) {
+		
+		float range = 100.0f;
+		if(!this->isAllied(this->getTarget()))
+			range = this->getAttackRange();
+		if(distToTarget <= range) {
 			this->position.lastCheckTime = clock();
 			return false;
 		} else {
@@ -113,9 +115,12 @@ bool Entity::attackRoutine() {
 
 bool Entity::attackEnemy() { 
 	Entity *enemy = this->getTarget();
-	WORD damage = 10;
-	WORD flag = 0x2000; //0x2000 = hit; 0x4000 = crit, = 0x8000 = Dead
-	//enemy->addDamage( damage );
+	WORD damage = this->getAttackPower() + 10;
+	WORD defense = static_cast<WORD>(this->getTarget()->getDefensePhysical() * 0.7f) + 5;
+	damage = (defense > damage && defense < (damage+5) ? 5 : damage > defense ? damage - defense : 0x00);
+	damage += QuickInfo::round<WORD>(static_cast<float>(rand() / static_cast<float>(RAND_MAX)) * damage * 0.1f);
+	WORD flag = 0x0000; //0x2000 = hit-animation; 0x4000 = crit, = 0x8000 = Dead
+	//enemy->addDamage( damage )
 	
 	if(enemy->getEntityType() == Entity::TYPE_MONSTER) {
 		AIService::run(dynamic_cast<Monster*>(enemy), AIP::ON_DAMAGED, nullptr, damage );
@@ -129,27 +134,31 @@ bool Entity::attackEnemy() {
 	} else {
 		enemy->stats.curHP -= damage;
 	}
+	enemy->addDamage( this, damage );
 
 	this->combat.lastAttackTime = clock();
 	Packet pak(PacketID::World::Response::BASIC_ATTACK);
 	pak.addWord( this->getClientId() );
 	pak.addWord( enemy->getClientId() );
 	pak.addWord ( (damage & 0x7FF) | flag );
+
+	if(flag & 0x8000 && enemy->getEntityType() != Entity::TYPE_PLAYER) {
+		enemy->onDeath();
+		delete enemy;
+		enemy = nullptr;
+	}
 	return this->sendToVisible( pak );
 }
 
-bool Entity::checkForNewSector() {
+MapSector* Entity::checkForNewSector() {
 	if (this->getLastSectorCheckTime() >= MapSector::DEFAULT_CHECK_TIME) {
 		MapSector* nearestSector =  mainServer->getMap(this->getMapId())->getSector(this->getPositionCurrent());
 		if(nearestSector != this->entityInfo.getSector()) {
-			this->setSector(nearestSector);
-			//this->entityInfo.setSector(nearestSector);
-			//Tell the "outside" that something changed
-			return true;
+			return nearestSector;
 		}
 		this->position.lastSectorCheckTime = clock() + MapSector::DEFAULT_CHECK_TIME; 
 	}
-	return false;
+	return nullptr;
 }
 
 void Entity::checkVisuality() {
@@ -198,9 +207,8 @@ void Entity::checkVisuality() {
 
 void Entity::addSectorVisually(MapSector* newSector) {
 	LinkedList<Entity*>::Node* pNode = newSector->getFirstEntity();
-	while(pNode) {
-		Entity* entity = pNode->getValue();
-		pNode = pNode->getNextNode();
+	for(;pNode;pNode = pNode->getNextNode()) {
+		Entity* entity = pNode->getValue();	
 		if(!entity || !entity->isIngame() || entity == this)
 			continue;
 
@@ -212,9 +220,8 @@ void Entity::addSectorVisually(MapSector* newSector) {
 
 void Entity::removeSectorVisually(MapSector* toRemove) {
 	LinkedList<Entity*>::Node* pNode = toRemove->getFirstEntity();
-	while(pNode) {
+	for(;pNode;pNode = pNode->getNextNode()) {
 		Entity* entity = pNode->getValue();
-		pNode = pNode->getNextNode();
 		if(!entity || !entity->isIngame() || entity == this)
 			continue;
 
@@ -228,9 +235,8 @@ bool Entity::sendToVisible(Packet& pak) {
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
 		MapSector* curSector = this->visibleSectors.getValue(i);
 		LinkedList<Entity*>::Node* pNode = curSector->getFirstPlayer();
-		while(pNode) {
+		for(;pNode;pNode = curSector->getNextPlayer(pNode)) {
 			Player* player = dynamic_cast<Player*>(pNode->getValue());
-			pNode = curSector->getNextPlayer(pNode);
 			if(!player || !player->isIngame())
 				continue;
 			player->sendData(pak);
@@ -247,9 +253,8 @@ bool Entity::sendToMap(Packet& pak) {
 		if(!curSector) //Not likely gonna happen
 			continue; 
 		LinkedList<Entity*>::Node* eNode = curSector->getFirstPlayer();
-		while(eNode) {
+		for(;eNode;eNode = curSector->getNextPlayer(eNode)) {
 			Player* player = dynamic_cast<Player*>(eNode->getValue());
-			eNode = curSector->getNextPlayer(eNode);
 			if(!player || !player->isIngame())
 				continue;
 			player->sendData(pak);

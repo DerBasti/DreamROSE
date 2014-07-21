@@ -111,7 +111,7 @@ class Player : public Entity, public ClientSocket {
 		bool pakSpawnMonster(class Monster* monster);
 		bool pakSpawnDrop(class Drop* drop);
 		bool pakRemoveEntityVisually(Entity* entity);
-		bool pakUpdateInventory( const BYTE slotAmount, const BYTE* slotIds );
+		bool pakUpdateInventoryVisually( const BYTE slotAmount, const BYTE* slotIds );
 
 		//Packets which are requested to be handled
 		bool pakPing();
@@ -143,12 +143,14 @@ class Player : public Entity, public ClientSocket {
 		~Player();
 
 		bool loadInfos();
+		bool pakPickDrop(const WORD dropId);
 		bool pakTelegate(const WORD mapId, const Position& pos);
 		
 		virtual void setPositionCurrent(const Position& newPos);
 		virtual void setPositionDest(const Position& newPos);
 		
 		void updateAttackpower();
+		void updateAttackSpeed();
 		void updateDefense();
 		void updateMagicDefense();
 		void updateHitrate();
@@ -158,7 +160,6 @@ class Player : public Entity, public ClientSocket {
 
 		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
 
-		bool isAllied(Entity* entity);
 		bool isAllied( class NPC* npc ) { return true; }
 		bool isAllied( class Monster* mon ) { return false; }
 		bool isAllied( Player* player) { return true; }
@@ -167,6 +168,9 @@ class Player : public Entity, public ClientSocket {
 
 		__inline BYTE getLevel() const { return this->charInfo.level; }
 		__inline WORD getJob() const { return this->charInfo.job; }
+		__inline DWORD getExperience() const { return this->charInfo.experience; }
+		DWORD getExperienceForLevelup();
+		void addExperience(const DWORD additionalExp);
 
 		//The same as "getJob()"
 		__inline WORD getClass() const { return this->getJob(); }
@@ -189,7 +193,7 @@ class Player : public Entity, public ClientSocket {
 		__inline WORD getSensibility() const { return this->attributes.getSensibility(); }
 		__inline WORD getSensibilityTotal() { return this->attributes.getSensibilityTotal(); }
 
-		__inline void setInventoryItem(const BYTE slot, const Item& item) { this->inventory[slot] = item; this->pakUpdateInventory(1, &slot); }
+		bool equipItem(const Item& item);
 
 		float getAttackRange();
 		__inline clock_t intervalBetweenAttacks() { return 60000 / this->getAttackSpeed(); }

@@ -245,16 +245,15 @@ class ItemType {
 		const static WORD GLOVES = 4;
 		const static WORD SHOES = 5;
 		const static WORD BACK = 6;
-		const static WORD JEWELS = 7;
+		const static WORD JEWELRY = 7;
 		const static WORD WEAPON = 8;
 		const static WORD SHIELD = 9;
 		const static WORD CONSUMABLES = 10;
-		const static WORD JEWELRY = 11;
+		const static WORD JEWELS = 11;
 		const static WORD OTHER = 12;
 		const static WORD QUEST = 13;
 		const static WORD PAT = 14;
 		const static WORD MONEY = 31; //Why 31?
-	
 };
 
 class WeaponType {
@@ -332,17 +331,11 @@ class Inventory {
 		const static WORD FACE = 1;
 		const static WORD HEADGEAR = 2;
 		const static WORD ARMOR = 3;
-		const static WORD GLOVES = 4;
-		const static WORD SHOES = 5;
-		const static WORD BACK = 6;
-		const static WORD JEWELS = 7;
-		const static WORD WEAPON = 8;
-		const static WORD SHIELD = 9;
-		const static WORD CONSUMABLES = 10;
-		const static WORD JEWELRY = 11;
-		const static WORD OTHER = 12;
-		const static WORD QUEST = 13;
-		const static WORD PAT = 14;
+		const static WORD GLOVES = 6;
+		const static WORD SHOES = 4;
+		const static WORD BACK = 5;
+		const static WORD WEAPON = 7;
+		const static WORD SHIELD = 8;
 
 		const static WORD TAB_SIZE = 30;
 
@@ -355,6 +348,28 @@ class Inventory {
 		const static WORD CART_WEAPON = 138;
 		const static WORD CART_ABILITY = 139;
 		const static WORD MAXIMUM = 140;
+
+		const static BYTE fromItemType(const BYTE itemType) {
+			switch(itemType) {
+				case ItemType::HEADGEAR:
+					return Inventory::HEADGEAR;
+				case ItemType::FACE:
+					return Inventory::FACE;
+				case ItemType::ARMOR:
+					return Inventory::ARMOR;
+				case ItemType::GLOVES:
+					return Inventory::GLOVES;
+				case ItemType::SHOES:
+					return Inventory::SHOES;
+				case ItemType::BACK:
+					return Inventory::BACK;
+				case ItemType::WEAPON:
+					return Inventory::WEAPON;
+				case ItemType::SHIELD:
+					return Inventory::SHIELD;
+			}
+			return 0xFF;
+		}
 };
 
 class NPCData {
