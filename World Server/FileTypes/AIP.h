@@ -134,12 +134,11 @@ struct BasicAIP {
 
 struct AITransfer {
 	class Entity* designatedTarget;
-	class Entity* target;
 	class Entity* nearestEntity;
 	class Entity* lastFound;
 
 	AITransfer() {
-		this->designatedTarget = target = nearestEntity = lastFound = nullptr;
+		this->designatedTarget = nearestEntity = lastFound = nullptr;
 	}
 };
 

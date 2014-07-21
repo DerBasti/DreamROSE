@@ -77,7 +77,7 @@ bool CharClient::pakGetCharacters() {
 		for (unsigned int j = 0; j < itemCnt; j++) {
 			MYSQL_ROW row = mainServer->sqlGetNextRow();
 			Item& curItem = newChar.equipment[atoi(row[0])];
-			curItem.itemId = atoi(row[1]);
+			curItem.itemId = atoi(row[1]) % 10000;
 			curItem.refineLevel = atoi(row[2]);
 		}
 		mainServer->sqlFinishQuery();
@@ -130,6 +130,9 @@ bool CharClient::pakCreateCharacter() {
 		return false;
 	newChar.id = atoi(mainServer->sqlGetNextRow()[0]);
 	mainServer->sqlFinishQuery();
+
+	if (!mainServer->sqlInsert("INSERT INTO character_stats(id) VALUES(%i)", newChar.id))
+		return false;
 
 	if (!mainServer->sqlInsert("INSERT INTO character_skills(id, basicSkills, passiveSkills, activeSkills) VALUES(%i, '%s', '%s', '%s')", newChar.id,
 		"11,12,16,20,41,42,43,181,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",

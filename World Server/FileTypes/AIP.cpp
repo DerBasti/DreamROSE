@@ -187,14 +187,20 @@ template<class _Ty> static _Ty AIService::resultOperation(_Ty& first, _Ty& secon
 
 bool AIService::run(NPC* npc, const BYTE blockId, Entity* target, const DWORD dmgDealt) {
 	WORD timeDiff = static_cast<WORD>(time(nullptr) - npc->getTimeAICheck());
-	if(npc->getAI() == nullptr || timeDiff <= npc->getAI()->getCheckInterval()) {
+	if(npc->getAI() == nullptr) {
 		return false;
 	}
 	//Check overall conditions
 	switch(blockId) {
-		case AIP::ON_DAMAGED:
-			if(dmgDealt <= npc->getAI()->getTriggerDamageAmount())
+		case AIP::ON_IDLE:
+			if( timeDiff <= npc->getAI()->getCheckInterval() )
 				return false;
+		break;
+		case AIP::ON_DAMAGED:
+			if(npc->getTarget() != nullptr) {
+				if(rand()%100 <= npc->getAI()->getTriggerDamageAmount())
+					return false;
+			}
 		break;
 	}
 	npc->setTimeAICheck();
@@ -202,7 +208,7 @@ bool AIService::run(NPC* npc, const BYTE blockId, Entity* target, const DWORD dm
 	for(unsigned int i=0;i<block.size();i++) {
 		const AIP::Record& curRecord = block.at(i);
 
-		AITransfer trans; trans.target = target;
+		AITransfer trans; trans.designatedTarget = target;
 		const std::vector<Trackable<char>>& conditions = curRecord.getConditions();
 		if(AIService::checkConditions(conditions, npc, &trans)) {
 			const std::vector<Trackable<char>>& actions = curRecord.getActions();
@@ -374,7 +380,7 @@ bool AIService::conditionDistanceToTarget( NPC* npc, const AICOND_04* cond ) {
 
 	float distance = npc->getPositionCurrent().distanceTo(npc->getTarget()->getPositionCurrent());
 	float condDist = cond->getDistance();
-	if (AIService::checkOperation(distance, condDist, cond->moreOrLess ? AIService::OPERATION_BIGGER_EQUAL : AIService::OPERATION_SMALLER_EQUAL))
+	if (AIService::checkOperation(distance, condDist, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL))
 		return true;
 	return false;
 }
@@ -384,14 +390,14 @@ bool AIService::conditionCheckAbilityDifference(NPC* npc, const AICOND_05* cond)
 		return false;
 
 	WORD abilityValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
-	if(AIService::checkOperation(abilityValue, cond->difference, cond->moreOrLess ? AIService::OPERATION_BIGGER_EQUAL : AIService::OPERATION_SMALLER_EQUAL))
+	if(AIService::checkOperation(abilityValue, cond->difference, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL))
 		return true;
 	return false;
 }
 
 bool AIService::conditionCheckPercentHP(NPC* npc, const AICOND_06* cond) {
 	BYTE percentHP = npc->getPercentHP();
-	return AIService::checkOperation(percentHP, cond->hp, cond->moreOrLess ? AIService::OPERATION_BIGGER_EQUAL : AIService::OPERATION_SMALLER_EQUAL);
+	return AIService::checkOperation(percentHP, cond->hp, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL);
 }
 
 bool AIService::conditionRandomPercentageMet(const AICOND_07* cond) {
@@ -425,26 +431,27 @@ bool AIService::conditionFindNearestEligibleTarget(NPC* npc, const AICOND_08* co
 }
 
 bool AIService::conditionHasTargetChanged(NPC *npc, const AICOND_09* cond, AITransfer* trans) {
-	if(npc->getTarget() != trans->target)
+	if(npc->getTarget() != trans->designatedTarget)
 		return true;
 	return false;
 }
 
 bool AIService::conditionCompareAbilities(NPC *npc, const AICOND_10* cond, AITransfer* trans) {
-	if(npc->getTarget() == nullptr || trans->target == nullptr)
+	if(npc->getTarget() == nullptr || trans->designatedTarget == nullptr)
 		return false;
 
 	WORD npcTargetValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
-	WORD transTargetValue = AIService::getAbilityType(cond->abilityType, trans->target);
+
+	WORD transTargetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
 	return AIService::checkOperation(npcTargetValue, transTargetValue, cond->moreOrLess ? AIService::OPERATION_BIGGER : AIService::OPERATION_SMALLER);
 }
 
 bool AIService::conditionIsStatSufficient(NPC* npc, const AICOND_11* cond, AITransfer* trans) {
-	if(npc->getTarget() != nullptr || trans->target == nullptr)
+	if(npc->getTarget() != nullptr || trans->designatedTarget == nullptr)
 		return false;
 
-	WORD targetValue = AIService::getAbilityType(cond->abilityType, trans->target);
-	return AIService::checkOperation(targetValue, cond->value, cond->moreOrLess ? AIService::OPERATION_BIGGER_EQUAL : AIService::OPERATION_SMALLER_EQUAL);
+	WORD targetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
+	return AIService::checkOperation(targetValue, cond->value, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL);
 }
 
 bool AIService::conditionHasDaytimeArrived(NPC* npc, const AICOND_12* cond) {

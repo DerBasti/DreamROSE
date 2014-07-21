@@ -31,7 +31,7 @@ void Entity::setPositionDest(const Position& newPos) {
 }
 
 void Entity::setTarget(Entity* target) { 
-	if(target) {
+	if(target && target->getCurrentHP()>0) {
 		Packet pak( PacketID::World::Response::INIT_BASIC_ATTACK);
 		pak.addWord( this->getClientId() );
 		pak.addWord( target->getClientId() );
@@ -115,7 +115,7 @@ bool Entity::attackRoutine() {
 
 bool Entity::attackEnemy() { 
 	Entity *enemy = this->getTarget();
-	WORD damage = this->getAttackPower() + 10;
+	WORD damage = this->getAttackPower() + 25;
 	WORD defense = static_cast<WORD>(this->getTarget()->getDefensePhysical() * 0.7f) + 5;
 	damage = (defense > damage && defense < (damage+5) ? 5 : damage > defense ? damage - defense : 0x00);
 	damage += QuickInfo::round<WORD>(static_cast<float>(rand() / static_cast<float>(RAND_MAX)) * damage * 0.1f);
@@ -123,7 +123,7 @@ bool Entity::attackEnemy() {
 	//enemy->addDamage( damage )
 	
 	if(enemy->getEntityType() == Entity::TYPE_MONSTER) {
-		AIService::run(dynamic_cast<Monster*>(enemy), AIP::ON_DAMAGED, nullptr, damage );
+		AIService::run(dynamic_cast<Monster*>(enemy), AIP::ON_DAMAGED, this, damage );
 	}
 
 	if(damage >= enemy->getCurrentHP()) {
@@ -131,6 +131,7 @@ bool Entity::attackEnemy() {
 		flag |= 0x8000;
 
 		this->setTarget(nullptr);
+		enemy->setTarget(nullptr);
 	} else {
 		enemy->stats.curHP -= damage;
 	}

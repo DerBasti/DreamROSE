@@ -152,6 +152,7 @@ WORD Player::checkClothesForStats(const DWORD statAmount, ...) {
 			std::cout << ex.what() << "\n";
 		}
 	}
+	return result;
 }
 
 //Ex.: Atkpower + 10 - (Defense * 0.7)+5 = 
@@ -377,6 +378,8 @@ void Player::updateMaxHP() {
 	}
 	additionalMaxHP += this->getBuffStatus( Buffs::Visuality::HP_UP);
 	maxHp += additionalMaxHP;
+
+	this->stats.maxHP = maxHp;
 }	
 
 void Player::updateDodgerate() {
@@ -441,6 +444,7 @@ void Player::addExperience(const DWORD additionalExp) {
 			this->charInfo.skillPoints += 5;
 
 		this->updateStats();
+		this->stats.curHP = this->getMaxHP();
 
 		pak.newPacket( PacketID::World::Response::LEVEL_UP );
 		pak.addWord( this->getClientId() );
@@ -610,14 +614,17 @@ bool Player::pakQuestData() {
 }
 
 bool Player::saveInfos() {
-	if(!mainServer->sqlRequest("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%i", this->getLevel(), this->getExperience(), this->getJob(), this->charInfo.zulies))
+	if(!mainServer->sqlInsert("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%i, statPoints=%i, skillPoints=%i WHERE id=%i", this->getLevel(), this->getExperience(), this->getJob(), this->charInfo.zulies, this->charInfo.statPoints, this->charInfo.skillPoints, this->charInfo.id))
 		return false;
-	if(!mainServer->sqlRequest("DELETE * FROM inventory WHERE id=%i", this->charInfo.id))
+	if(!mainServer->sqlInsert("UPDATE character_stats SET str=%i, dex=%i, int=%i, con=%i, cha=%i, sen=%i WHERE id=%i", this->attributes.strength, this->attributes.dexterity, this->attributes.intelligence, this->attributes.concentration, this->attributes.charm, this->attributes.sensibility, this->charInfo.id))
+		return false;
+	if(!mainServer->sqlInsert("DELETE * FROM inventory WHERE id=%i", this->charInfo.id))
 		return false;
 	for(unsigned int i=1;i<Inventory::MAXIMUM;i++) {
 		if(this->inventory[i].isValid())
-			mainServer->sqlInsert("INSERT INTO inventory (charId, slot, itemId, count, refine) VALUES(%i, %i, %i, %i, %i)", this->charInfo.id, i, this->inventory[i].type * 10000 + this->inventory[i].id, this->inventory[i].amount, this->inventory[i].refine);
+			mainServer->sqlInsert("INSERT INTO inventory (charId, slot, itemId, durability, lifespan, count, refine) VALUES(%i, %i, %i, %i, %i, %i, %i)", this->charInfo.id, i, this->inventory[i].type * 10000 + this->inventory[i].id, this->inventory[i].durability, this->inventory[i].lifespan, this->inventory[i].amount, this->inventory[i].refine);
 	}
+	return true;
 }
 
 bool Player::loadInfos() {
@@ -629,7 +636,7 @@ bool Player::loadInfos() {
 	this->accountInfo.accessLevel = static_cast<BYTE>(atoi(row[1]));
 	mainServer->sqlFinishQuery();
 
-	if (!mainServer->sqlRequest("SELECT name, level, experience, job, face, hair, sex, zulies FROM characters WHERE id=%i", this->charInfo.id))
+	if (!mainServer->sqlRequest("SELECT name, level, experience, job, face, hair, sex, zulies, statPoints, skillPoints FROM characters WHERE id=%i", this->charInfo.id))
 		return false;
 
 	row = mainServer->sqlGetNextRow();
@@ -641,8 +648,24 @@ bool Player::loadInfos() {
 	this->charInfo.visualTraits.hairStyle = atoi(row[5]);
 	this->charInfo.visualTraits.sex = atoi(row[6]);
 	this->charInfo.zulies = static_cast<QWORD>(::atol(row[7]));
-	this->charInfo.skillPoints = this->charInfo.statPoints = 0x00;
+	this->charInfo.statPoints = atoi(row[8]);
+	this->charInfo.skillPoints = atoi(row[9]);
 
+	mainServer->sqlFinishQuery();
+	if(!mainServer->sqlRequest("SELECT * FROM inventory WHERE charId=%i", this->charInfo.id))
+		return false;
+	for(unsigned int i=0;i<mainServer->sqlGetRowCount();i++) {
+		row = mainServer->sqlGetNextRow();
+		BYTE slotId = atoi(row[1]);
+		this->inventory[slotId].type = atoi(row[2]) / 10000;
+		this->inventory[slotId].id = atoi(row[2]) % 10000;
+		this->inventory[slotId].durability = atoi(row[3]);
+		this->inventory[slotId].lifespan = atoi(row[4]);
+		this->inventory[slotId].amount = atoi(row[5]);
+		this->inventory[slotId].refine = atoi(row[6]);
+	}
+	mainServer->sqlFinishQuery();
+	
 	if (!mainServer->sqlRequest("SELECT basicSkills FROM character_skills WHERE id=%i", this->charInfo.id))
 		return false;
 	if (mainServer->sqlGetRowCount() != 1)
@@ -1232,6 +1255,9 @@ bool Player::handlePacket() {
 
 		case PacketID::World::Request::IDENFITY:
 			return this->pakIdentify();
+
+		case PacketID::World::Request::INCREASE_ATTRIBUTE:
+			return this->pakIncreaseAttribute();
 
 		case PacketID::World::Request::LOCAL_CHAT:
 			return this->pakLocalChat();
