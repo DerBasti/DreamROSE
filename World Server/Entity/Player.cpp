@@ -18,7 +18,7 @@ Player::Player(SOCKET sock, ServerSocket* server){
 }
 
 Player::~Player() {
-	this->saveData();
+	this->saveInfos();
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
 		this->removeSectorVisually(this->visibleSectors.getValue(i));
 	}
@@ -827,7 +827,7 @@ bool Player::pakMoveCharacter() {
 
 bool Player::pakIncreaseAttribute() {
 	BYTE statType = this->packet.getByte(0x00);
-	WORD* statPointsREF = &this->attributes.strength;
+	WORD* statPointsREF = nullptr;
 	switch(statType) {
 		case 0x00:	
 			statPointsREF = &this->attributes.strength;
@@ -848,7 +848,7 @@ bool Player::pakIncreaseAttribute() {
 			statPointsREF = &this->attributes.sensibility;
 		break;
 	}
-	if((*statPointsREF)/5 <= this->charInfo.statPoints) {
+	if(statPointsREF && (*statPointsREF)/5 <= this->charInfo.statPoints) {
 		(*statPointsREF)++;
 		this->charInfo.statPoints -= (*statPointsREF) / 5;
 
@@ -859,6 +859,7 @@ bool Player::pakIncreaseAttribute() {
 		pak.addWord( (*statPointsREF) );
 		return this->sendData(pak);
 	}
+	return true;
 }
 
 bool Player::pakChangeStance() {
@@ -1126,9 +1127,10 @@ bool Player::pakEquipmentChange() {
 	return true; //Safe?
 }
 
-bool Player::pakPickDrop(const WORD dropId) {
+bool Player::pakPickUpDrop() {
 	this->setTarget(nullptr);
 
+	WORD dropId = this->packet.getWord(0x00);
 	Entity *entityDrop = mainServer->getEntity(dropId);
 	if(entityDrop->getEntityType() != Entity::TYPE_DROP)
 		return false;
@@ -1171,10 +1173,6 @@ bool Player::pakPickDrop(const WORD dropId) {
 
 	return this->sendData(pak); 
 
-}
-
-bool Player::pakPickDrop() {
-	return this->pakPickDrop(this->packet.getWord(0x00));
 }
 
 bool Player::pakTelegate() {
@@ -1245,7 +1243,7 @@ bool Player::handlePacket() {
 			return this->pakReturnToCharServer();
 
 		case PacketID::World::Request::PICK_DROP:
-			return this->pakPickDrop();
+			return this->pakPickUpDrop();
 
 		case PacketID::World::Request::SET_EMOTION:
 			return this->pakSetEmotion();
