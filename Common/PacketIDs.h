@@ -99,6 +99,7 @@ class PacketID {
 						const static WORD IDENFITY = 0x70B;
 						const static WORD RETURN_TO_CHARSERVER = 0x71C;
 						const static WORD GET_ID = 0x753;
+						const static WORD RESPAWN_AFTER_DEATH = 0x755;
 						const static WORD TERRAIN_COLLISION = 0x770;
 						const static WORD SET_EMOTION = 0x781;
 						const static WORD CHANGE_STANCE = 0x782;
@@ -133,6 +134,7 @@ class PacketID {
 						const static WORD UNKNOWN = 0x721;
 						const static WORD SPAWN_ON_MAP = 0x730;
 						const static WORD ASSIGN_ID = 0x753;
+						const static WORD RESPAWN_AFTER_DEATH = 0x755;
 						const static WORD WEIGHT = 0x762;
 						const static WORD TERRAIN_COLLISION = 0x770;
 						const static WORD SET_EMOTION = 0x781;

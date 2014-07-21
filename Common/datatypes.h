@@ -176,7 +176,7 @@ public:
 	}
 
 	bool checkIsConnected() {
-		return (this->isConnected = (mysql_ping(this->sql)>0));
+		return (this->isConnected = (mysql_ping(this->sql)==0));
 	}
 
 	bool reconnect() {
