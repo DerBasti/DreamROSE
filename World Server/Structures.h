@@ -277,6 +277,29 @@ class WeaponType {
 		const static WORD RANGE_CROSSBOW = 271;
 };
 
+class JobType {
+	private:
+		JobType() {}
+		~JobType() {}
+	public:
+		const static WORD VISITOR = 0;
+		const static WORD SOLDIER = 111;
+		const static WORD KNIGHT = 121;
+		const static WORD CHAMPION = 122;
+
+		const static WORD MUSE = 211;
+		const static WORD MAGE = 221;
+		const static WORD CLERIC = 222;
+
+		const static WORD HAWKER = 311;
+		const static WORD RAIDER = 321;
+		const static WORD SCOUT = 322;
+
+		const static WORD DEALER = 411;
+		const static WORD BOURGEOIS = 421;
+		const static WORD ARTISAN = 422;
+};
+
 struct Item {
 	WORD type;
 	DWORD id;

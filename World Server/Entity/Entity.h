@@ -72,6 +72,7 @@ class Entity {
 		virtual void updateDefense() {}
 		virtual void updateMagicDefense() {}
 		virtual void updateHitrate() {}
+		virtual void updateMaxHP() {}
 		virtual void updateDodgerate() {}
 		virtual void updateCritrate() {}
 		virtual void updateMovementSpeed() {}
@@ -81,6 +82,7 @@ class Entity {
 			this->updateDefense();
 			this->updateMagicDefense();
 			this->updateHitrate();
+			this->updateMaxHP();
 			this->updateDodgerate();
 			this->updateCritrate();
 			this->updateMovementSpeed();
@@ -172,7 +174,7 @@ class Entity {
 		bool attackRoutine();
 		__inline clock_t intervalBetweenAttacks() { return 100000 / this->getAttackSpeed(); }
 
-		bool sendToVisible(class Packet& pak);
+		bool sendToVisible(class Packet& pak, Entity* exceptThis = nullptr);
 		bool sendToMap(class Packet& pak);
 };
 

@@ -18,6 +18,7 @@ Player::Player(SOCKET sock, ServerSocket* server){
 }
 
 Player::~Player() {
+	this->saveData();
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
 		this->removeSectorVisually(this->visibleSectors.getValue(i));
 	}
@@ -119,6 +120,38 @@ bool Player::pakRemoveEntityVisually(Entity* entity) {
 	Packet pak(PacketID::World::Response::REMOVE_VISIBLE_PLAYER);
 	pak.addWord(entity->getClientId());
 	return this->sendData(pak);
+}
+
+
+//TODO: ADD TO STAT CALCULATION
+WORD Player::checkClothesForStats(const DWORD statAmount, ...) {
+	std::vector<DWORD> stats;
+	va_list ap;
+	va_start(ap, statAmount);
+
+	WORD result = 0x00;
+	for(unsigned int i=0;i<statAmount;i++) {
+		stats.push_back(va_arg(ap, DWORD));
+	}
+	for(unsigned int i=1;i<Inventory::SHIELD;i++) {
+		if(!this->inventory[i].isValid())
+			continue;
+		try {
+			STBEntry& entry = mainServer->getEquipmentEntry( this->inventory[i].type, this->inventory[i].id );
+			WORD firstStatType = entry.getColumn<WORD>( EquipmentSTB::STAT_FIRST_TYPE );
+			WORD secondStatType = entry.getColumn<WORD>( EquipmentSTB::STAT_SECOND_TYPE );
+			for(unsigned int k=0;k<stats.size();k++) {
+				if(firstStatType == stats.at(k)) {
+					result += entry.getColumn<WORD>( EquipmentSTB::STAT_FIRST_AMOUNT );
+				}
+				if(secondStatType == stats.at(k)) {
+					result += entry.getColumn<WORD>( EquipmentSTB::STAT_SECOND_AMOUNT );
+				}
+			}
+		} catch(std::exception& ex) {
+			std::cout << ex.what() << "\n";
+		}
+	}
 }
 
 //Ex.: Atkpower + 10 - (Defense * 0.7)+5 = 
@@ -284,6 +317,68 @@ void Player::updateHitrate() {
 	this->stats.hitRate = newHitrate;
 }
 
+void Player::updateMaxHP() {
+	float multiplier = 2.36f;
+	int additionPart1 = 26;
+	int additionPart2 = 4;
+	switch( this->getJob() ) {
+		case JobType::SOLDIER:
+			multiplier = 3.5f;
+			additionPart1 = 20; additionPart2 = 5;
+		break;
+		case JobType::KNIGHT:
+			multiplier = 3.5f;
+			additionPart1 = 28; additionPart2 = 5;
+		break;
+		case JobType::CHAMPION:
+			multiplier = 3.5f;
+			additionPart1 = 22; additionPart2 = 5;
+		break;
+
+		case JobType::MUSE:
+			multiplier = 2.36f;
+			additionPart1 = 26; additionPart2 = 4;
+		break;
+		case JobType::MAGE:
+			multiplier = 2.37f;
+			additionPart1 = 26; additionPart2 = 5;
+		break;
+		case JobType::CLERIC:
+			multiplier = 2.4f;
+			additionPart1 = 26; additionPart2 = 7;
+		break;
+
+		case JobType::HAWKER:
+			multiplier = 2.7f;
+			additionPart1 = 20; additionPart2 = 5;
+		break;
+		case JobType::RAIDER:
+			multiplier = 3.0f;
+			additionPart1 = 23; additionPart2 = 5;
+		break;
+		case JobType::SCOUT:
+			multiplier = 2.7f;
+			additionPart1 = 21; additionPart2 = 5;
+		break;
+		
+		case JobType::DEALER:
+		case JobType::ARTISAN:
+		case JobType::BOURGEOIS:
+			multiplier = 2.7f;
+			additionPart1 = 20; additionPart2 = 5;
+		break;
+	}
+	DWORD maxHp = (::sqrt(static_cast<double>(additionPart1 + this->getLevel())) * (additionPart2 + this->getLevel()) * multiplier)
+		+ ( this->attributes.getStrengthTotal() << 1 );
+
+	DWORD additionalMaxHP = 0x00;
+	if(this->getJob() & 0x17) { //Second Jobs: X2Y = X ClassType, Y = SubClass (e.g. Scout)
+		additionalMaxHP = 300;
+	}
+	additionalMaxHP += this->getBuffStatus( Buffs::Visuality::HP_UP);
+	maxHp += additionalMaxHP;
+}	
+
 void Player::updateDodgerate() {
 	this->stats.dodgeRate = 100;
 }
@@ -291,6 +386,7 @@ void Player::updateDodgerate() {
 void Player::updateCritrate() {
 	this->stats.critRate = 10;
 }
+
 void Player::updateMovementSpeed() {
 	this->stats.movementSpeed = 425;
 }
@@ -357,7 +453,7 @@ void Player::addExperience(const DWORD additionalExp) {
 
 		pak.newPacket( PacketID::World::Response::LEVEL_UP );
 		pak.addWord( this->getClientId() );
-		if(!this->sendToVisible( pak ))
+		if(!this->sendToVisible( pak, this ))
 			return;
 	}
 }
@@ -511,6 +607,17 @@ bool Player::pakQuestData() {
 	}
 	
 	return this->sendData(pak);
+}
+
+bool Player::saveInfos() {
+	if(!mainServer->sqlRequest("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%i", this->getLevel(), this->getExperience(), this->getJob(), this->charInfo.zulies))
+		return false;
+	if(!mainServer->sqlRequest("DELETE * FROM inventory WHERE id=%i", this->charInfo.id))
+		return false;
+	for(unsigned int i=1;i<Inventory::MAXIMUM;i++) {
+		if(this->inventory[i].isValid())
+			mainServer->sqlInsert("INSERT INTO inventory (charId, slot, itemId, count, refine) VALUES(%i, %i, %i, %i, %i)", this->charInfo.id, i, this->inventory[i].type * 10000 + this->inventory[i].id, this->inventory[i].amount, this->inventory[i].refine);
+	}
 }
 
 bool Player::loadInfos() {
@@ -716,6 +823,42 @@ bool Player::pakMoveCharacter() {
 	this->combat.setTarget( mainServer->getEntity( this->packet.getWord(0x00) ) );
 	this->setPositionDest( Position(this->packet.getFloat(0x02), this->packet.getFloat(0x06)) );
 	return true;
+}
+
+bool Player::pakIncreaseAttribute() {
+	BYTE statType = this->packet.getByte(0x00);
+	WORD* statPointsREF = &this->attributes.strength;
+	switch(statType) {
+		case 0x00:	
+			statPointsREF = &this->attributes.strength;
+		break;
+		case 0x01:	
+			statPointsREF = &this->attributes.dexterity;
+		break;
+		case 0x02:	
+			statPointsREF = &this->attributes.intelligence;
+		break;
+		case 0x03:	
+			statPointsREF = &this->attributes.concentration;
+		break;
+		case 0x04:	
+			statPointsREF = &this->attributes.charm;
+		break;
+		case 0x05:	
+			statPointsREF = &this->attributes.sensibility;
+		break;
+	}
+	if((*statPointsREF)/5 <= this->charInfo.statPoints) {
+		(*statPointsREF)++;
+		this->charInfo.statPoints -= (*statPointsREF) / 5;
+
+		this->updateStats();
+
+		Packet pak( PacketID::World::Response::INCREASE_ATTRIBUTE );
+		pak.addByte( statType );
+		pak.addWord( (*statPointsREF) );
+		return this->sendData(pak);
+	}
 }
 
 bool Player::pakChangeStance() {

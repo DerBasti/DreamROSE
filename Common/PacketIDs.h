@@ -113,6 +113,7 @@ class PacketID {
 						const static WORD TELEGATE = 0x7A8;
 						const static WORD EQUIPMENT_CHANGE = 0x7A5;
 						const static WORD PICK_DROP = 0x7A7;
+						const static WORD INCREASE_ATTRIBUTE = 0x7A9;
 						const static WORD CLAN_MANAGER = 0x7E0;
 						const static WORD MESSAGE_MANAGER = 0x7E1;
 				};
@@ -154,6 +155,7 @@ class PacketID {
 						const static WORD EQUIPMENT_CHANGE = 0x7A5;
 						const static WORD SPAWN_DROP = 0x7A6;
 						const static WORD PICK_DROP = 0x7A7;
+						const static WORD INCREASE_ATTRIBUTE = 0x7A9;
 						const static WORD GAMING_PLAN = 0x7DE;
 						const static WORD CLAN_MANAGER = 0x7E0;
 						const static WORD MESSAGE_MANAGER = 0x7E1;

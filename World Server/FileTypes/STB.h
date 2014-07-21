@@ -241,6 +241,10 @@ class EquipmentSTB {
 		const static WORD CRAFTING_STB_REFERENCE = 0x0E;
 		const static WORD UNION_POINTS = 0x0F;
 		const static WORD DURABILITY_MINIMUM = 0x1D;
+		const static WORD STAT_FIRST_TYPE = 0x18;
+		const static WORD STAT_FIRST_AMOUNT = 0x19;
+		const static WORD STAT_SECOND_TYPE = 0x1A;
+		const static WORD STAT_SECOND_AMOUNT = 0x1B;
 		const static WORD DEFENSE_PHYISCAL = 0x1F;
 		const static WORD DEFENSE_MAGICAL = 0x20;
 		const static WORD ATTACK_RANGE = 0x21;

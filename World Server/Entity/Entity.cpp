@@ -231,13 +231,13 @@ void Entity::removeSectorVisually(MapSector* toRemove) {
 	}
 }
 
-bool Entity::sendToVisible(Packet& pak) {
+bool Entity::sendToVisible(Packet& pak, Entity* exceptThis) {
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
 		MapSector* curSector = this->visibleSectors.getValue(i);
 		LinkedList<Entity*>::Node* pNode = curSector->getFirstPlayer();
 		for(;pNode;pNode = curSector->getNextPlayer(pNode)) {
 			Player* player = dynamic_cast<Player*>(pNode->getValue());
-			if(!player || !player->isIngame())
+			if(!player || !player->isIngame() || pNode->getValue() == exceptThis)
 				continue;
 			player->sendData(pak);
 		}

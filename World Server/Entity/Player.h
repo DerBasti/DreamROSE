@@ -125,12 +125,13 @@ class Player : public Entity, public ClientSocket {
 		bool pakInitBasicAttack();
 		bool pakShowMonsterHP(Monster *mon);
 		bool pakMoveCharacter();
+		bool pakIncreaseAttribute();
 		bool pakChangeStance();
 		bool pakLocalChat();
 		bool pakShoutChat();
 		bool pakTelegate();
 		bool pakEquipmentChange();
-		bool pakPickDrop();
+		bool pakPickUpDrop();
 		
 		void addEntityVisually(Entity* entity);
 		void removeEntityVisually(Entity* entity);
@@ -143,7 +144,7 @@ class Player : public Entity, public ClientSocket {
 		~Player();
 
 		bool loadInfos();
-		bool pakPickDrop(const WORD dropId);
+		bool saveInfos();
 		bool pakTelegate(const WORD mapId, const Position& pos);
 		
 		virtual void setPositionCurrent(const Position& newPos);
@@ -154,9 +155,12 @@ class Player : public Entity, public ClientSocket {
 		void updateDefense();
 		void updateMagicDefense();
 		void updateHitrate();
+		void updateMaxHP();
 		void updateDodgerate();
 		void updateCritrate();
 		void updateMovementSpeed();
+
+		WORD checkClothesForStats(const DWORD statType, ...);
 
 		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
 
