@@ -120,6 +120,7 @@ class Player : public Entity, public ClientSocket {
 		bool pakIdentify();
 
 		bool pakAssignID();
+		bool pakRespawnAfterDeath();
 		bool pakTerrainCollision();
 		bool pakSetEmotion();
 		bool pakInitBasicAttack();

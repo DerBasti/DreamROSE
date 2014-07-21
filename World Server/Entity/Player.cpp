@@ -64,7 +64,7 @@ const BYTE Player::findSlot( const Item& item ) {
 		break;
 		default:
 			if(item.type == 0x00 || item.type >= ItemType::PAT)
-				return std::numeric_limits<WORD>::max();
+				return std::numeric_limits<BYTE>::max();
 	}	
 	BYTE slotId = 12 + (Inventory::TAB_SIZE * inventoryTab);
 	if(inventoryTab == 0x01 || inventoryTab == 0x02) {
@@ -117,6 +117,12 @@ void Player::removeEntityVisually(Entity* entity) {
 bool Player::pakRemoveEntityVisually(Entity* entity) {
 	if(!entity)
 		return false;
+
+	//In case we're targeted, tell the entity to stop doing that.
+	if(entity->getTarget() == this) {
+		entity->setTarget(nullptr);
+		entity->setPositionDest(entity->getPositionCurrent());
+	}
 	Packet pak(PacketID::World::Response::REMOVE_VISIBLE_PLAYER);
 	pak.addWord(entity->getClientId());
 	return this->sendData(pak);
@@ -172,9 +178,9 @@ void Player::updateAttackpower() {
 		weaponAtkPower += mainServer->getWeaponAttackpower( this->inventory[Inventory::WEAPON].id );
 		weaponType = mainServer->getSubType( ItemType::WEAPON, this->inventory[Inventory::WEAPON].id );
 	} else {
-		WORD dexPart = (this->attributes.getDexterityTotal() * 0.3);
-		WORD strPart = (this->attributes.getStrengthTotal() * 0.5);
-		WORD lvlPart = (this->charInfo.level * 0.2);
+		WORD dexPart = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.3);
+		WORD strPart = static_cast<WORD>(this->attributes.getStrengthTotal() * 0.5);
+		WORD lvlPart = static_cast<WORD>(this->charInfo.level * 0.2);
 
 		totalAttackpower = dexPart + strPart + lvlPart;
 	}
@@ -686,6 +692,22 @@ bool Player::loadInfos() {
 
 	mainServer->sqlFinishQuery();
 
+	return true;
+}
+
+bool Player::pakRespawnAfterDeath() {
+	Map* curMap = mainServer->getMap(this->getMapId());
+
+	this->stats.curHP = this->stats.maxHP * 10 / 100;
+	this->status.buffs.clearBuff();
+
+	BYTE respawnType = this->packet.getByte(0x00);
+	if(respawnType == 0x01) {
+		const Position& pos = curMap->getRespawnPoint(this->getPositionCurrent());
+		return this->pakTelegate(this->getMapId(), pos);
+	} else {
+		//TODO
+	}
 	return true;
 }
 
@@ -1264,6 +1286,9 @@ bool Player::handlePacket() {
 
 		case PacketID::World::Request::MOVEMENT_PLAYER:
 			return this->pakMoveCharacter();
+
+		case PacketID::World::Request::RESPAWN_AFTER_DEATH:
+			return this->pakRespawnAfterDeath();
 
 		case PacketID::World::Request::RETURN_TO_CHARSERVER:
 			return this->pakReturnToCharServer();

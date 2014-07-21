@@ -126,6 +126,8 @@ class WorldServer : public ServerSocket {
 		const int getWeaponAttackspeed(const DWORD itemId);
 
 		__inline STBFile* getEquipmentSTB(const BYTE itemType) { return (itemType <= ItemType::PAT ? this->equipmentFile[itemType] : nullptr); }
+		
+		__inline class ZON* getZON(const BYTE mapId) const { return this->zoneData[mapId]; }
 		__inline ZoneSTB* getZoneSTB() const { return this->zoneFile; }
 		__inline Entity* getEntity(const WORD clientId) const { return this->clientIDs[clientId].second; }
 

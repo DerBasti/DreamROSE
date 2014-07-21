@@ -621,7 +621,7 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 		SPLIT();
 	}
 	else if(WANTED_COMMAND("drop")) {
-		WORD itemType = atoi(curValue.c_str()); SPLIT();
+		BYTE itemType = static_cast<BYTE>(atoi(curValue.c_str())); SPLIT();
 		if(curValue.length() == 0) {
 			//Drop money
 			new Drop(gm, itemType, false);

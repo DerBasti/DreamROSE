@@ -76,7 +76,7 @@ class Map {
 		FixedArray2D<MapSector*> mapSectors;
 		std::vector<class IFOSpawn*> monsterSpawns;
 		LinkedList<Entity*> entitiesOnMap;
-
+		std::vector<Position> respawnPoints;
 		void findMinMax(std::vector<std::string>& files, WORD* x, WORD* y);
 	public:
 		const static DWORD MIN_DAYCYCLE = 0x64;
@@ -118,6 +118,8 @@ class Map {
 		__inline const DWORD getSectorCount() const { 
 			return this->mapSectors.capacity(); 
 		}
+
+		const Position getRespawnPoint(Position& pos);
 	
 		__inline LinkedList<Entity*>::Node* getFirstEntity() {
 			return this->entitiesOnMap.getHeadNode();

@@ -1,5 +1,6 @@
 #include "Map.h"
 #include "WorldServer.h"
+#include "FileTypes\ZON.h"
 
 MapSector::MapSector() {
 #ifdef __MAPSECTOR_LL__
@@ -147,6 +148,22 @@ MapSector* Map::getSector(const Position& pos) {
 
 MapSector* Map::getSectorBySpawn(const IFOSpawn* spawn) {
 	return this->getSector(spawn->getPosition()); 
+}
+
+const Position Map::getRespawnPoint(Position& pos) {
+	ZON* zon = mainServer->getZON(this->getId());
+	Position nearestPos; DWORD distance = 0xFFFFFFFF;
+	for(unsigned int i=0;i<zon->getEventInfoAmount();i++) {
+		ZON::EventInfo& info = zon->getEventInfo(i);
+		Position infoPos = Position(info.x, info.y);
+		if(_stricmp(info.name.c_str(), "restore")==0) {
+			if(distance > pos.distanceTo(infoPos)) {
+				nearestPos = infoPos;
+				distance = pos.distanceTo(infoPos);
+			}
+		}
+	}
+	return nearestPos;
 }
 
 MapSector* Map::getSurroundingSector(MapSector* center, BYTE surroundingSectorType) {

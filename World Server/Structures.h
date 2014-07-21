@@ -301,7 +301,7 @@ class JobType {
 };
 
 struct Item {
-	WORD type;
+	BYTE type;
 	DWORD id;
 	bool isAppraised;
 	bool isSocketed;
@@ -316,7 +316,8 @@ struct Item {
 		this->clear();
 	}
 	void clear() {
-		this->type = this->lifespan = this->gem = this->stats = this->refine = 0x00;
+		this->type = 0x00;		
+		this->lifespan = this->gem = this->stats = this->refine = 0x00;
 		this->id = 0x00;
 		this->isAppraised = true;
 		this->isSocketed = false;
