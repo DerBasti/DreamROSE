@@ -238,6 +238,7 @@ struct _entityInfo {
 	__inline BYTE getType() const { return this->type; }
 };
 
+
 class ItemType {
 	private:
 		ItemType() { };
@@ -257,7 +258,7 @@ class ItemType {
 		const static WORD OTHER = 12;
 		const static WORD QUEST = 13;
 		const static WORD PAT = 14;
-		const static WORD MONEY = 31; //Why 31?
+		const static WORD MONEY = 31; //6 Bits
 };
 
 class WeaponType {
@@ -398,7 +399,7 @@ class Inventory {
 				case ItemType::MONEY:
 					return 0x00; //TEST
 			}
-			return 0xFF;
+			return Inventory::MAXIMUM - 1;
 		}
 };
 
