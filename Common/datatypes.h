@@ -143,6 +143,11 @@ private:
 
 	bool isConnected;
 	const char* errorDesc;
+
+	void showErrorMsg() {
+		this->errorDesc = this->lastError();
+		std::cout << "[MYSQL ERROR]: " << this->errorDesc << "\n";
+	}
 public:
 	DataBase() {
 		this->server = this->userName = this->pw = this->database = nullptr;
@@ -192,7 +197,7 @@ public:
 		if (!isInit && this->checkIsConnected())
 			return false;
 		if (!mysql_real_connect(this->sql, this->server, this->userName, this->pw, this->database, this->port, nullptr, 0)) {
-			this->errorDesc = this->lastError();
+			this->showErrorMsg();
 			return false;
 		}
 		this->isConnected = true;
@@ -210,7 +215,7 @@ public:
 	MYSQL_RES* get(const char* fmt, ...) {
 		ArgConverterA(result, fmt);
 		if (mysql_query(this->sql, result.c_str()) != 0) {
-			this->errorDesc = this->lastError();
+			this->showErrorMsg();
 			if (this->reconnect())
 				return get(result.c_str());
 			else
@@ -226,7 +231,7 @@ public:
 	bool put(const char* fmt, ...) {
 		ArgConverterA(result, fmt);
 		if (mysql_query(this->sql, result.c_str()) != 0) {
-			this->errorDesc = this->lastError();
+			this->showErrorMsg();
 			if (this->reconnect())
 				return put(result.c_str());
 			else
