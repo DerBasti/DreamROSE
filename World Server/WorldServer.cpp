@@ -525,7 +525,7 @@ const int WorldServer::getWeaponAttackspeed(const DWORD itemId) {
 }
 
 STBEntry& WorldServer::getEquipmentEntry(const BYTE itemType, const DWORD itemId) {
-	if(itemType == 0x00 || itemType >= ItemType::PAT)
+	if(itemType == 0x00 || itemType > ItemType::PAT)
 		throw TraceableExceptionARGS("Invalid ItemType: %i", itemType);
 	STBFile *eqFile = this->equipmentFile[itemType];
 	if(itemId >= eqFile->getRowCount())
