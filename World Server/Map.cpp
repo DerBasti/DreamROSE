@@ -1,4 +1,5 @@
 #include "Map.h"
+#include "Entity\NPC.h"
 #include "WorldServer.h"
 #include "FileTypes\ZON.h"
 
@@ -113,8 +114,8 @@ BYTE Map::getDayTime(const DWORD worldTime) const {
 MapSector* Map::getSector(const WORD sectorId) {
 	try {
 		DWORD subLevel = this->mapSectors.capacitySubLevel();
-		WORD xSector = sectorId / subLevel;
-		WORD ySector = sectorId % subLevel;
+		WORD xSector = static_cast<WORD>(sectorId / subLevel);
+		WORD ySector = static_cast<WORD>(sectorId % subLevel);
 		return this->mapSectors.getValue(xSector, ySector);
 	} catch(...) { }
 	return nullptr;
@@ -146,13 +147,27 @@ MapSector* Map::getSector(const Position& pos) {
 	return nullptr;
 }
 
+
+NPC* Map::getNPC(const WORD type) {
+	LinkedList<Entity*>::Node* nNode = this->getFirstEntity();
+	for(;nNode;nNode = nNode->getNextNode()) {
+		Entity* entity = nNode->getValue();
+		if(!entity || entity->getEntityType() != Entity::TYPE_NPC)
+			continue;
+		NPC* curNpc = dynamic_cast<NPC*>(entity);
+		if(curNpc->getTypeId() == type)
+			return curNpc;
+	}
+	return nullptr;
+}
+
 MapSector* Map::getSectorBySpawn(const IFOSpawn* spawn) {
 	return this->getSector(spawn->getPosition()); 
 }
 
 const Position Map::getRespawnPoint(Position& pos) {
 	ZON* zon = mainServer->getZON(this->getId());
-	Position nearestPos; DWORD distance = 0xFFFFFFFF;
+	Position nearestPos; float distance = 999999.9f;
 	for(unsigned int i=0;i<zon->getEventInfoAmount();i++) {
 		ZON::EventInfo& info = zon->getEventInfo(i);
 		Position infoPos = Position(info.x, info.y);

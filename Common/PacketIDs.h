@@ -111,9 +111,10 @@ class PacketID {
 						const static WORD MOVEMENT_PLAYER = 0x79A;
 						const static WORD UPDATE_EXPERIENCE = 0x79B;
 						const static WORD LEVEL_UP = 0x79E;
-						const static WORD TELEGATE = 0x7A8;
+						const static WORD DROP_FROM_INVENTORY = 0x7A4;
 						const static WORD EQUIPMENT_CHANGE = 0x7A5;
 						const static WORD PICK_DROP = 0x7A7;
+						const static WORD TELEGATE = 0x7A8;
 						const static WORD INCREASE_ATTRIBUTE = 0x7A9;
 						const static WORD CLAN_MANAGER = 0x7E0;
 						const static WORD MESSAGE_MANAGER = 0x7E1;
@@ -161,6 +162,7 @@ class PacketID {
 						const static WORD GAMING_PLAN = 0x7DE;
 						const static WORD CLAN_MANAGER = 0x7E0;
 						const static WORD MESSAGE_MANAGER = 0x7E1;
+						const static WORD REGENERATION = 0x7EC;
 				};
 		};
 };

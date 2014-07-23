@@ -155,8 +155,11 @@ class Stance {
 };
 
 struct Status {
+	time_t lastRegenCheck;
 	Stance stance;
 	Buffs buffs;
+
+	const static BYTE DEFAULT_CHECK_TIME = 0x08;
 	__inline bool addBuff(const BYTE visualityBit, const WORD amount, const DWORD timeInMilliseconds) {
 		return this->buffs.addBuff(visualityBit, amount, timeInMilliseconds);
 	}
@@ -165,7 +168,8 @@ struct Status {
 	__inline Stance getStance() const { return stance; }
 	__inline void setStance( const Stance& newStance ) { stance = newStance; }
 	__inline void setStance( const BYTE& newStance ) { stance = newStance; }
-	
+
+	__inline void updateLastRegen() { this->lastRegenCheck = time(NULL); }
 };
  
 struct Position {
@@ -326,7 +330,7 @@ struct Item {
 	}
 	bool isValid() {
 		if((this->type > 0 && this->type < ItemType::PAT) || this->type == ItemType::MONEY) {
-			if(this->id > 0 && this->amount>0)
+			if(this->amount>0)
 				return true;
 		}
 		return false;
@@ -391,6 +395,8 @@ class Inventory {
 					return Inventory::WEAPON;
 				case ItemType::SHIELD:
 					return Inventory::SHIELD;
+				case ItemType::MONEY:
+					return 0x00; //TEST
 			}
 			return 0xFF;
 		}
@@ -413,6 +419,8 @@ class NPCData {
 		WORD attackSpeed;
 		WORD AIId;
 		WORD expPerLevel;
+		WORD moneyPercentage;
+		WORD dropTableId;
 		float attackRange;
 		WORD dialogId;
 		bool isNPC;
@@ -441,6 +449,8 @@ class NPCData {
 			this->attackRange = stb->getAttackrange(rowId);
 			this->AIId = stb->getAIFileId(rowId);
 			this->isNPC = stb->isNPCEntry(rowId);
+			this->moneyPercentage = stb->getMoneyChance(rowId);
+			this->dropTableId = stb->getDroptableId(rowId);
 			this->dialogId = 0x00;
 		}
 		__inline WORD getTypeId() const { return this->id; }
@@ -458,6 +468,9 @@ class NPCData {
 		__inline WORD getSprintSpeed() const { return this->sprintSpeed; }
 		__inline WORD getExpPerLevel() const { return this->expPerLevel; }
 		__inline float getAttackRange() const { return this->attackRange; }
+		__inline WORD getMoneyPercentage() const { return this->moneyPercentage; }
+		__inline WORD getDropPercentage() const { return 100 - this->moneyPercentage; }
+		__inline WORD getDropTableId() const { return this->dropTableId; }
 		__inline WORD getDialogId() const { return this->dialogId; }
 		__inline WORD getAIId() const {return this->AIId; }
 		__inline bool getIsNPC() const { return this->isNPC; }

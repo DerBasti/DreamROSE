@@ -62,8 +62,10 @@ class NPC : public Entity {
 		__inline bool hasDialogId() const { return (this->data->getDialogId() > 0); }
 		__inline WORD getDialogId() const { return this->data->getDialogId(); }
 
+		virtual void setStance(const BYTE newStance);
+
 		virtual void addDamage(Entity* enemy, const DWORD amount) { }
-		virtual __inline clock_t intervalBetweenAttacks() { return 60000 * 3 / (2 * this->getAttackSpeed()); }
+		virtual __inline clock_t intervalBetweenAttacks() { return 250000 / this->getAttackSpeed(); }
 
 		__inline virtual const IFOSpawn* getSpawn() const { return this->spawn; }
 

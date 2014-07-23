@@ -12,6 +12,7 @@ Player::Player(SOCKET sock, ServerSocket* server){
 	this->serverDelegate = server;
 	this->entityInfo.type = Entity::TYPE_PLAYER;
 	this->entityInfo.ingame = false;
+	this->status.updateLastRegen();
 	for (unsigned int i = 0; i < Inventory::MAXIMUM; i++) {
 		this->inventory[i].clear();
 	}
@@ -77,6 +78,13 @@ const BYTE Player::findSlot( const Item& item ) {
 			}
 			slotId++;
 		}
+		slotId -= Inventory::TAB_SIZE;
+		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
+			if(!this->inventory[slotId].isValid()) {
+				return slotId;
+			}
+			slotId++;
+		}
 	} else {
 		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
 			if(this->inventory[slotId].type == 0x00 && this->inventory[slotId].amount == 0x00)
@@ -128,6 +136,36 @@ bool Player::pakRemoveEntityVisually(Entity* entity) {
 	return this->sendData(pak);
 }
 
+void Player::checkRegeneration() {
+	if(time(NULL) - this->status.lastRegenCheck >= Status::DEFAULT_CHECK_TIME) {
+		if(this->getCurrentHP() != this->getMaxHP() || this->getCurrentMP() != this->getMaxMP()) {
+			DWORD hpRegenAmount = static_cast<DWORD>(ceil(this->getMaxHP() * 2.0f / 100.0f));
+			DWORD mpRegenAmount = static_cast<DWORD>(ceil(this->getMaxMP() * 2.0f / 100.0f));
+			if(this->getStance().asBYTE() == Stance::SITTING) {
+				hpRegenAmount *= 4;
+				mpRegenAmount *= 4;
+			}
+
+			this->stats.curHP += hpRegenAmount;
+			if(this->stats.curHP > this->getMaxHP())
+				this->stats.curHP = this->getMaxHP();
+
+			this->stats.curMP += mpRegenAmount;
+			if(this->stats.curMP > this->getMaxMP())
+				this->stats.curMP = this->getMaxMP();
+
+			this->pakUpdateLifeStats();
+		}
+		this->status.updateLastRegen();
+	}
+}
+
+bool Player::pakUpdateLifeStats() {
+	Packet pak( PacketID::World::Response::REGENERATION );
+	pak.addWord( this->getCurrentHP() );
+	pak.addWord( this->getCurrentMP() );
+	return this->sendData(pak);
+}
 
 //TODO: ADD TO STAT CALCULATION
 WORD Player::checkClothesForStats(const DWORD statAmount, ...) {
@@ -571,7 +609,7 @@ bool Player::pakPlayerInfos() {
 
 bool Player::pakInventory() {
 	Packet pak(PacketID::World::Response::PLAYER_INVENTORY);
-	pak.addQWord(this->charInfo.zulies);
+	pak.addQWord(this->inventory[0x00].amount);
 
 	for (unsigned int i = 0; i < Inventory::MAXIMUM; i++) {
 		pak.addWord(mainServer->buildItemHead(this->inventory[i]));
@@ -620,9 +658,9 @@ bool Player::pakQuestData() {
 }
 
 bool Player::saveInfos() {
-	if(!mainServer->sqlInsert("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%i, statPoints=%i, skillPoints=%i WHERE id=%i", this->getLevel(), this->getExperience(), this->getJob(), this->charInfo.zulies, this->charInfo.statPoints, this->charInfo.skillPoints, this->charInfo.id))
+	if(!mainServer->sqlInsert("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%l, statPoints=%i, skillPoints=%i WHERE id=%i", this->getLevel(), this->getExperience(), this->getJob(), this->inventory[0x00].amount, this->charInfo.statPoints, this->charInfo.skillPoints, this->charInfo.id))
 		return false;
-	if(!mainServer->sqlInsert("UPDATE character_stats SET str=%i, dex=%i, int=%i, con=%i, cha=%i, sen=%i WHERE id=%i", this->attributes.strength, this->attributes.dexterity, this->attributes.intelligence, this->attributes.concentration, this->attributes.charm, this->attributes.sensibility, this->charInfo.id))
+	if(!mainServer->sqlInsert("UPDATE character_stats SET strength=%i, dexterity=%i, intelligence=%i, concentration=%i, charm=%i, sensibility=%i WHERE id=%i", this->attributes.strength, this->attributes.dexterity, this->attributes.intelligence, this->attributes.concentration, this->attributes.charm, this->attributes.sensibility, this->charInfo.id))
 		return false;
 	if(!mainServer->sqlInsert("DELETE * FROM inventory WHERE id=%i", this->charInfo.id))
 		return false;
@@ -653,11 +691,26 @@ bool Player::loadInfos() {
 	this->charInfo.visualTraits.faceStyle = atoi(row[4]);
 	this->charInfo.visualTraits.hairStyle = atoi(row[5]);
 	this->charInfo.visualTraits.sex = atoi(row[6]);
-	this->charInfo.zulies = static_cast<QWORD>(::atol(row[7]));
+	this->inventory[0x00].type = ItemType::MONEY;
+	this->inventory[0x00].amount = static_cast<QWORD>(::atol(row[7]));
 	this->charInfo.statPoints = atoi(row[8]);
 	this->charInfo.skillPoints = atoi(row[9]);
 
 	mainServer->sqlFinishQuery();
+	
+	if (!mainServer->sqlRequest("SELECT * FROM character_stats WHERE id=%i", this->charInfo.id))
+		return false;
+	row = mainServer->sqlGetNextRow();
+	this->attributes.strength = atoi(row[1]);
+	this->attributes.dexterity = atoi(row[2]);
+	this->attributes.intelligence = atoi(row[3]);
+	this->attributes.concentration = atoi(row[4]);
+	this->attributes.charm = atoi(row[5]);
+	this->attributes.sensibility = atoi(row[6]);
+
+	mainServer->sqlFinishQuery();
+	
+	
 	if(!mainServer->sqlRequest("SELECT * FROM inventory WHERE charId=%i", this->charInfo.id))
 		return false;
 	for(unsigned int i=0;i<mainServer->sqlGetRowCount();i++) {
@@ -894,8 +947,8 @@ bool Player::pakIncreaseAttribute() {
 		break;
 	}
 	if(statPointsREF && (*statPointsREF)/5 <= this->charInfo.statPoints) {
-		(*statPointsREF)++;
 		this->charInfo.statPoints -= (*statPointsREF) / 5;
+		(*statPointsREF)++;
 
 		this->updateStats();
 
@@ -1043,22 +1096,6 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 	pak.addFloat(npc->getCurrentY());
 	pak.addFloat(npc->getDestinationX()); 
 	pak.addFloat(npc->getDestinationY()); 
-	pak.addByte(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x03E8);
-	pak.addWord(0x00);
-	pak.addWord(0x01);
-	pak.addWord(0x00);
-	pak.addDWord(0x00);
-	pak.addWord( npc->getTypeId() );
-	if(npc->hasDialogId())
-		pak.addWord( npc->getDialogId() );
-	else
-		pak.addWord( npc->getTypeId() - 900 );
-	pak.addFloat( npc->getDirection() );
-	pak.addWord(0x00);
-	/*
 	if(npc->getCurrentHP() == 0x00) {
 		pak.addWord( EntitySpawnsVisually::IS_DEAD );
 	} else if(npc->getPositionCurrent() != npc->getPositionDest()) {
@@ -1083,7 +1120,7 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 	pak.addFloat(npc->getDirection());
 	pak.addByte(0x00); //CLANFIELD OPEN/CLOSED FOR BURLAND (NPC: 1115)
 	pak.addByte(0x00);
-	*/
+	
 	return this->sendData(pak);
 }
 
@@ -1172,13 +1209,31 @@ bool Player::pakEquipmentChange() {
 	return true; //Safe?
 }
 
+bool Player::pakDropFromInventory() {
+	BYTE slot = this->packet.getByte(0x00);
+	if(!this->inventory[slot].isValid())
+		return false;
+
+	DWORD amount = this->packet.getDWord(0x01);
+	if(amount >= this->inventory[slot].amount)
+		return true;
+
+	Item toDrop = this->inventory[slot];
+	toDrop.amount = amount;
+
+	new Drop(this, toDrop, true);
+
+	this->inventory[slot].amount -= amount;
+	return this->pakUpdateInventoryVisually( 1, &slot );
+}
+
 bool Player::pakPickUpDrop() {
 	this->setTarget(nullptr);
 
 	WORD dropId = this->packet.getWord(0x00);
 	Entity *entityDrop = mainServer->getEntity(dropId);
-	if(entityDrop->getEntityType() != Entity::TYPE_DROP)
-		return false;
+	if(!entityDrop || entityDrop->getEntityType() != Entity::TYPE_DROP)
+		return true;
 	Drop* drop = dynamic_cast<Drop*>(entityDrop);
 	if(!drop)
 		return false;
@@ -1193,30 +1248,44 @@ bool Player::pakPickUpDrop() {
 	}
 	//In case we're the owner, find a fitting inventory slot
 	WORD inventorySlotId = 0x00;
-	if(drop->isZulyDrop()) {
-		this->charInfo.zulies += drop->getItem().amount;
-	} else {
+	if(!drop->isZulyDrop()) {
 		inventorySlotId = this->findSlot( drop->getItem() );
 
 		//In case we don't have a free (suiting) slot, tell the client
-		if(inventorySlotId == std::numeric_limits<WORD>::max()) {
+		if(inventorySlotId == std::numeric_limits<BYTE>::max()) {
 			pak.addByte( PickDropMessage::INVENTORY_FULL );
 			return this->sendData(pak);
 		}
 	}
-	pak.addByte( PickDropMessage::OKAY );
-	pak.addWord( inventorySlotId ); //SlotId
-	pak.addWord( mainServer->buildItemHead(drop->getItem()) );
-	pak.addDWord( mainServer->buildItemData(drop->getItem()) );
-	
 	DWORD previousAmount = this->inventory[inventorySlotId].amount;
 	this->inventory[inventorySlotId] = drop->getItem();
 	this->inventory[inventorySlotId].amount += previousAmount;
-
+	
+	pak.addByte( PickDropMessage::OKAY );
+	pak.addWord( inventorySlotId ); //SlotId
+	pak.addWord( mainServer->buildItemHead(this->inventory[inventorySlotId]) );
+	if(drop->isZulyDrop())
+		pak.addDWord( drop->getItem().amount );
+	else
+		pak.addDWord( mainServer->buildItemData(this->inventory[inventorySlotId]) );
+	
 	delete drop;
 	drop = nullptr;
 
 	return this->sendData(pak); 
+
+}
+
+bool Player::pakBuyFromNPC() {
+	WORD npcType = this->packet.getWord(0x00);
+	NPC* npc = mainServer->getMap(this->getMapId())->getNPC(npcType);
+	if(!npc)
+		return false;
+
+
+}
+
+bool Player::pakSellToNPC() {
 
 }
 
@@ -1265,6 +1334,9 @@ bool Player::handlePacket() {
 
 		case PacketID::World::Request::CHANGE_STANCE:
 			return this->pakChangeStance();
+
+		case PacketID::World::Request::DROP_FROM_INVENTORY:
+			return this->pakDropFromInventory();
 
 		case PacketID::World::Request::EQUIPMENT_CHANGE:
 			return this->pakEquipmentChange();

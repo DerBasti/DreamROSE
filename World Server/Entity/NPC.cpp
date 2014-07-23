@@ -71,6 +71,15 @@ void NPC::updateDodgerate() {
 		this->stats.dodgeRate = this->data->getDodgerate();
 	}
 }
+
+void NPC::setStance(const BYTE newStance) {
+	if(newStance == Stance::WALKING)
+		this->status.stance = Stance::NPC_WALKING;
+	else
+		this->status.stance = Stance::NPC_RUNNING;
+
+	this->updateMovementSpeed();
+}
 		
 void NPC::updateMovementSpeed() {
 	if(this->data) {

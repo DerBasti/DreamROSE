@@ -136,7 +136,7 @@ class NPCSTB : public STBFile {
 		const static WORD AI_COLUMN = 0x10;
 		const static WORD EXPERIENCE_COLUMN = 0x11;
 		const static WORD DROPTABLE_COLUMN = 0x12;
-		const static WORD MONEY_COLUMN = 0x13;
+		const static WORD DROPCHANCE_COLUMN = 0x14;
 		const static WORD ATTACKRANGE_COLUMN = 0x1A;
 		const static WORD AGGRO_COLUMN = 0x1B;
 		NPCSTB(const char* filePath) {
@@ -182,8 +182,11 @@ class NPCSTB : public STBFile {
 		__inline WORD getDroptableId(const WORD row) {
 			return this->entries.at(row).getColumn<WORD>(NPCSTB::DROPTABLE_COLUMN);
 		}
-		__inline WORD getMoney(const WORD row) {
-			return this->entries.at(row).getColumn<WORD>(NPCSTB::MONEY_COLUMN);
+		__inline WORD getMoneyChance(const WORD row) {
+			return 100 - this->entries.at(row).getColumn<WORD>(NPCSTB::DROPCHANCE_COLUMN);
+		}
+		__inline WORD getDropChance(const WORD row) {
+			return this->entries.at(row).getColumn<WORD>(NPCSTB::DROPCHANCE_COLUMN);
 		}
 		__inline WORD getAttackrange(const WORD row) {
 			return this->entries.at(row).getColumn<WORD>(NPCSTB::ATTACKRANGE_COLUMN);

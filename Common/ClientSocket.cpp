@@ -3,6 +3,7 @@
 ClientSocket::~ClientSocket() {
 	//this->serverDelegate = nullptr;
 	this->packet.newPacket(0x00, 0x00);
+	this->closeSocket();
 }
 
 bool ClientSocket::receiveData() {

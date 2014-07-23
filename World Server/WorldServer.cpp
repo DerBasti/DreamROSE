@@ -38,9 +38,29 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 WorldServer::~WorldServer() {
 	this->sqlDataBase.disconnect();
 
-	for (unsigned int i = 1; i < 14; i++) {
+	for (unsigned int i = 1; i <= 14; i++) {
 		delete this->equipmentFile[i];
+		this->equipmentFile[i] = nullptr;
 	}
+
+	delete this->aiFile;
+	this->aiFile = nullptr;
+	
+	delete this->skillFile;
+	this->skillFile = nullptr;
+
+	delete this->npcFile;
+	this->npcFile = nullptr;
+
+	delete ::config;
+	::config = nullptr;
+
+	delete this->zoneFile;
+	this->zoneFile = nullptr;
+
+	delete this->dropFile;
+	this->dropFile = nullptr;
+
 	for(unsigned int i=0;i<this->zoneData.size();i++) {
 		ZON* file = this->zoneData.getValue(i);
 		delete file;
@@ -51,10 +71,6 @@ WorldServer::~WorldServer() {
 		delete map;
 		map = NULL;
 	}
-	delete this->skillFile;
-	delete this->npcFile;
-	delete ::config;
-
 	this->npcData.clear();
 }
 
@@ -105,6 +121,7 @@ void WorldServer::runMap(Map* curMap) {
 					//Check whether we entered a new sector
 					//If so, change the visuality vector
 					/*bool newSector = */
+					curPlayer->checkRegeneration();
  					if(curEntity->checkForNewSector() != nullptr) {
 						entityToRemove.add(curEntity);
 					}
@@ -117,12 +134,16 @@ void WorldServer::runMap(Map* curMap) {
 						//run AI with state "IDLE"
 						if(curEntity->getTarget() == NULL) {
 							AIService::run(curNPC, AIP::ON_IDLE);
+						} else {
+							AIService::run(curNPC, AIP::ON_ATTACK);
 						}
 					} else {
 						//In case it's walking and has no target
 						//i.e. walking around/away
 						if(curEntity->getTarget() == NULL)
 							curNPC->setTimeAICheck();
+						else
+							AIService::run(curNPC, AIP::ON_ATTACK);
 					}
 				break;
 			}
@@ -192,6 +213,7 @@ bool WorldServer::loadSTBs() {
 	std::cout << totalPercent << "% done reading\r";
 
 	this->skillFile = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_SKILL.STB")).c_str());
+	this->dropFile = new STBFile((workingPath + std::string("\\3DDATA\\STB\\ITEM_DROP.STB")).c_str());
 	totalPercent += percentDone;
 	std::cout << totalPercent << "% done reading\r";
 
@@ -440,13 +462,9 @@ WORD WorldServer::buildItemHead(const Item& item) {
 }
 
 DWORD WorldServer::buildItemData(const Item& item) {
-	if ((item.type >= ItemType::CONSUMABLES && item.type <= ItemType::QUEST) || item.amount == 0) {
+	if ((item.type >= ItemType::CONSUMABLES && item.type <= ItemType::QUEST) || item.type == ItemType::MONEY || item.amount == 0) {
 		return item.amount;
 	}
-
-	//Static
-	if(item.type == ItemType::MONEY)
-		return (0x5F900000);
 
 	//0101 1111 1001 0000
 	DWORD refinePart = (item.refine >> 4) << 28;
@@ -596,6 +614,8 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 	}
 	else if(WANTED_COMMAND("heal")) {
 		gm->setCurrentHP(gm->getMaxHP());
+		gm->setCurrentMP(gm->getMaxMP());
+		gm->pakUpdateLifeStats();
 	} else if(WANTED_COMMAND("equip")) {
 		WORD itemType = atoi(curValue.c_str()); 
 		if(itemType == 0 && curValue.length() > 0) {

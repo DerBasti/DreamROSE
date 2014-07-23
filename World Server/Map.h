@@ -130,6 +130,7 @@ class Map {
 		__inline const DWORD getEntityCount() const { 
 			return this->entitiesOnMap.getNodeCount();
 		}
+		class NPC* getNPC(const WORD type);
 
 		__inline float getSectorWidthAndHeight() const { return this->sectorSize; }
 		__inline void setSectorWidthAndHeight(const DWORD newWH) { this->sectorSize = static_cast<float>(std::max(newWH, IFO::CUSTOMIZED_SECTOR_SIZE)); }

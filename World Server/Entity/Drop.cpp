@@ -4,6 +4,8 @@
 void Drop::construct(Entity* giver, bool isPublicDomain) {
 	if(!isPublicDomain)
 		this->owner = giver;
+	else
+		this->owner = nullptr;
 	
 	this->setMapId(giver->getMapId());
 	this->position.current = giver->getPositionCurrent();
@@ -26,14 +28,14 @@ Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {
 	this->construct(dropGiver, isPublicDomain);
 }
 
-Drop::~Drop() {
-	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
-		this->removeSectorVisually(this->visibleSectors.getValue(i));
-	}
-}
-
 Drop::Drop(Entity* dropGiver, const Item& item, bool isPublicDomain) {
 	this->item = item;
 	
 	this->construct(dropGiver, isPublicDomain);
+}
+
+Drop::~Drop() {
+	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
+		this->removeSectorVisually(this->visibleSectors.getValue(i));
+	}
 }

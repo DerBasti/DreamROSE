@@ -70,7 +70,6 @@ class Player : public Entity, public ClientSocket {
 			DWORD experience;
 			WORD skillPoints;
 			WORD statPoints;
-			QWORD zulies;
 			struct VisualTraits {
 				BYTE sex;
 				WORD hairStyle;
@@ -85,7 +84,6 @@ class Player : public Entity, public ClientSocket {
 				this->name = "";
 				this->id = this->experience = 0x00;
 				this->job = this->skillPoints = this->statPoints = 0x00;
-				this->zulies = 0x00;
 				this->level = 0x00;
 			}
 		} charInfo;
@@ -133,6 +131,9 @@ class Player : public Entity, public ClientSocket {
 		bool pakTelegate();
 		bool pakEquipmentChange();
 		bool pakPickUpDrop();
+		bool pakDropFromInventory();
+		bool pakBuyFromNPC();
+		bool pakSellToNPC();
 		
 		void addEntityVisually(Entity* entity);
 		void removeEntityVisually(Entity* entity);
@@ -147,6 +148,7 @@ class Player : public Entity, public ClientSocket {
 		bool loadInfos();
 		bool saveInfos();
 		bool pakTelegate(const WORD mapId, const Position& pos);
+		bool pakUpdateLifeStats();
 		
 		virtual void setPositionCurrent(const Position& newPos);
 		virtual void setPositionDest(const Position& newPos);
@@ -160,6 +162,7 @@ class Player : public Entity, public ClientSocket {
 		void updateDodgerate();
 		void updateCritrate();
 		void updateMovementSpeed();
+		void checkRegeneration();
 
 		WORD checkClothesForStats(const DWORD statType, ...);
 
@@ -201,7 +204,7 @@ class Player : public Entity, public ClientSocket {
 		bool equipItem(const Item& item);
 
 		float getAttackRange();
-		__inline clock_t intervalBetweenAttacks() { return 60000 / this->getAttackSpeed(); }
+		__inline clock_t intervalBetweenAttacks() { return 125000 / this->getAttackSpeed(); }
 };
 
 #endif //__ROSE_PLAYER__

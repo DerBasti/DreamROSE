@@ -198,7 +198,7 @@ bool AIService::run(NPC* npc, const BYTE blockId, Entity* target, const DWORD dm
 		break;
 		case AIP::ON_DAMAGED:
 			if(npc->getTarget() != nullptr) {
-				if(rand()%100 <= npc->getAI()->getTriggerDamageAmount())
+				if(QuickInfo::random<DWORD>(100) <= npc->getAI()->getTriggerDamageAmount())
 					return false;
 			}
 		break;

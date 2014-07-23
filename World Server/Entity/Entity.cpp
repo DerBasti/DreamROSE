@@ -38,7 +38,7 @@ void Entity::setTarget(Entity* target) {
 		pak.addWord ( this->getMovementSpeed() );
 		pak.addFloat( target->getCurrentX() );
 		pak.addFloat( target->getCurrentY() );
-
+		this->setStance( Stance::RUNNING );
 		this->sendToVisible(pak);
 	}
 	this->combat.setTarget(target); 
