@@ -128,7 +128,7 @@ bool Entity::attackEnemy() {
 	}
 	else {
 		if((this->getAttackPower() * 0.8f) > (this->getDefensePhysical() * 0.8f))
-			damage = (this->getAttackPower() * 0.8f) - (this->getDefensePhysical() * 0.8f);
+			damage = static_cast<WORD>((this->getAttackPower() * 0.8f) - (this->getDefensePhysical() * 0.8f));
 		else
 			damage = 5;
 	}

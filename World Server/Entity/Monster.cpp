@@ -47,7 +47,8 @@ void Monster::onDeath() {
 	}
 	//Calculate dealt percentages
 	DWORD basicExp = this->data->getExpPerLevel() * this->data->getLevel();
-	DWORD totalExp = basicExp * (totalAmountOfDamage / static_cast<float>(this->data->getMaxHP()+1));
+	float modifier = (totalAmountOfDamage / static_cast<float>(this->data->getMaxHP()+1));
+	DWORD totalExp = static_cast<DWORD>(basicExp * modifier);
 
 	Monster* mon = nullptr; Player* player = nullptr;
 	for(unsigned int i=0;i<this->damageDealers.size();i++) {
