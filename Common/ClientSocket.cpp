@@ -65,7 +65,7 @@ bool ClientSocket::sendData( Packet& pak ) {
 	*/
 
 	DWORD dataSize = pak.getLength();
-	std::cout << "[OUT] Sending 0x" << std::hex << pak.getCommand() << std::dec << " with Length " << dataSize << "\n";
+	//std::cout << "[OUT] Sending 0x" << std::hex << pak.getCommand() << std::dec << " with Length " << dataSize << "\n";
 
 
 	EncryptBuffer(this->crypt.table, data);

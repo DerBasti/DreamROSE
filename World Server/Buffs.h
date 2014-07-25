@@ -92,7 +92,7 @@ class Buffs {
 		//Returns true if a buff was deleted
 		bool checkBuffs();
 		
-		const DWORD getStatusAmount(BYTE bitFromVisuality);
+		const WORD getStatusAmount(BYTE bitFromVisuality);
 		const DWORD getVisuality(BYTE );
 };
 

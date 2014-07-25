@@ -608,9 +608,12 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 
 		gm->pakTelegate(mapId, Position(coordX, coordY));
 	} else if(WANTED_COMMAND("stats")) {
-		ChatService::sendWhisper("Server", gm, "AtkPower: %i\n", gm->getAttackPower());
 		ChatService::sendWhisper("Server", gm, "HP: %i/%i\n", gm->getCurrentHP(), gm->getMaxHP());
+		ChatService::sendWhisper("Server", gm, "AtkPower: %i\n", gm->getAttackPower());
+		ChatService::sendWhisper("Server", gm, "Defense: %i\n", gm->getDefensePhysical());
 		ChatService::sendWhisper("Server", gm, "Hitrate: %i\n", gm->getHitrate());
+		ChatService::sendWhisper("Server", gm, "AttackSpeed: %i\n", gm->getAttackSpeed());
+		ChatService::sendWhisper("Server", gm, "AttackRange: %f\n", gm->getAttackRange());
 	}
 	else if(WANTED_COMMAND("heal")) {
 		gm->setCurrentHP(gm->getMaxHP());
@@ -631,7 +634,10 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 						item.id = m; item.type = k;
 						item.lifespan = 1000;
 						item.refine = 0;
-						gm->equipItem(item);
+
+						//In case the wanted item is valid (should always apply)
+						if(mainServer->isValidItem(k, m))
+							gm->equipItem(item);
 
 						return;
 					}
@@ -641,7 +647,7 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 		SPLIT();
 	}
 	else if(WANTED_COMMAND("drop")) {
-		BYTE itemType = static_cast<BYTE>(atoi(curValue.c_str())); SPLIT();
+		unsigned long itemType = static_cast<unsigned long>(atoi(curValue.c_str())); SPLIT();
 		if(curValue.length() == 0) {
 			//Drop money
 			new Drop(gm, itemType, false);
@@ -653,13 +659,14 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 			WORD amount = curValue.length() == 0 ? 0x01 : atoi(curValue.c_str());
 
 			Item item; 
-			item.type = itemType;
+			item.type = static_cast<BYTE>(itemType);
 			item.id = itemNum;
 			item.amount = amount;
 			item.durability = 120;
 			item.isAppraised = true;
 			item.lifespan = 1000;
-			new Drop(gm, item, false);
+			if(mainServer->isValidItem(item.type, item.id))
+				new Drop(gm, item, false);
 		}
 	}
 #undef STRCMP

@@ -2,6 +2,12 @@
 
 #include "QuickInfoFuncDefs.h"
 #include "Trackable.hpp"
+#include "LinkedList.h"
+#include "LinkedList.cpp"
+
+//SOURCE: http://www.codeproject.com/Articles/11132/Walking-the-callstack
+#include "StackWalker.h"
+
 #include "..\ConfigReader\Config.h"
 #include "..\CMyFile\MyFile.h"
 #include "..\Exceptions\TrackableException.h"
@@ -163,6 +169,8 @@ namespace QuickInfo {
     );
 	extern procEnumProcessModulesExPtr procEnumProcessModulesEx;
 
+	template<typename _funcType> void executeFunctions(const size_t num, ...);
+
 	void convertImageNameToRealName(std::wstring*);
 	BYTE getOperatingSystem();
 	bool is64BitSystem();
@@ -197,6 +205,11 @@ namespace QuickInfo {
 	void floatAsInt(const float& toConvert, DWORD& result);
 	void intAsFloat(const DWORD& toConvert, float& result);
 	float fRand(const float max = 100.0f, bool allowNegative=false);
+	template<class _Ty> _Ty random(const _Ty max) {
+		if(max == _Ty(0))
+			return _Ty(0);
+		return rand() % max;
+	}
 
 	void getClipboardData(std::wstring& dataStorage);
 	void setClipboardData(std::wstring& dataToAssign);
@@ -1397,7 +1410,7 @@ class SortedList : private _KeyAlloc, _ValAlloc {
 			return (*(this->valueInfo._firstItem + position));
 		}
 		value_reference getValueByKey(key_reference key) {
-			for(unsigned int i=0;i<this->compareInfo._usedSize;i++) {
+			for(unsigned int i=0;i<this->size();i++) {
 				if(*(this->compareInfo._firstItem + i) == key)
 					return this->getValue(i);
 			}
@@ -1673,117 +1686,6 @@ template<class _Ty> class LinkedHeaderList {
 		__inline const DWORD getHeaderCount() const { return this->headCount; }
 };
 
-//TODO:
-template<class _Ty, class = typename std::enable_if<std::has_trivial_copy<_Ty>::value && std::has_trivial_assign<_Ty>::value>::type> class LinkedList {	
-	public:
-		typedef struct Node {
-			friend class LinkedList;
-			private:
-				_Ty value;
-				Node* prev;
-				Node* next;
-			public:
-				__inline _Ty getValue() const { return this->value; }
-				__inline const _Ty& getValueCONST() const { return this->value; }
-				__inline Node* getNextNode() const { return this->next; }
-				__inline Node* getPreviousNode() const { return this->prev; }
-		};
-	private:
-		Node* head;
-		Node* last;
-		size_t count;
-	public:
-		LinkedList() {
-			this->count = 0x00;
-			this->head = this->last = nullptr;
-		}
-		~LinkedList() {
-
-		}
-		void add(const _Ty& data) {
-			Node* newNode = new Node();
-			if(this->count == 0x00) { //empty list
-				newNode->prev = nullptr;
-				newNode->next = nullptr;
-				this->head = this->last = newNode;
-			} else {
-				newNode->prev = this->last;
-				this->last->next = newNode;
-				this->last = newNode;
-			}
-			this->last->value = _Ty(data);
-			this->count++;
-		}
-		
-		__inline Node* getHeadNode() const { return this->head; }
-		__inline const size_t getNodeCount() const { return this->count; }
-
-		Node* getNode(const size_t pos) {
-			size_t offset = 0x00;
-			Node* tmpNode = this->head;
-			while(tmpNode && offset != pos) {
-				tmpNode = tmpNode->next;
-				offset++;
-			}
-			return tmpNode;
-		}
-		
-		_Ty& getValue(const size_t pos) {
-			Node* tmpNode = this->getNode(pos);
-			if(!tmpNode)
-				throw std::exception();
-			return tmpNode->getValue();
-		}
-
-		void remove(const _Ty& data) {
-			Node* tmpNode = this->head;
-			size_t idx = 0x00;
-			while(tmpNode) {
-				if(tmpNode->value == data) {
-					return this->removeAt(idx);
-				}
-				idx++;
-				tmpNode = tmpNode->next;
-			}
-		}
-		void removeAt(const size_t pos) {
-			if(this->count == 0x00 || pos >= this->count)
-				return;
-
-			Node* tmpNode = this->head;
-			if(pos == 0x00) {
-				if(this->count == 0x01) { //only header
-					this->head = this->last = nullptr;
-				} else { //other items are available -> create 
-					this->head->next->prev = nullptr; 
-					this->head = this->head->next;
-				}
-			} else { //something in between or last
-				size_t offset = 0x00;
-				while(tmpNode && offset != pos) {
-					tmpNode = tmpNode->next;
-					offset++;
-				}
-				if(tmpNode == this->last) {
-					this->last = this->last->prev;
-					this->last->next = nullptr;
-				} else {
-					tmpNode->prev->next = tmpNode->next;
-					tmpNode->next->prev = tmpNode->prev;
-				}
-			}
-			if(tmpNode) {
-				this->count--;
-				delete tmpNode;
-				tmpNode = nullptr;
-			}
-		}
-		void clear() {
-			size_t cnt = this->getNodeCount();
-			for(unsigned int i=0;i<cnt;i++)
-				this->removeAt(0x00);
-		}
-};
 class Timer {
 	private:
 		clock_t currentTime;

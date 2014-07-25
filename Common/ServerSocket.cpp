@@ -137,8 +137,6 @@ void ServerSocket::addClient(SOCKET sock, sockaddr_in* info) {
 }
 
 void ServerSocket::disconnectClient(ClientSocket* toDisconnect) {
-	std::cout << "Client disconnected\n";
-	toDisconnect->closeSocket();
 	for (unsigned int i = 0; i < this->clients.size(); i++) {
 		ClientSocket* client = this->clients.at(i);
 		if (client == toDisconnect) {
@@ -146,8 +144,9 @@ void ServerSocket::disconnectClient(ClientSocket* toDisconnect) {
 			break;
 		}
 	}
-
 	//Deletes the derived classes aswell -> virtual deconstructor in base class
 	delete toDisconnect;
 	toDisconnect = nullptr;
+	
+	std::cout << "Client disconnected\n";
 }

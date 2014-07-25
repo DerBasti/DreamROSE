@@ -10,7 +10,7 @@ class MapSector {
 	private:
 		friend class Map;
 #ifdef __MAPSECTOR_DEBUG__
-		WORD mapId;
+		BYTE mapId;
 #endif //__MAPSECTOR_DEBUG__
 		Position center;
 		DWORD id;
@@ -61,7 +61,7 @@ class MapSector {
 
 class Map {
 	private:
-		WORD id;
+		BYTE id;
 		bool isPVPOn;
 		struct _dayCycle {
 			bool nightOnly;
@@ -95,8 +95,8 @@ class Map {
 		void dumpSectors(const char* filePath);
 		MapSector* getSurroundingSector(MapSector* center, BYTE surroundingSectorType);
 	
-		__inline const WORD getId() const { return this->id; }
-		__inline void setId(const WORD newId) { this->id = newId; }
+		__inline const BYTE getId() const { return this->id; }
+		__inline void setId(const BYTE newId) { this->id = newId; }
 
 		__inline const char* getMapPath() const { return this->mapPath.c_str(); }
 		__inline void setMapPath(const char* newPath) { this->mapPath = newPath; }

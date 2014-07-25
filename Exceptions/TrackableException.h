@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <stdio.h>
 
+#include "..\QuickInfos\StackWalker.h"
 #include "..\QuickInfos\QuickInfoFuncDefs.h"
 
 class CTraceableException : public std::exception {
@@ -33,6 +34,8 @@ class CTraceableException : public std::exception {
 		}
 
 		virtual const char* what() const throw() {
+			StackWalker sw;
+			sw.ShowCallstack();
 			return this->errorMsg.c_str();
 		}
 

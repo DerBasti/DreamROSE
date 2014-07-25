@@ -115,9 +115,24 @@ bool Entity::attackRoutine() {
 
 bool Entity::attackEnemy() { 
 	Entity *enemy = this->getTarget();
-	WORD damage = this->getAttackPower() + 25;
-	WORD defense = static_cast<WORD>(this->getTarget()->getDefensePhysical() * 0.7f) + 5;
-	damage = (defense > damage && defense < (damage+5) ? 5 : damage > defense ? damage - defense : 0x00);
+	WORD damage = 0x00;
+	WORD defense = 0x00;
+	printf("%s(%i) [%i] attacks %s(%i) [%i]\n", this->getName().c_str(), this->getClientId(),
+		this->intervalBetweenAttacks(), enemy->getName().c_str(), enemy->getClientId(),
+		enemy->intervalBetweenAttacks());
+	if(this->getEntityType() == Entity::TYPE_PLAYER) {
+		if((this->getAttackPower() + 20) > (enemy->getDefensePhysical() * 7 / 10 + 5))
+			damage = (this->getAttackPower() + 20) - (enemy->getDefensePhysical() * 7 / 10 + 5);
+		else
+			damage = 5;
+	}
+	else {
+		if((this->getAttackPower() * 0.8f) > (this->getDefensePhysical() * 0.8f))
+			damage = (this->getAttackPower() * 0.8f) - (this->getDefensePhysical() * 0.8f);
+		else
+			damage = 5;
+	}
+
 	damage += QuickInfo::round<WORD>(static_cast<float>(rand() / static_cast<float>(RAND_MAX)) * damage * 0.1f);
 	WORD flag = 0x0000; //0x2000 = hit-animation; 0x4000 = crit, = 0x8000 = Dead
 	//enemy->addDamage( damage )

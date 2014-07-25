@@ -26,7 +26,7 @@ namespace QuickInfo {
 		va_start(ap, fmt);\
 		unsigned int minLenPos = 0; DWORD minLen[2] = { 0x00 };\
 		DWORD dTmp; bool afterComma = false;\
-		int iTmp; double fTmp; const char *cTmp = NULL; const wchar_t *wTmp = NULL; void *ptr = NULL;\
+		int iTmp; unsigned long long llTmp; double fTmp; const char *cTmp = NULL; const wchar_t *wTmp = NULL; void *ptr = NULL;\
 		std::string strFmt = "";\
 		char a = 0;\
 		char numBuf[0x20] = { 0x00 }; wchar_t wNumBuf[0x20] = { 0x00 };\
@@ -63,6 +63,18 @@ namespace QuickInfo {
 						}\
 						strFmt += "i";\
 						sprintf_s(numBuf, 0x20, strFmt.c_str(), iTmp);\
+						result += ::std::string(numBuf);\
+						minLen[0] = 0x00;\
+					break;\
+					case 'l':\
+						llTmp = va_arg(ap, unsigned long long);\
+						strFmt = "%";\
+						if (minLen[0] > 0) {\
+							_itoa_s(minLen[0], numBuf, 10);\
+							strFmt += ::std::string(numBuf);\
+						}\
+						strFmt += "lld";\
+						sprintf_s(numBuf, 0x20, strFmt.c_str(), llTmp);\
 						result += ::std::string(numBuf);\
 						minLen[0] = 0x00;\
 					break;\

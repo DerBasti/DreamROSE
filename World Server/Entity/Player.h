@@ -183,6 +183,9 @@ class Player : public Entity, public ClientSocket {
 		//The same as "getJob()"
 		__inline WORD getClass() const { return this->getJob(); }
 
+		__inline WORD getMaxHPW() const { return static_cast<WORD>(this->stats.getMaxHP()); }
+		__inline WORD getMaxMPW() const { return static_cast<WORD>(this->stats.getMaxMP()); }
+
 		__inline WORD getStrength() const { return this->attributes.getStrength(); }
 		__inline WORD getStrengthTotal() { return this->attributes.getStrengthTotal(); }
 		

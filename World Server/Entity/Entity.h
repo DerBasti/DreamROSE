@@ -55,7 +55,7 @@ class Entity {
 		virtual void removeSectorVisually(MapSector* toRemove);
 		
 		virtual void addEntityVisually(Entity* entity) { }
-		virtual void removeEntityVisually(Entity* entity) { }
+		virtual void removeEntityVisually(Entity* entity) { if(this->getTarget() == entity) this->setTarget(nullptr); }
 
 		virtual bool attackEnemy();
 	public:
@@ -157,6 +157,7 @@ class Entity {
 		__inline virtual bool isAllied( class Player* player ) { return true; }
 	
 		__inline virtual DWORD getBuffStatus(const BYTE type) {	return this->status.buffs.getVisuality(type); }
+		__inline virtual WORD getBuffAmount(const BYTE type) {	return this->status.buffs.getStatusAmount(type); }
 		__inline virtual const DWORD getBuffsVisuality(const BYTE buffType = 0x00) { return this->status.getBuffsVisuality(buffType); }
 		__inline virtual bool checkBuffs() { return this->status.checkBuffs(); }
 
@@ -172,7 +173,7 @@ class Entity {
 
 		bool movementRoutine();
 		bool attackRoutine();
-		__inline clock_t intervalBetweenAttacks() { return 100000 / this->getAttackSpeed(); }
+		virtual __inline clock_t intervalBetweenAttacks() { return 100000 / this->getAttackSpeed(); }
 
 		bool sendToVisible(class Packet& pak, Entity* exceptThis = nullptr);
 		bool sendToMap(class Packet& pak);

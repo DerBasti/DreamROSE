@@ -1,6 +1,7 @@
 #include "AIP.h"
 #include "..\WorldServer.h"
 #include "..\Entity\Player.h"
+#include "..\Entity\Drop.h"
 #include "..\Entity\Monster.h"
 
 #include "D:\Programmieren\CMyFile\MyFile.h"
@@ -343,23 +344,28 @@ bool AIService::conditionHasEnoughTargets(NPC *npc, const AICOND_02* cond, AITra
 	float nearestDist = 9999999.0f;
 
 	Entity* target = nullptr;
-	std::vector<Entity*> visibleEntities; //TODO: = npc->getVisiblePlayer();
-	for(unsigned int i=0;i<visibleEntities.size(); i++) {
-		Entity* curEntity = visibleEntities.at(i);
-		short levelDiff = curEntity->getLevel() - npc->getLevel();
-		if(cond->levelDiff[AICOND_02::LEVELDIFF_START] >= levelDiff &&
-			cond->levelDiff[AICOND_02::LEVELDIFF_END] <= levelDiff &&
-			dynamic_cast<Entity*>(npc)->isAllied( curEntity ) == alliedStatus) {
+	for(unsigned int i=0;i<npc->getVisibleSectors().size(); i++) {
+		MapSector* sector = npc->getVisibleSectors().getValue(i);
+		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
+		for(;eNode;eNode = eNode->getNextNode()) {
+			Entity* curEntity = eNode->getValue();
+			if(!curEntity || !curEntity->isIngame() || curEntity->getEntityType() == Entity::TYPE_DROP) {
+				continue;
+			}short levelDiff = curEntity->getLevel() - npc->getLevel();
+			if(cond->levelDiff[AICOND_02::LEVELDIFF_START] >= levelDiff &&
+				cond->levelDiff[AICOND_02::LEVELDIFF_END] <= levelDiff &&
+				dynamic_cast<Entity*>(npc)->isAllied( curEntity ) == alliedStatus) {
 				
-			targetCount++;
+				targetCount++;
 			
-			float dist = curEntity->getPositionCurrent().distanceTo(npc->getPositionCurrent());
-			if(dist <= nearestDist) {
-				trans->nearestEntity = curEntity;
-			}
-			if(targetCount >= cond->entityAmount) {
-				trans->lastFound = curEntity;
-				return true;
+				float dist = curEntity->getPositionCurrent().distanceTo(npc->getPositionCurrent());
+				if(dist <= nearestDist) {
+					trans->nearestEntity = curEntity;
+				}
+				if(targetCount >= cond->entityAmount) {
+					trans->lastFound = curEntity;
+					return true;
+				}
 			}
 		}
 	}
@@ -831,7 +837,7 @@ void AIService::actionCallAlliesForAttack(NPC* npc, const AIACTION_11 *act) {
 		while(eNode) {
 			ally = eNode->getValue();
 			eNode = eNode->getNextNode();
-			if( ally->isAllied( npc ) && ally->getTarget() == nullptr) {
+			if( ally->isAllied( npc ) && ally->getTarget() == nullptr || ally->getEntityType() == Entity::TYPE_MONSTER) {
 				ally->setTarget( target );
 
 				numOfAttackers++;
@@ -894,7 +900,11 @@ void AIService::actionRunAway(NPC* npc, const AIACTION_16* act) {
 void AIService::actionDropItem(const AIACTION_17* act) {
 	short dropItem = act->items[ rand() % 5 ];
 	
-	//TODO: DROP ITEM
+	Item item;
+	item.type = dropItem / 1000;
+	item.id = dropItem % 1000;
+
+	new Drop(nullptr, item, true);
 }
 
 void AIService::actionCallFewFamilyMembersForAttack(NPC* npc, const AIACTION_18* act) {

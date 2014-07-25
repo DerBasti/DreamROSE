@@ -7,6 +7,21 @@ namespace QuickInfo {
 	procEnumProcessModulesExPtr procEnumProcessModulesEx = nullptr;
 	HWND hWindow;
 
+	//Not very pretty, but it works for every compiler type
+	template<typename _funcType> void executeFunctions(const size_t num, ...) {
+		va_list ap;
+		_funcType func;
+		va_start(ap, num);
+
+		BYTE curNum = 0x00;
+		while( curNum < num ) {
+			_funcType& func = va_arg(ap, _funcType);
+			func();
+			curNum++;
+		}
+		va_end(ap);
+	}
+
 
 	void replaceTermInString(std::string& textBlock, const char* termToSearchFor, const char* replacementForSearchTerm) {
 		unsigned int position = 0x00; 

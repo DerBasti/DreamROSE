@@ -138,21 +138,21 @@ bool Player::pakRemoveEntityVisually(Entity* entity) {
 
 void Player::checkRegeneration() {
 	if(time(NULL) - this->status.lastRegenCheck >= Status::DEFAULT_CHECK_TIME) {
-		if(this->getCurrentHP() != this->getMaxHP() || this->getCurrentMP() != this->getMaxMP()) {
-			DWORD hpRegenAmount = static_cast<DWORD>(ceil(this->getMaxHP() * 2.0f / 100.0f));
-			DWORD mpRegenAmount = static_cast<DWORD>(ceil(this->getMaxMP() * 2.0f / 100.0f));
+		if(this->getCurrentHP() != this->getMaxHPW() || this->getCurrentMP() != this->getMaxMPW()) {
+			WORD hpRegenAmount = static_cast<WORD>(ceil(this->getMaxHP() * 2.0f / 100.0f));
+			WORD mpRegenAmount = static_cast<WORD>(ceil(this->getMaxMP() * 2.0f / 100.0f));
 			if(this->getStance().asBYTE() == Stance::SITTING) {
 				hpRegenAmount *= 4;
 				mpRegenAmount *= 4;
 			}
 
 			this->stats.curHP += hpRegenAmount;
-			if(this->stats.curHP > this->getMaxHP())
-				this->stats.curHP = this->getMaxHP();
+			if(this->stats.curHP > this->getMaxHPW())
+				this->stats.curHP = this->getMaxHPW();
 
 			this->stats.curMP += mpRegenAmount;
-			if(this->stats.curMP > this->getMaxMP())
-				this->stats.curMP = this->getMaxMP();
+			if(this->stats.curMP > this->getMaxMPW())
+				this->stats.curMP = this->getMaxMPW();
 
 			this->pakUpdateLifeStats();
 		}
@@ -222,71 +222,74 @@ void Player::updateAttackpower() {
 
 		totalAttackpower = dexPart + strPart + lvlPart;
 	}
+	WORD weaponAtkParts[5] = { 0x00 };
 	switch( weaponType ) {
 		case WeaponType::MELEE_ONE_HANDED_SWORD:
 		case WeaponType::MELEE_ONE_HANDED_BLUNT:
 		case WeaponType::MELEE_TWO_HANDED_AXE:
 		case WeaponType::MELEE_TWO_HANDED_SPEAR:
 		case WeaponType::MELEE_TWO_HANDED_SWORD:
-			totalAttackpower += (this->attributes.getStrengthTotal() * 0.75) + 
-				(this->getLevel() * 0.2) +
-				((this->attributes.getStrengthTotal() * 0.05) + 29) *
-				weaponAtkPower / 30.0;
+			weaponAtkParts[0] = static_cast<WORD>(this->attributes.getStrengthTotal() * 0.75);
+			weaponAtkParts[1] = static_cast<WORD>(this->getLevel() * 0.2);
+			weaponAtkParts[2] = static_cast<WORD>(((this->attributes.getStrengthTotal() * 0.05) + 29) * weaponAtkPower / 30.0);
 		break;
 		case WeaponType::MELEE_DOUBLE_SWORD:
-			totalAttackpower += this->getLevel() * 0.2 + 
-				this->attributes.getStrengthTotal() * 0.63 +
-				this->attributes.getDexterityTotal() * 0.45 + 
-				(this->attributes.getDexterityTotal() * 0.05 + 25) * weaponAtkPower / 26.0;
+			weaponAtkParts[0] = static_cast<WORD>(this->getLevel() * 0.2);
+			weaponAtkParts[1] = static_cast<WORD>(this->attributes.getStrengthTotal() * 0.63);
+			weaponAtkParts[2] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.45);
+			weaponAtkParts[3] = static_cast<WORD>((this->attributes.getDexterityTotal() * 0.05 + 25) * weaponAtkPower / 26.0);
 		break;
 		case WeaponType::MELEE_KATAR:
-			totalAttackpower += this->getLevel() * 0.2 +
-				this->attributes.getStrengthTotal() * 0.42 +
-				this->attributes.getDexterityTotal() * 0.55 +
-				(this->attributes.getDexterityTotal() * 0.05 + 20) * weaponAtkPower / 21;
+			weaponAtkParts[0] = static_cast<WORD>(this->getLevel() * 0.2);
+			weaponAtkParts[1] = static_cast<WORD>(this->attributes.getStrengthTotal() * 0.42);
+			weaponAtkParts[2] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.55);
+			weaponAtkParts[3] = static_cast<WORD>((this->attributes.getDexterityTotal() * 0.05 + 20) * weaponAtkPower / 21);
 		break;
 		case WeaponType::RANGE_BOW:
-			totalAttackpower += ((this->attributes.getStrengthTotal() + this->getLevel()) * 0.1) +
-				((this->attributes.getDexterityTotal() * 0.04) + (this->attributes.getSensibilityTotal() * 0.03 + 29)) * weaponAtkPower / 30.0 +
-				(this->attributes.getDexterityTotal() * 0.52) + (mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::ARROWS].id) * 0.5);
+			weaponAtkParts[0] = static_cast<WORD>((this->attributes.getStrengthTotal() + this->getLevel()) * 0.1);
+			weaponAtkParts[1] = static_cast<WORD>(((this->attributes.getDexterityTotal() * 0.04) + (this->attributes.getSensibilityTotal() * 0.03 + 29)) * weaponAtkPower / 30.0);
+			weaponAtkParts[2] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.52);
+			weaponAtkParts[3] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::ARROWS].id) * 0.5);
 		break;
 		case WeaponType::RANGE_GUN:
 		case WeaponType::RANGE_DUAL_GUN:
-			totalAttackpower += (this->attributes.getSensibilityTotal() * 0.47) +
-				mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::BULLETS].id) * 0.8 +
-				this->getLevel() * 0.1 +
-				this->attributes.getDexterityTotal() * 0.3 +
-				(this->attributes.getConcentrationTotal() * 0.04 + this->attributes.getSensibilityTotal() * 0.05 + 29) * weaponAtkPower / 30.0;
-
+			weaponAtkParts[0] = static_cast<WORD>(this->attributes.getSensibilityTotal() * 0.47);
+			weaponAtkParts[1] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::BULLETS].id) * 0.8);
+			weaponAtkParts[2] = static_cast<WORD>(this->getLevel() * 0.1);
+			weaponAtkParts[3] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.3);
+			weaponAtkParts[4] = static_cast<WORD>((this->attributes.getConcentrationTotal() * 0.04 + this->attributes.getSensibilityTotal() * 0.05 + 29) * weaponAtkPower / 30.0);
 		break;
 		case WeaponType::RANGE_LAUNCHER:
-			totalAttackpower += (this->attributes.getConcentrationTotal() * 0.47) +
-				mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::CANNONSHELLS].id) + 
-				(this->attributes.getStrengthTotal() * 0.32) + 
-				(this->attributes.getConcentrationTotal() * 0.45) +
-				(this->attributes.getConcentrationTotal() * 0.04 +
-				this->attributes.getSensibilityTotal() * 0.05 + 29) * weaponAtkPower / 30.0;
+			weaponAtkParts[0] = static_cast<WORD>(this->attributes.getConcentrationTotal() * 0.47);
+			weaponAtkParts[1] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::CANNONSHELLS].id));
+			weaponAtkParts[2] = static_cast<WORD>(this->attributes.getStrengthTotal() * 0.32);
+			weaponAtkParts[3] = static_cast<WORD>(this->attributes.getConcentrationTotal() * 0.45);
+			weaponAtkParts[4] = static_cast<WORD>((this->attributes.getConcentrationTotal() * 0.04 +
+				this->attributes.getSensibilityTotal() * 0.05 + 29) * weaponAtkPower / 30.0);
 		break;
 		case WeaponType::RANGE_CROSSBOW:
-			totalAttackpower += (this->attributes.getStrengthTotal() + this->getLevel()) * 0.1 +
-				this->attributes.getDexterityTotal() * 0.04 +
-				(this->attributes.getSensibilityTotal() * 0.03 + 29) * weaponAtkPower / 30 +
-				this->attributes.getDexterityTotal() * 0.52 +
-				mainServer->getQuality( ItemType::OTHER, this->inventory[Inventory::ARROWS].id ) * 0.5;
+			weaponAtkParts[0] = static_cast<WORD>((this->attributes.getStrengthTotal() + this->getLevel()) * 0.1);
+			weaponAtkParts[1] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.04);
+			weaponAtkParts[2] = static_cast<WORD>((this->attributes.getSensibilityTotal() * 0.03 + 29) * weaponAtkPower / 30);
+			weaponAtkParts[3] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.52);
+			weaponAtkParts[4] = static_cast<WORD>(mainServer->getQuality( ItemType::OTHER, this->inventory[Inventory::ARROWS].id ) * 0.5);
 		break;
 		case WeaponType::MAGIC_WAND:
-			totalAttackpower += this->getLevel() * 0.2 +
-				this->attributes.getIntelligenceTotal() * 0.6 +
-				((this->attributes.getSensibilityTotal() * 0.1 + 26) * weaponAtkPower / 27);
+			weaponAtkParts[0] = static_cast<WORD>(this->getLevel() * 0.2);
+			weaponAtkParts[1] = static_cast<WORD>(this->attributes.getIntelligenceTotal() * 0.6);
+			weaponAtkParts[2] = static_cast<WORD>((this->attributes.getSensibilityTotal() * 0.1 + 26) * weaponAtkPower / 27);
 		break;
 		case WeaponType::MAGIC_STAFF:
-			totalAttackpower += this->getLevel() * 0.2 +
-				(this->attributes.getIntelligenceTotal() + this->attributes.getStrengthTotal()) * 0.4 +
-				(this->attributes.getIntelligenceTotal() * 0.05 + 29) * weaponAtkPower / 30.0;
+			weaponAtkParts[0] = static_cast<WORD>(this->getLevel() * 0.2);
+			weaponAtkParts[1] = static_cast<WORD>((this->attributes.getIntelligenceTotal() + this->attributes.getStrengthTotal()) * 0.4);
+			weaponAtkParts[2] = static_cast<WORD>((this->attributes.getIntelligenceTotal() * 0.05 + 29) * weaponAtkPower / 30.0);
 		break;
 	}
-	totalAttackpower += this->getBuffStatus( Buffs::Visuality::ATTACKPOWER_UP );
-	totalAttackpower -= this->getBuffStatus( Buffs::Visuality::ATTACKPOWER_DOWN );
+	for(unsigned int i=0;i<5;i++)
+		totalAttackpower += weaponAtkParts[i];
+
+	totalAttackpower += this->getBuffAmount( Buffs::Visuality::ATTACKPOWER_UP );
+	totalAttackpower -= this->getBuffAmount( Buffs::Visuality::ATTACKPOWER_DOWN );
 
 	this->stats.attackPower = totalAttackpower;
 }
@@ -323,14 +326,34 @@ void Player::updateAttackSpeed() {
 			break;
 		}
 	}
-	atkSpeed += this->getBuffStatus( Buffs::Visuality::ATTACKSPEED_UP );
-	atkSpeed -= this->getBuffStatus( Buffs::Visuality::ATTACKSPEED_DOWN );
+	atkSpeed += this->getBuffAmount( Buffs::Visuality::ATTACKSPEED_UP );
+	atkSpeed -= this->getBuffAmount( Buffs::Visuality::ATTACKSPEED_DOWN );
 
 	this->stats.attackSpeed = atkSpeed;
 }
 
 void Player::updateDefense() {
-	this->stats.defensePhysical = 100;
+	WORD defense = 0x00;
+	if(this->getJob() & 0x17) //Second tier jobs
+		defense += 25;
+
+	defense += static_cast<WORD>((this->attributes.getStrengthTotal() + 5) * 0.35);
+	defense += static_cast<WORD>((this->getLevel() + 15) * 0.7);
+
+	//TODO: CLOTHES STATS
+	defense += this->getBuffAmount( Buffs::Visuality::DEFENSE_UP );
+	defense -= this->getBuffAmount( Buffs::Visuality::DEFENSE_DOWN );
+	for(unsigned int i=Inventory::FACE;i<Inventory::SHIELD;i++) {
+		if(i == Inventory::WEAPON || !this->inventory[i].isValid())
+			continue;
+		try {
+			STBEntry& armorEntry = mainServer->getEquipmentEntry(this->inventory[i].type, this->inventory[i].id);
+			defense += armorEntry.getColumn<WORD>(EquipmentSTB::DEFENSE_PHYISCAL);
+		} catch( std::exception& ex) {
+			std::cout << ex.what() << "\n";
+		}
+	}
+	this->stats.defensePhysical = defense;
 }
 
 void Player::updateMagicDefense() {
@@ -341,12 +364,12 @@ void Player::updateHitrate() {
 	WORD newHitrate = 0x00;
 	if(this->isWeaponEquipped()) {
 		WORD statPart = static_cast<WORD>((this->attributes.getConcentrationTotal()+10)*0.8f);
-		WORD qualityPart = mainServer->getQuality(ItemType::WEAPON, this->inventory[Inventory::WEAPON].id) * 0.6;
-		WORD durabilityPart = this->inventory[Inventory::WEAPON].durability * 0.8;
+		WORD qualityPart = static_cast<WORD>(mainServer->getQuality(ItemType::WEAPON, this->inventory[Inventory::WEAPON].id) * 0.6);
+		WORD durabilityPart = static_cast<WORD>(this->inventory[Inventory::WEAPON].durability * 0.8);
 
 		newHitrate = statPart + qualityPart + durabilityPart;
 	} else {
-		newHitrate = ((this->attributes.getConcentrationTotal() + 10)*0.5) + 15;
+		newHitrate = static_cast<WORD>(((this->attributes.getConcentrationTotal() + 10)*0.5) + 15);
 	}
 	for(unsigned int i=Inventory::FACE;i<=Inventory::SHIELD;i++) {
 		if(this->inventory[i].isValid()) {
@@ -356,8 +379,8 @@ void Player::updateHitrate() {
 	for(unsigned int i=0;i<30;i++) {
 		//TODO: SKILL MAY INCREASE STAT
 	}
-	newHitrate += this->getBuffStatus( Buffs::Visuality::HITRATE_UP );
-	newHitrate -= this->getBuffStatus( Buffs::Visuality::HITRATE_DOWN );
+	newHitrate += this->getBuffAmount( Buffs::Visuality::HITRATE_UP );
+	newHitrate -= this->getBuffAmount( Buffs::Visuality::HITRATE_DOWN );
 
 	this->stats.hitRate = newHitrate;
 }
@@ -413,14 +436,14 @@ void Player::updateMaxHP() {
 			additionPart1 = 20; additionPart2 = 5;
 		break;
 	}
-	DWORD maxHp = (::sqrt(static_cast<double>(additionPart1 + this->getLevel())) * (additionPart2 + this->getLevel()) * multiplier)
-		+ ( this->attributes.getStrengthTotal() << 1 );
+	WORD maxHp = static_cast<WORD>(::sqrt(static_cast<double>(additionPart1 + this->getLevel())) * (additionPart2 + this->getLevel()) * multiplier);
+	maxHp += ( this->attributes.getStrengthTotal() << 1 );
 
-	DWORD additionalMaxHP = 0x00;
+	WORD additionalMaxHP = 0x00;
 	if(this->getJob() & 0x17) { //Second Jobs: X2Y = X ClassType, Y = SubClass (e.g. Scout)
 		additionalMaxHP = 300;
 	}
-	additionalMaxHP += this->getBuffStatus( Buffs::Visuality::HP_UP);
+	additionalMaxHP += this->getBuffAmount( Buffs::Visuality::HP_UP);
 	maxHp += additionalMaxHP;
 
 	this->stats.maxHP = maxHp;
@@ -488,7 +511,7 @@ void Player::addExperience(const DWORD additionalExp) {
 			this->charInfo.skillPoints += 5;
 
 		this->updateStats();
-		this->stats.curHP = this->getMaxHP();
+		this->stats.curHP = this->getMaxHPW();
 
 		pak.newPacket( PacketID::World::Response::LEVEL_UP );
 		pak.addWord( this->getClientId() );
@@ -611,7 +634,9 @@ bool Player::pakInventory() {
 	Packet pak(PacketID::World::Response::PLAYER_INVENTORY);
 	pak.addQWord(this->inventory[0x00].amount);
 
-	for (unsigned int i = 0; i < Inventory::MAXIMUM; i++) {
+	pak.addWord( 0x00 );
+	pak.addDWord(0x00);
+	for (unsigned int i = 1; i < Inventory::MAXIMUM; i++) {
 		pak.addWord(mainServer->buildItemHead(this->inventory[i]));
 		pak.addDWord(mainServer->buildItemData(this->inventory[i]));
 	}
@@ -658,11 +683,11 @@ bool Player::pakQuestData() {
 }
 
 bool Player::saveInfos() {
-	if(!mainServer->sqlInsert("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%l, statPoints=%i, skillPoints=%i WHERE id=%i", this->getLevel(), this->getExperience(), this->getJob(), this->inventory[0x00].amount, this->charInfo.statPoints, this->charInfo.skillPoints, this->charInfo.id))
+	if(!mainServer->sqlInsert("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%i, statPoints=%i, skillPoints=%i WHERE id=%i", this->getLevel(), this->getExperience(), this->getJob(), this->inventory[0x00].amount, this->charInfo.statPoints, this->charInfo.skillPoints, this->charInfo.id))
 		return false;
 	if(!mainServer->sqlInsert("UPDATE character_stats SET strength=%i, dexterity=%i, intelligence=%i, concentration=%i, charm=%i, sensibility=%i WHERE id=%i", this->attributes.strength, this->attributes.dexterity, this->attributes.intelligence, this->attributes.concentration, this->attributes.charm, this->attributes.sensibility, this->charInfo.id))
 		return false;
-	if(!mainServer->sqlInsert("DELETE * FROM inventory WHERE id=%i", this->charInfo.id))
+	if(!mainServer->sqlInsert("DELETE FROM inventory WHERE charId=%i", this->charInfo.id))
 		return false;
 	for(unsigned int i=1;i<Inventory::MAXIMUM;i++) {
 		if(this->inventory[i].isValid())
@@ -751,7 +776,7 @@ bool Player::loadInfos() {
 bool Player::pakRespawnAfterDeath() {
 	Map* curMap = mainServer->getMap(this->getMapId());
 
-	this->stats.curHP = this->stats.maxHP * 10 / 100;
+	this->stats.curHP = this->getMaxHPW() * 10 / 100;
 	this->status.buffs.clearBuff();
 
 	BYTE respawnType = this->packet.getByte(0x00);
@@ -769,6 +794,8 @@ bool Player::pakUpdateInventoryVisually( const BYTE slotAmount, const BYTE* slot
 	pak.addByte( slotAmount );
 	for(unsigned int i=0;i<slotAmount;i++) {
 		pak.addByte( slotIds[i] );
+		if(this->inventory[ slotIds[i] ].amount == 0)
+			this->inventory[ slotIds[i] ].clear();
 		pak.addWord( mainServer->buildItemHead( this->inventory[ slotIds[i] ] ) );
 		pak.addDWord( mainServer->buildItemData( this->inventory[ slotIds[i] ] ) );
 	}
@@ -891,6 +918,7 @@ bool Player::pakAssignID(){
 	pak.addWord(this->getMovementSpeed());
 
 	this->position.lastCheckTime = clock();
+	this->status.updateLastRegen();
 	this->entityInfo.ingame = true;
 	bool result = this->sendToVisible(pak);
 
@@ -1215,7 +1243,7 @@ bool Player::pakDropFromInventory() {
 		return false;
 
 	DWORD amount = this->packet.getDWord(0x01);
-	if(amount >= this->inventory[slot].amount)
+	if(amount > this->inventory[slot].amount)
 		return true;
 
 	Item toDrop = this->inventory[slot];
@@ -1282,11 +1310,11 @@ bool Player::pakBuyFromNPC() {
 	if(!npc)
 		return false;
 
-
+	return true;
 }
 
 bool Player::pakSellToNPC() {
-
+	return true;
 }
 
 bool Player::pakTelegate() {
