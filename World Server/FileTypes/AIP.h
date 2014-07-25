@@ -805,7 +805,7 @@ struct AICOND_19 {
 		}
 		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Time (0x13)\n%s=====\n%sStartTime: %i, EndTime: %i\n",
+			sprintf(buf,"Check Zone Time (0x13)\n%s=====\n%sStartTime: %i, EndTime: %i\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStartTime(), this->getEndTime());
 			return std::string(buf);
 		}
