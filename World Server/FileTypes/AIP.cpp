@@ -408,7 +408,7 @@ bool AIService::conditionCheckAbilityDifference(NPC* npc, const AICOND_05* cond)
 
 bool AIService::conditionCheckPercentHP(NPC* npc, const AICOND_06* cond) {
 	BYTE percentHP = npc->getPercentHP();
-	return AIService::checkOperation(percentHP, cond->hp, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL);
+	return AIService::checkOperation(percentHP, cond->hp, cond->needsLessHP() ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL);
 }
 
 bool AIService::conditionRandomPercentageMet(const AICOND_07* cond) {
@@ -453,7 +453,7 @@ bool AIService::conditionCompareAbilities(NPC *npc, const AICOND_10* cond, AITra
 	WORD npcTargetValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
 
 	WORD transTargetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
-	return AIService::checkOperation(npcTargetValue, transTargetValue, cond->moreOrLess ? AIService::OPERATION_BIGGER : AIService::OPERATION_SMALLER);
+	return AIService::checkOperation(npcTargetValue, transTargetValue, cond->moreOrLess ? AIService::OPERATION_SMALLER : AIService::OPERATION_BIGGER);
 }
 
 bool AIService::conditionIsStatSufficient(NPC* npc, const AICOND_11* cond, AITransfer* trans) {

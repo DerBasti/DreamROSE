@@ -216,7 +216,6 @@ class AIService {
 		static void actionAttackDesignatedTarget(class NPC* npc, AITransfer* trans);
 		static void actionRunAway(class NPC* npc, const struct AIACTION_16* act);
 
-		//TODO: Implement drops
 		static void actionDropItem( const struct AIACTION_17* act);
 		static void actionCallFewFamilyMembersForAttack(class NPC* npc, const struct AIACTION_18* act);
 		static void actionSpawnPetAtPosition(class NPC* npc, const struct AIACTION_20* act, AITransfer *trans);
@@ -272,9 +271,10 @@ struct AICOND_00 {
 
 			this->cFightOrDelay = fightOrDelay;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf,"Wait or Attack\n=====\n\nFightOrDelay: 0x%x\n", this->cFightOrDelay );
+			sprintf(buf,"Wait or Attack (0x00)\n%s=====\n\n%sFightOrDelay: 0x%x\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->cFightOrDelay );
 			return std::string(buf);
 		}
 		__inline BYTE fightOrDelay() const { return this->cFightOrDelay; }
@@ -297,9 +297,9 @@ struct AICOND_01 {
 			this->iDamage = damage;
 			this->cReceiveOrDeal = receiveOrDeal > 0 ? true : false;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Damage\n=====\nDamage amount: 0x%x\nOnReceive: %i\n",this->getDamage(), this->isActionOnReceive() );
+			sprintf(buf,"Check Damage (0x01)\n%s=====\n%sDamage amount: 0x%x\n%sOnReceive: %i\n", indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDamage(), indent ? "\t\t\t" : "", this->isActionOnReceive() );
 			return std::string(buf);
 		}
 		__inline DWORD getDamage() const { return this->iDamage; }
@@ -331,13 +331,13 @@ struct AICOND_02 {
 			this->levelDiff[AICOND_02::LEVELDIFF_END] = levelDiff_End;
 			this->entityAmount = entityAmount;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x200] = {0x00};
-			sprintf(buf,"Check nearby Entities\n=====\nAllowed Distance: %f\nNeeds Ally: %i\nLevelDiff: [%i;%i]\nEntity amount: %i\n",this->getDistance(),
-				this->isAllyNeeded(), 
-				this->getLevelDiff(0x00), 
-				this->getLevelDiff(0x01),
-				this->getAmount());
+			sprintf(buf,"Check nearby Entities (0x02)\n%s=====\n%sAllowed Distance: %f\n%sNeeds Ally: %i\n%sLevelDiff: [%i;%i]\n%sEntity amount: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(),
+				indent ? "\t\t\t" : "", this->isAllyNeeded(), 
+				indent ? "\t\t\t" : "", this->getLevelDiff(0x00), this->getLevelDiff(0x01),
+				indent ? "\t\t\t" : "", this->getAmount());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -360,9 +360,9 @@ struct AICOND_03 {
 			
 			this->distance = newDist;
 		}
-		std::string toString() const {
-			char buf[0x40] = {0x00};
-			sprintf(buf,"Check Distance (Spawn)\n=====\nAllowed Distance: %f\n",this->getDistance());
+		std::string toString(bool indent = true) const {
+			char buf[0x50] = {0x00};
+			sprintf(buf,"Check Distance (Spawn) (0x03)\n%s=====\n%sAllowed Distance: %f\n",indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -382,10 +382,10 @@ struct AICOND_04 {
 			this->distance = newDist;
 			this->moreOrLess = cMoreOrLess;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Distance from possible Target\n=====\nAllowed Distance: %f\nRequires less: %i\n",this->getDistance(),
-				this->needsLessDistance());
+			sprintf(buf,"Check Distance from possible Target (0x04)\n%s=====\n%sAllowed Distance: %f\n%sRequires less: %i\n",indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(),
+				indent ? "\t\t\t" : "", this->needsLessDistance());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -416,12 +416,12 @@ struct AICOND_05 {
 			this->difference = diff;
 			this->moreOrLess = isMoreOrLess > 0 ? true : false;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Ability\n=====\nAbilityName: %s\nDifference: %i\nNeeds Less: %i\n",
-				AIService::getAbilityTypeName(this->getAbilityType()),
-				this->getAllowedDifference(),
-				this->needsLessDifference());
+			sprintf(buf,"Check Ability (0x05)\n%s=====\n%sAbilityName: %s\n%sDifference: %i\n%sNeeds Less: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", AIService::getAbilityTypeName(this->getAbilityType()),
+				indent ? "\t\t\t" : "", this->getAllowedDifference(),
+				indent ? "\t\t\t" : "", this->needsLessDifference());
 			return std::string(buf);
 		}
 		__inline BYTE getAbilityType() const { return this->abilityType; }
@@ -448,9 +448,11 @@ struct AICOND_06 {
 			this->hp = HPToCheckFor;
 			this->moreOrLess = moreOrLess > 0 ? true : false;
 		}
-		std::string toString() const {
-			char buf[0x30] = {0x00};
-			sprintf(buf,"Check HP\n=====\nHP in Percent: %i\n", this->getHPCheckMark());
+		std::string toString(bool indent = true) const {
+			char buf[0x48] = {0x00};
+			sprintf(buf,"Check HP (0x06)\n%s=====\n%sHP in Percent: %i\n%sNeedsLess: %i\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getHPCheckMark(),
+				indent ? "\t\t\t" : "", this->needsLessHP());
 			return std::string(buf);
 		}
 		__inline DWORD getHPCheckMark() const { return this->hp; }
@@ -474,9 +476,9 @@ struct AICOND_07 {
 			
 			this->percent = newPercent;
 		}
-		std::string toString() const {
-			char buf[0x30] = {0x00};
-			sprintf(buf,"Check Percentage\n=====\nRandom Percentage: %i%\n", this->getPercentage());
+		std::string toString(bool indent = true) const {
+			char buf[0x50] = {0x00};
+			sprintf(buf,"Check Percentage (0x07)\n%s=====\n%sRandom Percentage: %i%\n", indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getPercentage());
 			return std::string(buf);
 		}
 		__inline BYTE getPercentage() const { return this->percent; }
@@ -502,11 +504,11 @@ struct AICOND_08 {
 
 			this->isAllied = isAllied > 0 ? true : false;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check until X fitting entities\n=====\nAllowed Distance: %f\nLevelDiff: [%i;%i]\nNeeds Ally: %i\n", 
-				this->getDistance(), this->getLevelDifference(0x00),
-				this->getLevelDifference(0x01), this->isAllyNeeded());
+			sprintf(buf,"Check until X fitting entities (0x08)\n%s=====\n%sAllowed Distance: %f\n%sLevelDiff: [%i;%i]\n%sNeeds Ally: %i\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(), indent ? "\t\t\t" : "", this->getLevelDifference(0x00),
+				indent ? "\t\t\t" : "", this->getLevelDifference(0x01), indent ? "\t\t\t" : "", this->isAllyNeeded());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -523,7 +525,7 @@ struct AICOND_09 {
 			this->type = __AIP_CONDITION_CODE__ | 0x0A;
 			this->_size = 0x08;
 		}
-		__inline std::string toString() const { return std::string(""); };
+		__inline std::string toString() const { return std::string("HAS_TARGET_CHANGED (0x09)"); };
 };
 
 struct AICOND_10 {
@@ -540,11 +542,11 @@ struct AICOND_10 {
 			this->abilityType = _abilityType;
 			this->moreOrLess = (_moreOrLess > 0 ? true : false);
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x100] = {0x00};
-			sprintf(buf,"Check AbilityDifference (CurTarget <-> DestTarget)\n=====\nAbilityType: %s\nNeeds Less: %i\n",
-				AIService::getAbilityTypeName(this->getAbilityType()),
-				this->needsLessAbility());
+			sprintf(buf,"Check AbilityDifference (CurTarget <-> DestTarget) (0x0A)\n%s=====\n%sAbilityType: %s\n%sNeeds Less: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", AIService::getAbilityTypeName(this->getAbilityType()),
+				indent ? "\t\t\t" : "", this->needsLessAbility());
 			return std::string(buf);
 		}
 		__inline BYTE getAbilityType() const { return this->abilityType; }
@@ -574,12 +576,12 @@ struct AICOND_11 {
 			this->value = _value;
 			this->moreOrLess = (_moreOrLess > 0 ? true : false);
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x100] = {0x00};
-			sprintf(buf,"Check Ability Value\n=====\nAbilityType: %s\nValue: %i\nNeeds Less: %i\n",
-				AIService::getAbilityTypeName(this->getAbilityType()),
-				this->getAbilityValue(),
-				this->needsLessValue());
+			sprintf(buf,"Check Ability Value (0x0B)\n%s=====\n%sAbilityType: %s\n%sValue: %i\n%sNeeds Less: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", AIService::getAbilityTypeName(this->getAbilityType()),
+				indent ? "\t\t\t" : "", this->getAbilityValue(),
+				indent ? "\t\t\t" : "", this->needsLessValue());
 			return std::string(buf);
 		}
 		__inline BYTE getAbilityType() const { return this->abilityType; }
@@ -603,10 +605,10 @@ struct AICOND_12 {
 
 			this->when = _when;
 		}
-		std::string toString() const {
-			char buf[0x30] = {0x00};
-			sprintf(buf,"Check daytime (0=day, 1=night)\n=====\nWhen %i\n",
-				this->getWhen());
+		std::string toString(bool indent = true) const {
+			char buf[0x40] = {0x00};
+			sprintf(buf,"Check daytime (0=day, 1=night) (0x0C)\n%s=====\n%sWhen %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getWhen());
 			return std::string(buf);
 		}
 		__inline BYTE getWhen() const { return this->when; }
@@ -628,12 +630,12 @@ struct AICOND_13 {
 			this->statusType = status;
 			this->hasIt = (hasItOrNot > 0 ? true : false);
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Buffs\n=====\nTargetType: %i\nBuffType: %i\nHasIt: %i\n",
-				this->getTargetCheckType(),
-				this->getStatusType(),
-				this->needsStatusType());
+			sprintf(buf,"Check Buffs (0x0D)\n%s=====\n%sTargetType: %i\n%sBuffType: %i\n%sHasIt: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getTargetCheckType(),
+				indent ? "\t\t\t" : "", this->getStatusType(),
+				indent ? "\t\t\t" : "", this->needsStatusType());
 			return std::string(buf);
 		}
 		__inline BYTE getTargetCheckType() const { return this->checkTarget; }
@@ -661,12 +663,12 @@ struct AICOND_14 {
 			this->value = newValue;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Variables\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVariableIndex(),
-				this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf,"Check Variables (0x0E)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->variableIdx; }
@@ -693,12 +695,12 @@ struct AICOND_15 {
 			this->value = newValue;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Variables\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVariableIndex(),
-				this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf,"Check Variables (0x0F)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->variableIdx; }
@@ -726,12 +728,12 @@ struct AICOND_16 {
 			this->value = newValue;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Variables\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVariableIndex(),
-				this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf,"Check Variables (0x10)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->variableIdx; }
@@ -745,6 +747,7 @@ struct AICOND_17 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		DWORD npcId;
+		WORD mapId; //Maybe?
 	public:
 		AICOND_17(DWORD npcType) {
 			this->type = __AIP_CONDITION_CODE__ | 0x12;
@@ -752,10 +755,11 @@ struct AICOND_17 {
 
 			this->npcId = npcType;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check NPC on Map\n=====\nNpcID: %i\n",
-				this->getNpcId());
+			sprintf(buf,"Check NPC on Map (0x11)\n%s=====\n%sNpcID: %i\n%sMapId: %i",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getNpcId(),
+				indent ? "\t\t\t" : "", this->mapId );
 			return std::string(buf);
 		}
 		__inline DWORD getNpcId() const { return this->npcId; }
@@ -775,11 +779,11 @@ struct AICOND_18 {
 			this->distance = dist;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Distance to Owner\n=====\nDistance: %f\nOperation: %s\n",
-				this->getDistance(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf,"Check Distance to Owner (0x12)\n%s=====\n%sDistance: %f\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -801,10 +805,10 @@ struct AICOND_19 {
 			this->startTime = _startTime;
 			this->endTime = _endTime;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Time\n=====\nStartTime: %i, EndTime: %i\n",
-				this->getStartTime(), this->getEndTime());
+			sprintf(buf,"Check Time (0x13)\n%s=====\n%sStartTime: %i, EndTime: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStartTime(), this->getEndTime());
 			return std::string(buf);
 		}
 		__inline DWORD getStartTime() const { return this->startTime; }
@@ -830,12 +834,12 @@ struct AICOND_20 {
 			this->value = val;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check AbilityValue\n=====\nAbility Name: %s\nValue: %i\nOperation: %s\n",
-				AIService::getAbilityTypeName(this->getAbilityType()),
-				this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf,"Check AbilityValue (0x14)\n%s=====\n%sAbility Name: %s\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", AIService::getAbilityTypeName(this->getAbilityType()),
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getAbilityType() const { return this->abilityType; }
@@ -851,7 +855,7 @@ struct AICOND_21 {
 		AICOND_21() { this->type = __AIP_CONDITION_CODE__ | 0x16; 
 			this->_size = 0x08;
 		}
-		__inline std::string toString() const { return std::string(""); }
+		__inline std::string toString() const { return std::string("HAS_NO_OWNER (0x15)\n"); }
 };
 
 struct AICOND_22 {
@@ -862,7 +866,7 @@ struct AICOND_22 {
 		AICOND_22() { this->type = __AIP_CONDITION_CODE__ | 0x17; 
 			this->_size = 0x08;
 		}
-		__inline std::string toString() const { return std::string(""); }
+		__inline std::string toString() const { return std::string("HAS_OWNER (0x16)\n"); }
 };
 
 struct AICOND_23 {
@@ -879,10 +883,10 @@ struct AICOND_23 {
 			this->startTime = startTime;
 			this->endTime = endTime;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Time\n=====\nStartTime: %i\nEndTime: %i\n",
-				this->getStartTime(), this->getEndTime());
+			sprintf(buf,"Check Time (0x17)\n%s=====\n%sStartTime: %i\nEndTime: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStartTime(), this->getEndTime());
 			return std::string(buf);
 		}
 		__inline DWORD getStartTime() const { return this->startTime; }
@@ -912,11 +916,11 @@ struct AICOND_24 {
 			this->minute[AICOND_24::START_TIME] = minuteStart;
 			this->minute[AICOND_24::END_TIME] = minuteEnd;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Day of Month\n=====\nDay %i\nStartTime[%i:%i]\nEndTime[%i:%i]\n",
-				this->getDay(), this->getHourStart(), this->getMinuteStart(),
-				this->getHourEnd(), this->getMinuteEnd());
+			sprintf(buf,"Check Day of Month (0x18)\n%s=====%s\nDay %i\n%sStartTime[%i:%i]\n%sEndTime[%i:%i]\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDay(), indent ? "\t\t\t" : "", this->getHourStart(), this->getMinuteStart(),
+				indent ? "\t\t\t" : "", this->getHourEnd(), this->getMinuteEnd());
 			return std::string(buf);
 		}
 		__inline BYTE getDay() const { return this->day; }
@@ -949,11 +953,11 @@ struct AICOND_25 {
 			this->minute[AICOND_25::START_TIME] = minuteStart;
 			this->minute[AICOND_25::END_TIME] = minuteEnd;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Weekday\n=====\nWeekday %i\nStartTime[%i:%i]\nEndTime[%i:%i]\n",
-				this->getWeekday(), this->getHourStart(), this->getMinuteStart(),
-				this->getHourEnd(), this->getMinuteEnd());
+			sprintf(buf,"Check Weekday (0x19)\n%s=====%s\nWeekday %i\n%sStartTime[%i:%i]\n%sEndTime[%i:%i]\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getWeekday(), indent ? "\t\t\t" : "", this->getHourStart(), this->getMinuteStart(),
+				indent ? "\t\t\t" : "", this->getHourEnd(), this->getMinuteEnd());
 			return std::string(buf);
 		}
 		__inline BYTE getWeekday() const { return this->weekDay; }
@@ -977,10 +981,10 @@ struct AICOND_26 {
 			this->x = _x;
 			this->y = _y;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf,"Check Coordinates\n=====\nCoordinate: [%i;%i]\n",
-				this->getX(), this->getY());
+			sprintf(buf,"Check Coordinates (0x1A)\n%s=====%s\nCoordinate: [%i;%i]\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getX(), this->getY());
 			return std::string(buf);
 		}
 		__inline WORD getX() const { return this->x; }
@@ -1013,12 +1017,14 @@ struct AICOND_27 {
 			this->amount = count;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x100] = {0x00};
-			sprintf(buf,"Check level of nearby Entities\n=====\nDistance: %f\nNeeds Ally: %i\nLevelDiff: [%i;%i]\nAmount: %i\nOperation: %s\n",
-				this->getDistance(), this->needsAlly(),
-				this->getLevelDiff(0x00), this->getLevelDiff(0x01),
-				this->getAmount(), AIService::operationName(this->getOperationType()));
+			sprintf(buf,"Check level of nearby Entities (0x1B)\n%s=====\n%sDistance: %f\n%sNeeds Ally: %i\n%sLevelDiff: [%i;%i]\n%sAmount: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(), 
+				indent ? "\t\t\t" : "", this->needsAlly(),
+				indent ? "\t\t\t" : "", this->getLevelDiff(0x00), this->getLevelDiff(0x01),
+				indent ? "\t\t\t" : "", this->getAmount(), 
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -1047,12 +1053,12 @@ struct AICOND_28 {
 			this->value = val;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Variables\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVarIndex(),
-				this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf,"Check Variables (0x1C)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVarIndex(),
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVarIndex() const { return this->varIdx; }
@@ -1072,10 +1078,10 @@ struct AICOND_29 {
 
 			this->targetType = target_Type;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf,"Check TargetType\n=====\nTargetType: %i\n",
-				this->getTargetType());
+			sprintf(buf,"Check TargetType (0x1D)\n%s=====\n%sTargetType: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getTargetType());
 			return std::string(buf);
 		}
 		__inline BYTE getTargetType() const { return this->targetType; }
@@ -1094,10 +1100,10 @@ struct AICOND_30 {
 			this->unknown = unknownSoFar;
 		}
 		
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf,"Check ???\n=====\nUnknown: 0x%x\n",
-				this->getVariable());
+			sprintf(buf,"Check ??? (0x1E)\n%s=====\n%sUnknown: 0x%x\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariable());
 			return std::string(buf);
 		}
 		__inline DWORD getVariable() const { return this->unknown; }
@@ -1226,7 +1232,7 @@ struct AIACTION_00 {
 		}
 
 		std::string toString() const {
-			return std::string("");
+			return std::string("WAT_TO_DO (0x00)\n");
 		}
 };
 
@@ -1242,9 +1248,10 @@ struct AIACTION_01 {
 
 			this->action = actionId;
 		}
-		std::string toString() const { 
+		std::string toString(bool indent = true) const { 
 			char buf[0x30] = {0x00};
-			sprintf(buf, "Set Action\n=====\nActionType: %i\n", this->getAction());
+			sprintf(buf, "Set Action (0x01)\n%s=====\n%sActionType: %i\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getAction());
 			return std::string(buf);
 		}
 		__inline BYTE getAction() const { return this->action; }
@@ -1261,9 +1268,10 @@ struct AIACTION_02 {
 
 			this->stringId = strId;
 		}
-		std::string toString() const { 
-			char buf[0x30] = {0x00};
-			sprintf(buf, "Say String\n=====\nLTB-StringId: %i\n", this->getStringID());
+		std::string toString(bool indent = true) const { 
+			char buf[0x40] = {0x00};
+			sprintf(buf, "Say String (0x02)\n%s=====%s\nLTB-StringId: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStringID());
 			return std::string(buf);
 		}
 		__inline DWORD getStringID() const { return this->stringId; }
@@ -1284,10 +1292,11 @@ struct AIACTION_03 {
 			this->distance = dist;
 			this->stance = _stance;
 		}
-		std::string toString() const { 
-			char buf[0x50] = {0x00};
-			sprintf(buf, "Move to random position\n=====\nMaxDistance: %f\nStance: %i\n", 
-				this->getDistance(), this->getStance());
+		std::string toString(bool indent = true) const { 
+			char buf[0x60] = {0x00};
+			sprintf(buf, "Move to random position (0x03)\n%s=====\n%sMaxDistance: %f\n%sStance: %i\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(), 
+				indent ? "\t\t\t" : "", this->getStance());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -1308,10 +1317,11 @@ struct AIACTION_04 {
 			this->distance = dist;
 			this->stance = _stance;
 		}
-		std::string toString() const { 
+		std::string toString(bool indent = true) const { 
 			char buf[0x50] = {0x00};
-			sprintf(buf, "Move to Spawn\n=====\nMaxDistance: %f\nStance: %i\n", 
-				this->getDistance(), this->getStance());
+			sprintf(buf, "Move to Spawn (0x04)\n%s=====\n%sMaxDistance: %f\n%sStance: %i\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(), 
+				indent ? "\t\t\t" : "", this->getStance());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -1332,9 +1342,10 @@ struct AIACTION_05 {
 		}
 		__inline BYTE getStance() const { return this->stance; }
 
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x100] = {0x00};
-			::sprintf(buf, "MoveTo Target\n=====\nStance: %i\n", this->getStance());
+			::sprintf(buf, "MoveTo Target (0x05)\n%s=====\n%sStance: %i\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStance());
 			return (std::string(buf));
 		}
 };
@@ -1355,11 +1366,12 @@ struct AIACTION_06 {
 			this->abilityType = ability;
 			this->moreOrLess = (isMoreOrLess > 0 ? true : false);
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x100] = {0x00};
-			sprintf(buf, "Find and attack target\n=====\nMaxDist: %f\nAbilityType: %s\nNeedsLess: %i\n",
-				this->getDistance(), AIService::operationName(this->getAbilityType()), this->needsLessAbility()
-				);
+			sprintf(buf, "Find and attack target (0x06)\n%s=====\n%sMaxDist: %f\n%sAbilityType: %s\n%sNeedsLess: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getAbilityType()),
+				indent ? "\t\t\t" : "", this->needsLessAbility() );
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -1380,7 +1392,7 @@ struct AIACTION_07 {
 			this->_size = 0x08;
 		}
 		std::string toString() const {
-			return std::string("");
+			return std::string("SPECIAL_ATTACK (0x07)\n");
 		}
 };
 
@@ -1398,10 +1410,11 @@ struct AIACTION_08 {
 			this->distance = dist;
 			this->stance = _stance;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x100] = {0x00};
-			sprintf(buf, "MoveTo Target\n=====\nMaxDist: %f\nStance: %i\n",
-				this->getDistance(), this->getStance());
+			sprintf(buf, "MoveTo Target (0x08)\n%s=====\n%sMaxDist: %f\n%sStance: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(), 
+				indent ? "\t\t\t" : "", this->getStance());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -1423,10 +1436,10 @@ struct AIACTION_09 {
 		}
 		__inline WORD getMonsterId() const { return this->monsterId; }
 		
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf, "Convert Monster\n=====\nNewMonID: %i\n",
-				this->getMonsterId());
+			sprintf(buf, "Convert Monster (0x09)\n%s=====\n%sNewMonID: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMonsterId());
 			return std::string(buf);
 		}
 };
@@ -1445,10 +1458,10 @@ struct AIACTION_10 {
 		}
 		__inline WORD getMonsterId() const { return this->monsterId; }
 		
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf, "Spawn Pet\n=====\nPetTypeId: %i\n",
-				this->getMonsterId());
+			sprintf(buf, "Spawn Pet (0x0A)\n%s=====\n%sPetTypeId: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMonsterId());
 			return std::string(buf);
 		}
 };
@@ -1470,10 +1483,11 @@ struct AIACTION_11 {
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		__inline DWORD getMonsterAmount() const { return this->numOfMonsters; }
 		
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x50] = {0x00};
-			sprintf(buf, "Call Allies for Attack\n=====\nDistance: %f\nAmount: %i\n",
-				this->getDistance(), this->getMonsterAmount());
+			sprintf(buf, "Call Allies for Attack (0x0B)\n%s=====\n%sDistance: %f\n%sAmount: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(), 
+				indent ? "\t\t\t" : "", this->getMonsterAmount());
 			return std::string(buf);
 		}
 };
@@ -1487,7 +1501,7 @@ struct AIACTION_12 {
 			this->_size = 0x08;
 		}
 		std::string toString() const {
-			return std::string("");
+			return std::string("ATTACK_NEAREST_TARGET (0x0C)\n");
 		}
 };
 
@@ -1500,7 +1514,7 @@ struct AIACTION_13 {
 			this->_size = 0x08;
 		}
 		std::string toString() const {
-			return std::string("");
+			return std::string("ATTACK_FOUND_TARGET (0x0D)\n");
 		}
 };
 
@@ -1518,10 +1532,10 @@ struct AIACTION_14 {
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf, "Call family for attack\n=====\nDistance: %f\n",
-				this->getDistance());
+			sprintf(buf, "Call family for attack (0x0E)\n%s=====\n%sDistance: %f\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance());
 			return std::string(buf);
 		}
 };
@@ -1533,8 +1547,11 @@ struct AIACTION_15 {
 	public:
 		AIACTION_15() { this->type = __AIP_ACTION_CODE__ | 0x10; 
 			this->_size = 0x08;}
-		std::string toString() const {
-			return std::string("Attack Designated target\n====\n");
+		std::string toString(bool indent = true) const {
+			char buf[0x40] = {0x00};
+			sprintf(buf, "Attack Designated target (0x0F)\n%s====%sTrue\n",
+				indent ? "\t\t\t" : "",indent ? "\t\t\t" : "" );
+			return std::string(buf);
 		}
 };
 
@@ -1550,10 +1567,10 @@ struct AIACTION_16 {
 			this->distance = dist;
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
-			sprintf(buf, "Run Away\n=====\nDistance: %f\n",
-				this->getDistance());
+			sprintf(buf, "Run Away (0x10)\n%s=====\n%sDistance: %f\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance());
 			return std::string(buf);
 		}
 };
@@ -1594,12 +1611,12 @@ struct AIACTION_17 {
 			}
 			this->itemOwner = 0x00;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf, "Drop Item\n=====\n");
+			sprintf(buf, "Drop Item (0x11)\n%s=====\n", indent ? "\t\t\t" : "" );
 			for(unsigned int i=0;i<5;i++) {
 				if(this->items[i] > 0)
-					sprintf(&buf[strlen(buf)], "Item[%i]: %i\n", i, this->items[i]);
+					sprintf(&buf[strlen(buf)], "%sItem[%i]: %i\n", indent ? "\t\t\t" : "",  i, this->items[i]);
 			}
 			return std::string(buf);
 		}
@@ -1629,11 +1646,12 @@ struct AIACTION_18 {
 		__inline WORD getMonsterAmount() const { return this->monAmount; }
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		
-		std::string toString() const {
-			char buf[0x50] = {0x00};
-			sprintf(buf, "Spawn Slaves\n=====\nMonTypeId: %i\nAmount: %i\nMaxDistance: %f\n",
-				this->getMonsterId(), this->getMonsterAmount(),
-				this->getDistance());
+		std::string toString(bool indent = true) const {
+			char buf[0x60] = {0x00};
+			sprintf(buf, "Spawn Slaves (0x12)\n%s=====\n%sMonTypeId: %i\n%sAmount: %i\n%sMaxDistance: %f\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMonsterId(),
+				indent ? "\t\t\t" : "", this->getMonsterAmount(),
+				indent ? "\t\t\t" : "", this->getDistance());
 			return std::string(buf);
 		}
 };
@@ -1646,9 +1664,10 @@ struct AIACTION_19 {
 		AIACTION_19() { this->type = __AIP_ACTION_CODE__ | 0x14; 
 			this->_size = 0x08;
 		}
-		std::string toString() const {
-			char buf[0x30] = {0x00};
-			sprintf(buf, "Attack nearest target\n=====\n");
+		std::string toString(bool indent = true) const {
+			char buf[0x40] = {0x00};
+			sprintf(buf, "Attack nearest target (0x13)\n%s=====%sTrue\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "");
 			return std::string(buf);
 		}
 };
@@ -1678,11 +1697,12 @@ struct AIACTION_20 {
 		__inline WORD getMonsterId() const { return this->monId; }
 		__inline WORD getPositionType() const { return this->positionType; }
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		std::string toString() const {
-			char buf[0x60] = {0x00};
-			sprintf(buf, "Spawn Slave at Position\n=====\nMonTypeId: %i\nPositionType: %i\nMaxDistance: %f\n",
-				this->getMonsterId(), this->getPositionType(),
-				this->getDistance());
+		std::string toString(bool indent = true) const {
+			char buf[0xA0] = {0x00};
+			sprintf(buf, "Spawn Slave at Position (0x14)\n%s=====\n%sMonTypeId: %i\n%sPositionType: %i\n%sMaxDistance: %f\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMonsterId(), 
+				indent ? "\t\t\t" : "", this->getPositionType(),
+				indent ? "\t\t\t" : "", this->getDistance());
 			return std::string(buf);
 		}
 };
@@ -1695,8 +1715,8 @@ struct AIACTION_21 {
 		AIACTION_21() { this->type = __AIP_ACTION_CODE__ | 0x16; 
 			this->_size = 0x08;
 		}
-		std::string toString() const {
-			return std::string("Suicide\n=====\n");
+		std::string toString(bool indent = true) const {
+			return std::string("??? (0x15)\n");
 		}
 };
 struct AIACTION_22 {
@@ -1708,7 +1728,7 @@ struct AIACTION_22 {
 			this->_size = 0x08;
 		}
 		std::string toString() const {
-			return std::string("???");
+			return std::string("??? (0x16)\n");
 		}
 };
 struct AIACTION_23 {
@@ -1719,8 +1739,11 @@ struct AIACTION_23 {
 		AIACTION_23() { this->type = __AIP_ACTION_CODE__ | 0x18; 
 			this->_size = 0x08;
 		}
-		std::string toString() const {
-			return std::string("???");
+		std::string toString(bool indent = true) const {
+			char buf[0x50] = {0x00};
+			sprintf(buf, "Suicide (0x17)\n%s=====%sTrue\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "");
+			return std::string(buf);
 		}
 };
 
@@ -1752,11 +1775,12 @@ struct AIACTION_24 {
 		__inline BYTE getTargetType() const { return this->targetType; }
 		__inline WORD getSkillId() const { return this->skillId; }
 		__inline WORD getMotion() const { return this->motion; }
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Cast Skill\n=====\nTargetType: %i\nSkillId: %i\nMotion: %i\n",
-				this->getTargetType(), this->getSkillId(),
-				this->getMotion());
+			sprintf(buf, "Cast Skill (0x18)\n%s=====\n%sTargetType: %i\n%sSkillId: %i\n%sMotion: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getTargetType(), 
+				indent ? "\t\t\t" : "", this->getSkillId(),
+				indent ? "\t\t\t" : "", this->getMotion());
 			return std::string(buf);
 		}
 };
@@ -1782,11 +1806,12 @@ struct AIACTION_25 {
 		__inline BYTE getVariableIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
 		__inline BYTE getOperationType() const { return this->operation; }
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Set NPC Variable\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVariableIndex(), this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf, "Set NPC Variable (0x19)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(), 
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 };
@@ -1812,11 +1837,12 @@ struct AIACTION_26 {
 		__inline BYTE getVariableIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
 		__inline BYTE getOperationType() const { return this->operation; }
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Set World Variable\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVariableIndex(), this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf, "Set World Variable (0x1A)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 };
@@ -1842,11 +1868,12 @@ struct AIACTION_27 {
 		__inline BYTE getVariableIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
 		__inline BYTE getOperationType() const { return this->operation; }
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Set Economy Variable\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVariableIndex(), this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf, "Set Economy Variable (0x1B)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(), 
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 };
@@ -1873,10 +1900,11 @@ struct AIACTION_28 {
 		}
 		__inline BYTE getMessageType() const { return this->messageType; }
 		__inline DWORD getMessageId() const { return this->messageId; }
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Say Message\n=====\nMessageType: %i\nMessageId: %i\n",
-				this->getMessageType(), this->getMessageId());
+			sprintf(buf, "Say Message (0x1C)\n%s=====\n%sMessageType: %i\n%sMessageId: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMessageType(), 
+				indent ? "\t\t\t" : "", this->getMessageId());
 			return std::string(buf);
 		}
 };
@@ -1889,8 +1917,11 @@ struct AIACTION_29 {
 		AIACTION_29() { this->type = __AIP_ACTION_CODE__ | 0x1E; 
 			this->_size = 0x08;
 		}
-		std::string toString() const {
-			return std::string("Move towards owner\n====\n");
+		std::string toString(bool indent = true) const {
+			char buf[0x60] = {0x00};
+			sprintf(buf, "Move towards owner (0x1D)\n%s====%sTrue\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "");
+			return std::string(buf);
 		}
 };
 
@@ -1898,17 +1929,28 @@ struct AIACTION_30 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		std::string triggerName;
+		union {
+			BYTE length;
+			WORD len;
+		};
+		char triggerName[128];
 	public:
 		AIACTION_30(const char* trigger) {
 			this->type = __AIP_ACTION_CODE__ | 0x1F;
 			this->_size = 0x08 + 0x04 + strlen(trigger);
 			
-			this->triggerName = std::string(trigger);
+			//this->triggerName = trigger;
 		}
-		__inline std::string getTriggerName() const { return this->triggerName; }
-		std::string toString() const {
-			return std::string("QuestTrigger\n====\nTriggerName: %s\n", this->getTriggerName().c_str());
+		std::string getTriggerName() const { 
+			const char* triggerName = (reinterpret_cast<const char*>(&this[this->_size - this->length])); 
+			return std::string(triggerName);
+		}
+		std::string toString(bool indent = true) const {
+			std::string triggerName = this->getTriggerName();
+			char buf[0x100] = {0x00};
+			sprintf(buf, "QuestTrigger (0x1E)\n%s====\n%sTriggerName: %s\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", triggerName.c_str());
+			return std::string(buf);
 		}
 };
 
@@ -1920,8 +1962,11 @@ struct AIACTION_31 {
 		AIACTION_31() { this->type = __AIP_ACTION_CODE__ | 0x20; 
 			this->_size = 0x08;
 		}
-		std::string toString() const {
-			return std::string("Attack owner's target\n====\n");
+		std::string toString(bool indent = true) const {
+			char buf[0x50] = {0x00};
+			sprintf(buf, "Attack owner's target\n%s====%sTrue\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "");
+			return std::string(buf);
 		}
 };
 
@@ -1943,8 +1988,12 @@ struct AIACTION_32 {
 		__inline bool setOn() const { return this->offOrOn; }
 		__inline bool setOff() const { return !this->setOn(); }
 
-		std::string toString() const {
-			return std::string("Set PVPMode on/off\n====\nMapId: %i\nSetOn: %i\n", this->getMapId(), this->setOn());
+		std::string toString(bool indent = true) const {
+			char buf[0x100] = {0x00};
+			sprintf(buf, "Set PVPMode on/off\n%s====\n%sMapId: %i\n%sSetOn: %i\n", 
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMapId(), 
+				indent ? "\t\t\t" : "", this->setOn());
+			return std::string(buf);
 		}
 };
 
@@ -1958,7 +2007,7 @@ struct AIACTION_33 {
 			this->type = __AIP_ACTION_CODE__ | 0x22;
 			this->_size = 0x08;
 		}
-		std::string toString() const { return std::string(""); }
+		std::string toString() const { return std::string("ZONE_TRIGGER(??)\n"); }
 };
 
 struct AIACTION_34 {
@@ -1975,10 +2024,11 @@ struct AIACTION_34 {
 			this->itemNum = itemNo;
 			this->amount = count;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Give item to owner\n=====\nItem: %i\nAmount: %i\n",
-				this->getItemNum(), this->getAmount());
+			sprintf(buf, "Give item to owner\n%s=====\n%sItem: %i\n%sAmount: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getItemNum(), 
+				indent ? "\t\t\t" : "", this->getAmount());
 			return std::string(buf);
 		}
 		__inline WORD getItemNum() const { return this->itemNum; }
@@ -2004,11 +2054,12 @@ struct AIACTION_35 {
 			this->value = val;
 			this->operation = op;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Set AI Variable (?)\n=====\nVarIdx: %i\nValue: %i\nOperation: %s\n",
-				this->getVariableIndex(), this->getValue(),
-				AIService::operationName(this->getOperationType()));
+			sprintf(buf, "Set AI Variable (?)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(), 
+				indent ? "\t\t\t" : "", this->getValue(),
+				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->varIdx; }
@@ -2030,10 +2081,11 @@ struct AIACTION_36 {
 			this->monId = monId;
 			this->assignMaster = assign;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Spawn Monster\n=====\nMonId: %i\nAssignMaster: %i\n",
-				this->getMonsterId(), this->getAssignMaster());
+			sprintf(buf, "Spawn Monster\n%s=====\n%sMonId: %i\n%sAssignMaster: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMonsterId(), 
+				indent ? "\t\t\t" : "", this->getAssignMaster());
 			return std::string(buf);
 		}
 		__inline WORD getMonsterId() const { return this->monId; }
@@ -2058,10 +2110,13 @@ struct AIACTION_37 {
 			this->distance = dist;
 			this->assignMaster = assign;
 		}
-		std::string toString() const {
+		std::string toString(bool indent = true) const {
 			char buf[0xA0] = {0x00};
-			sprintf(buf, "Spawn Monster at position\n=====\nMonId: %i\nPositionType: %i\nDistance: %f\nAssignMaster: %i\n",
-				this->getMonsterId(), this->getPositionType(), this->getDistance(), this->getAssignMaster());
+			sprintf(buf, "Spawn Monster at position\n%s=====\n%sMonId: %i\n%sPositionType: %i\n%sDistance: %f\n%sAssignMaster: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMonsterId(), 
+				indent ? "\t\t\t" : "", this->getPositionType(), 
+				indent ? "\t\t\t" : "", this->getDistance(), 
+				indent ? "\t\t\t" : "", this->getAssignMaster());
 			return std::string(buf);
 		}
 		__inline WORD getMonsterId() const { return this->monId; }

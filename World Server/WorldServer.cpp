@@ -693,22 +693,23 @@ void WorldServer::dumpAICombined(const char* filePath) {
 		file.putStringWithVarOnly("CheckInterval: %i | DmgTrigger: %i\n", aip->getCheckInterval(), aip->getTriggerDamageAmount());
 		file.putStringWithVarOnly("BlockCount: %i\n", aip->getBlockCount());
 		for(unsigned int j=0;j<aip->getBlockCount();j++) {
-			const std::vector<AIP::Record> records = aip->getRecords(i);
+			const std::vector<AIP::Record> records = aip->getRecords(j);
 			file.putStringWithVarOnly("\tCurrent Block[%i] records: %i\n", j, records.size());
 			for(unsigned int k=0;k<records.size();k++) {
 				const AIP::Record& curRec = records.at(k);
-				file.putStringWithVarOnly("\t\tConditionCount: %i\n", j, curRec.getConditionCount());
+				file.putStringWithVarOnly("\t\tConditionCount: %i\n", curRec.getConditionCount());
 				for(unsigned int m=0;m<curRec.getConditionCount();m++) {
-					const char* data = curRec.getCondition(i).getData();
+					const char* data = curRec.getCondition(m).getData();
 					AIConditions cond(data);
 					file.putStringWithVarOnly("\t\t\t%s\n", cond.toString());
 				}
-				file.putStringWithVarOnly("\t\tActionCount: %i\n", j, curRec.getActionCount());
+				file.putStringWithVarOnly("\t\tActionCount: %i\n", curRec.getActionCount());
 				for(unsigned int m=0;m<curRec.getActionCount();m++) {
-					const char* data = curRec.getAction(i).getData();
+					const char* data = curRec.getAction(m).getData();
 					AIActions act(data);
 					file.putStringWithVarOnly("\t\t\t%s\n", act.toString());
 				}
+				file.putString("\n\n");
 			}
 		}
 		file.putString("\n\n");
@@ -729,22 +730,23 @@ void WorldServer::dumpAISeparated(std::string basicFilePath) {
 		file.putStringWithVarOnly("CheckInterval: %i | DmgTrigger: %i\n", aip->getCheckInterval(), aip->getTriggerDamageAmount());
 		file.putStringWithVarOnly("BlockCount: %i\n", aip->getBlockCount());
 		for(unsigned int j=0;j<aip->getBlockCount();j++) {
-			const std::vector<AIP::Record> records = aip->getRecords(i);
+			const std::vector<AIP::Record> records = aip->getRecords(j);
 			file.putStringWithVarOnly("\tCurrent Block[%i] records: %i\n", j, records.size());
 			for(unsigned int k=0;k<records.size();k++) {
 				const AIP::Record& curRec = records.at(k);
-				file.putStringWithVarOnly("\t\tConditionCount: %i\n", j, curRec.getConditionCount());
+				file.putStringWithVarOnly("\t\tConditionCount: %i\n", curRec.getConditionCount());
 				for(unsigned int m=0;m<curRec.getConditionCount();m++) {
-					const char* data = curRec.getCondition(i).getData();
+					const char* data = curRec.getCondition(m).getData();
 					AIConditions cond(data);
-					file.putStringWithVarOnly("\t\t\t%s\n", cond.toString());
+					file.putStringWithVarOnly("\t\t\t%s\n", cond.toString().c_str());
 				}
-				file.putStringWithVarOnly("\t\tActionCount: %i\n", j, curRec.getActionCount());
+				file.putStringWithVarOnly("\t\tActionCount: %i\n", curRec.getActionCount());
 				for(unsigned int m=0;m<curRec.getActionCount();m++) {
-					const char* data = curRec.getAction(i).getData();
+					const char* data = curRec.getAction(m).getData();
 					AIActions act(data);
-					file.putStringWithVarOnly("\t\t\t%s\n", act.toString());
+					file.putStringWithVarOnly("\t\t\t%s\n", act.toString().c_str());
 				}
+				file.putString("\n\n");
 			}
 		}
 		file.putString("\n\n");
