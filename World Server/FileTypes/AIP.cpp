@@ -414,9 +414,8 @@ bool AIService::conditionRandomPercentageMet(const AICOND_07* cond) {
 }
 
 bool AIService::conditionFindNearestEligibleTarget(NPC* npc, const AICOND_08* cond, AITransfer* trans) {
-	UniqueSortedList<DWORD, MapSector*> sectors = npc->getVisibleSectors();
-	for(unsigned int i=0;i<sectors.size();i++) {
-		MapSector* currentSector = sectors.getValue(i);
+	for(unsigned int i=0;i<npc->getVisibleSectors().size();i++) {
+		MapSector* currentSector = npc->getVisibleSectors().getValue(i);
 		LinkedList<Entity*>::Node* eNode = currentSector->getFirstEntity();
 		for(;eNode;eNode = eNode->getNextNode()) {
 			Entity* entity = eNode->getValue();
@@ -505,15 +504,18 @@ bool AIService::conditionIsEconomyVarValid(const AICOND_16* cond) {
 
 bool AIService::conditionIsNPCNearby(NPC *npc, const AICOND_17* ai) {
 	Map* currentMap = mainServer->getMap(npc->getMapId());
-	LinkedList<Entity*>::Node* eNode = currentMap->getFirstEntity();
-	for(;eNode;eNode = eNode->getNextNode()) {
-		Entity* curEntity = eNode->getValue();
-		if(!curEntity || curEntity->getEntityType() == Entity::TYPE_PLAYER) {
-			continue;
+	for(unsigned int i=0;i<currentMap->getSectorCount();i++) {
+		MapSector* sector = currentMap->getSector(i);
+		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
+		for(;eNode;eNode = eNode->getNextNode()) {
+			Entity* curEntity = eNode->getValue();
+			if(!curEntity || curEntity->getEntityType() == Entity::TYPE_PLAYER) {
+				continue;
+			}
+			NPC* npc = dynamic_cast<NPC*>(curEntity);
+			if (npc && npc->getTypeId() == ai->getNpcId())
+				return true;
 		}
-		NPC* npc = dynamic_cast<NPC*>(curEntity);
-		if (npc && npc->getTypeId() == ai->getNpcId())
-			return true;
 	}
 	return false;
 }
