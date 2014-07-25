@@ -747,7 +747,6 @@ struct AICOND_17 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		DWORD npcId;
-		WORD mapId; //Maybe?
 	public:
 		AICOND_17(DWORD npcType) {
 			this->type = __AIP_CONDITION_CODE__ | 0x12;
@@ -757,9 +756,8 @@ struct AICOND_17 {
 		}
 		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check NPC on Map (0x11)\n%s=====\n%sNpcID: %i\n%sMapId: %i",
-				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getNpcId(),
-				indent ? "\t\t\t" : "", this->mapId );
+			sprintf(buf,"Check NPC on Map (0x11)\n%s=====\n%sNpcID: %i\n",
+				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getNpcId());
 			return std::string(buf);
 		}
 		__inline DWORD getNpcId() const { return this->npcId; }
@@ -898,23 +896,16 @@ struct AICOND_24 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		BYTE day; //1-31
-		BYTE hour[2];
-		BYTE minute[2];
+		BYTE start[2];
+		BYTE end[2];
 		char notUsed[3];
 	public:
-		const static BYTE START_TIME = 0x00;
-		const static BYTE END_TIME = 0x01;
+		const static BYTE HOUR_TIME = 0x00;
+		const static BYTE MINUTE_TIME = 0x01;
 
 		AICOND_24(BYTE dayNo, BYTE hourStart, BYTE minuteStart, BYTE hourEnd, BYTE minuteEnd) {
 			this->type = __AIP_CONDITION_CODE__ | 0x19;
 			this->_size = 0x08 + 0x05;
-			
-			this->day = dayNo;
-			this->hour[AICOND_24::START_TIME] = hourStart;
-			this->hour[AICOND_24::END_TIME] = hourEnd;
-
-			this->minute[AICOND_24::START_TIME] = minuteStart;
-			this->minute[AICOND_24::END_TIME] = minuteEnd;
 		}
 		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
@@ -924,10 +915,10 @@ struct AICOND_24 {
 			return std::string(buf);
 		}
 		__inline BYTE getDay() const { return this->day; }
-		__inline BYTE getHourStart() const { return this->hour[AICOND_24::START_TIME]; }
-		__inline BYTE getHourEnd() const { return this->hour[AICOND_24::END_TIME]; }
-		__inline BYTE getMinuteStart() const { return this->minute[AICOND_24::START_TIME]; }
-		__inline BYTE getMinuteEnd() const { return this->minute[AICOND_24::END_TIME]; }
+		__inline BYTE getHourStart() const { return this->start[AICOND_24::HOUR_TIME]; }
+		__inline BYTE getHourEnd() const { return this->end[AICOND_24::HOUR_TIME]; }
+		__inline BYTE getMinuteStart() const { return this->start[AICOND_24::MINUTE_TIME]; }
+		__inline BYTE getMinuteEnd() const { return this->end[AICOND_24::MINUTE_TIME]; }
 };
 
 struct AICOND_25 {
@@ -1533,7 +1524,7 @@ struct AIACTION_14 {
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		
 		std::string toString(bool indent = true) const {
-			char buf[0x40] = {0x00};
+			char buf[0x50] = {0x00};
 			sprintf(buf, "Call family for attack (0x0E)\n%s=====\n%sDistance: %f\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance());
 			return std::string(buf);
