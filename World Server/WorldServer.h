@@ -84,7 +84,7 @@ class WorldServer : public ServerSocket {
 		WORD assignClientID(Entity*);
 		void freeClientId(Entity*);
 
-		bool isValidItem(const WORD itemType, const WORD itemId);
+		bool isValidItem(const BYTE itemType, const WORD itemId);
 
 		Map* getMap(const WORD mapId) const {
 			 if (mapId >= this->mapData.capacity())

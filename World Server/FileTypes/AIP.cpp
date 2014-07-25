@@ -576,8 +576,8 @@ bool AIService::conditionWeekTime(const AICOND_24* cond) {
 			return false;
 	}
 	unsigned __int16 Minutes = ((sTime.wHour * 60) + sTime.wMinute);
-	unsigned __int16 wFrom = (cond->hour[AICOND_24::START_TIME] * 60) + cond->minute[AICOND_24::START_TIME];
-	unsigned __int16 wTo = (cond->hour[AICOND_24::END_TIME] * 60) + cond->minute[AICOND_24::END_TIME];
+	unsigned __int16 wFrom = (cond->start[AICOND_24::HOUR_TIME] * 60) + cond->start[AICOND_24::MINUTE_TIME];
+	unsigned __int16 wTo = (cond->end[AICOND_24::HOUR_TIME] * 60) + cond->end[AICOND_24::MINUTE_TIME];
 	if(Minutes >= wFrom && Minutes <= wTo)
 		return true;
 	return false;
@@ -590,8 +590,8 @@ bool AIService::conditionMonthTime(const AICOND_25* cond) {
 		return false;
 	}
 	unsigned __int16 Minutes = ((sTime.wHour * 60) + sTime.wMinute);
-	unsigned __int16 wFrom = (cond->hour[AICOND_24::START_TIME] * 60) + cond->minute[AICOND_24::START_TIME];
-	unsigned __int16 wTo = (cond->hour[AICOND_24::END_TIME] * 60) + cond->minute[AICOND_24::END_TIME];
+	unsigned __int16 wFrom = (cond->start[AICOND_24::HOUR_TIME] * 60) + cond->start[AICOND_24::MINUTE_TIME];
+	unsigned __int16 wTo = (cond->end[AICOND_24::HOUR_TIME] * 60) + cond->end[AICOND_24::MINUTE_TIME];
 	if(Minutes >= wFrom && Minutes <= wTo)
 		return true;
 	return false;

@@ -926,23 +926,23 @@ struct AICOND_25 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		BYTE weekDay; //0-6
-		BYTE hour[2];
-		BYTE minute[2];
+		BYTE start[2];
+		BYTE end[2];
 		char notUsed[3];
 	public:
-		const static BYTE START_TIME = 0x00;
-		const static BYTE END_TIME = 0x01;
+		const static BYTE HOUR_TIME = 0x00;
+		const static BYTE MINUTE_TIME = 0x01;
 
 		AICOND_25(BYTE dayNo, BYTE hourStart, BYTE minuteStart, BYTE hourEnd, BYTE minuteEnd) {
 			this->type = __AIP_CONDITION_CODE__ | 0x1A;
 			this->_size = 0x08 + 0x05;
 			
 			this->weekDay = dayNo;
-			this->hour[AICOND_25::START_TIME] = hourStart;
-			this->hour[AICOND_25::END_TIME] = hourEnd;
+			this->start[AICOND_25::HOUR_TIME] = hourStart;
+			this->end[AICOND_25::HOUR_TIME] = hourEnd;
 
-			this->minute[AICOND_25::START_TIME] = minuteStart;
-			this->minute[AICOND_25::END_TIME] = minuteEnd;
+			this->start[AICOND_25::MINUTE_TIME] = minuteStart;
+			this->end[AICOND_25::MINUTE_TIME] = minuteEnd;
 		}
 		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
@@ -952,10 +952,10 @@ struct AICOND_25 {
 			return std::string(buf);
 		}
 		__inline BYTE getWeekday() const { return this->weekDay; }
-		__inline BYTE getHourStart() const { return this->hour[AICOND_25::START_TIME]; }
-		__inline BYTE getHourEnd() const { return this->hour[AICOND_25::END_TIME]; }
-		__inline BYTE getMinuteStart() const { return this->minute[AICOND_25::START_TIME]; }
-		__inline BYTE getMinuteEnd() const { return this->minute[AICOND_25::END_TIME]; }
+		__inline BYTE getHourStart() const { return this->start[AICOND_25::HOUR_TIME]; }
+		__inline BYTE getHourEnd() const { return this->end[AICOND_25::HOUR_TIME]; }
+		__inline BYTE getMinuteStart() const { return this->start[AICOND_25::MINUTE_TIME]; }
+		__inline BYTE getMinuteEnd() const { return this->end[AICOND_25::MINUTE_TIME]; }
 };
 
 

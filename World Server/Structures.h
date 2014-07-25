@@ -307,7 +307,7 @@ class JobType {
 
 struct Item {
 	BYTE type;
-	DWORD id;
+	WORD id;
 	bool isAppraised;
 	bool isSocketed;
 	WORD lifespan;

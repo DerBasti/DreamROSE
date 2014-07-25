@@ -437,7 +437,7 @@ void WorldServer::convertTo(NPC* npc, WORD npcDataId) {
 }
 
 
-bool WorldServer::isValidItem(const WORD itemType, const WORD itemId) {
+bool WorldServer::isValidItem(const BYTE itemType, const WORD itemId) {
 	if(itemType == 0 || itemType > ItemType::PAT || itemId >= this->equipmentFile[itemType]->getRowCount())
 		return false;
 
