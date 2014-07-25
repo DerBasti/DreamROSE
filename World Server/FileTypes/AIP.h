@@ -254,7 +254,6 @@ class AIService {
 
 		static bool checkConditions( const std::vector<Trackable<char>>& ai, class NPC* monster, AITransfer* trans );
 		static void executeActions( const std::vector<Trackable<char>>& ai, class NPC* monster, AITransfer* trans );
-
 };
 
 
@@ -2222,8 +2221,14 @@ class AIP {
 				__inline const std::vector<Trackable<char>>& getConditions() const {
 					return this->conditions;
 				}
+				__inline const Trackable<char>& getCondition(const size_t pos) const {
+					return this->conditions.at(pos);
+				}
 				__inline const std::vector<Trackable<char>>& getActions() const {
 					return this->actions;
+				}
+				__inline const Trackable<char>& getAction(const size_t pos) const {
+					return this->actions.at(pos);
 				}
 				__inline const DWORD getConditionCount() const { return this->conditions.size(); }
 				__inline const DWORD getActionCount() const { return this->actions.size(); }
@@ -2232,6 +2237,8 @@ class AIP {
 		struct Block {
 			std::vector<AIP::Record> records;
 		} blocks[MAX_BLOCKS];
+		WORD id;
+		std::string filePath;
 		DWORD checkInterval;
 		DWORD damageAmountTrigger; //Or Damage dealt/received?
 		void loadFrom(class CMyFile& file);
@@ -2243,15 +2250,22 @@ class AIP {
 		const static BYTE ON_ENEMY_DEATH = 0x04;
 		const static BYTE ON_SELF_DEATH = 0x05;
 
-		AIP() {}
-		AIP(const char* fileName);
+		AIP() {
+			this->checkInterval = 0x00;
+			this->damageAmountTrigger = 0x00;
+			this->filePath = std::string("");
+			this->id = 0x00;
+		}
+		AIP(const WORD id, const char* fileName);
 		~AIP();
 
+		__inline WORD getId() const { return this->id; }
 		__inline BYTE getBlockCount() const { return AIP::MAX_BLOCKS; }
 		__inline DWORD getRecordCount(BYTE blockId) const { return this->blocks[blockId % this->getBlockCount()].records.size(); }
 		__inline const std::vector<AIP::Record>& getRecords(const BYTE blockId) const {
 			return this->blocks[blockId % this->getBlockCount()].records;
 		}
+		__inline std::string getFilePath() const { return std::string(this->filePath); }
 		__inline DWORD getCheckInterval() const { return this->checkInterval; }
 		__inline DWORD getTriggerDamageAmount() const { return this->damageAmountTrigger; }
 };

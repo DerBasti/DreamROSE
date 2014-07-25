@@ -6,10 +6,15 @@
 
 #include "D:\Programmieren\CMyFile\MyFile.h"
 
-AIP::AIP(const char* fileName) {
+AIP::AIP(const WORD id, const char* fileName) {
 	CMyFile file(fileName, "rb");
-	if(file.exists())
+	this->id = id;
+	this->checkInterval = this->damageAmountTrigger = 0x00;
+	this->filePath = std::string("");
+	if(file.exists()) {
+		this->filePath = std::string(fileName);
 		this->loadFrom(file);
+	}
 	file.close();
 }
 

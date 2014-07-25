@@ -402,9 +402,9 @@ bool WorldServer::loadTelegates(const WORD currentMapId, STBFile& warpFile, IFO&
 bool WorldServer::loadAI() {
 	//Reserve an array with the size of the AIFile's row count
 	this->aiData.reserve(this->aiFile->getRowCount());
-	for (unsigned int i = 0; i < this->aiFile->getRowCount(); i++) {
+	for (WORD i = 0; i < this->aiFile->getRowCount(); i++) {
 		//Read all AI-Files and store them in our array.
-		AIP aiFile( (workingPath + std::string("\\") + this->aiFile->getFilePath(i)).c_str() );
+		AIP aiFile( i, (workingPath + std::string("\\") + this->aiFile->getFilePath(i)).c_str() );
 		this->aiData.addValue(aiFile);
 	}
 	return true;
@@ -671,6 +671,84 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 	}
 #undef STRCMP
 #undef SPLIT
+}
+
+
+NPCData* WorldServer::getNPCData(const AIP* ai) {
+	for(unsigned int i=0;i<this->npcData.size();i++) {
+		NPCData* npcData = &this->npcData.at(i);
+		if(npcData->getAIId() == ai->getId())
+			return npcData;
+	}
+	return nullptr;
+}
+
+void WorldServer::dumpAICombined(const char* filePath) {
+	CMyFile file(filePath, "a+");
+	for(unsigned int i=0;i<this->aiData.size();i++) {
+		AIP* aip = &this->aiData.getValue(i);
+		if(aip->getCheckInterval() == 0x00)
+			continue;
+		file.putStringWithVarOnly("%s [%i]\n", aip->getFilePath().c_str(), i);
+		file.putStringWithVarOnly("CheckInterval: %i | DmgTrigger: %i\n", aip->getCheckInterval(), aip->getTriggerDamageAmount());
+		file.putStringWithVarOnly("BlockCount: %i\n", aip->getBlockCount());
+		for(unsigned int j=0;j<aip->getBlockCount();j++) {
+			const std::vector<AIP::Record> records = aip->getRecords(i);
+			file.putStringWithVarOnly("\tCurrent Block[%i] records: %i\n", j, records.size());
+			for(unsigned int k=0;k<records.size();k++) {
+				const AIP::Record& curRec = records.at(k);
+				file.putStringWithVarOnly("\t\tConditionCount: %i\n", j, curRec.getConditionCount());
+				for(unsigned int m=0;m<curRec.getConditionCount();m++) {
+					const char* data = curRec.getCondition(i).getData();
+					AIConditions cond(data);
+					file.putStringWithVarOnly("\t\t\t%s\n", cond.toString());
+				}
+				file.putStringWithVarOnly("\t\tActionCount: %i\n", j, curRec.getActionCount());
+				for(unsigned int m=0;m<curRec.getActionCount();m++) {
+					const char* data = curRec.getAction(i).getData();
+					AIActions act(data);
+					file.putStringWithVarOnly("\t\t\t%s\n", act.toString());
+				}
+			}
+		}
+		file.putString("\n\n");
+	}
+}
+
+
+void WorldServer::dumpAISeparated(std::string basicFilePath) {
+	for(unsigned int i=0;i<this->aiData.size();i++) {
+		AIP* aip = &this->aiData.getValue(i);
+		NPCData* npcData = this->getNPCData(aip);
+		if(!npcData)
+			continue;
+		CMyFile file( (basicFilePath + "\\" + npcData->getName() + ".log").c_str(), "a+");
+		if(aip->getCheckInterval() == 0x00)
+			continue;
+		file.putStringWithVarOnly("%s [%i]:\n", aip->getFilePath().c_str(), i);
+		file.putStringWithVarOnly("CheckInterval: %i | DmgTrigger: %i\n", aip->getCheckInterval(), aip->getTriggerDamageAmount());
+		file.putStringWithVarOnly("BlockCount: %i\n", aip->getBlockCount());
+		for(unsigned int j=0;j<aip->getBlockCount();j++) {
+			const std::vector<AIP::Record> records = aip->getRecords(i);
+			file.putStringWithVarOnly("\tCurrent Block[%i] records: %i\n", j, records.size());
+			for(unsigned int k=0;k<records.size();k++) {
+				const AIP::Record& curRec = records.at(k);
+				file.putStringWithVarOnly("\t\tConditionCount: %i\n", j, curRec.getConditionCount());
+				for(unsigned int m=0;m<curRec.getConditionCount();m++) {
+					const char* data = curRec.getCondition(i).getData();
+					AIConditions cond(data);
+					file.putStringWithVarOnly("\t\t\t%s\n", cond.toString());
+				}
+				file.putStringWithVarOnly("\t\tActionCount: %i\n", j, curRec.getActionCount());
+				for(unsigned int m=0;m<curRec.getActionCount();m++) {
+					const char* data = curRec.getAction(i).getData();
+					AIActions act(data);
+					file.putStringWithVarOnly("\t\t\t%s\n", act.toString());
+				}
+			}
+		}
+		file.putString("\n\n");
+	}
 }
 
 void WorldServer::dumpTelegates(const char* filePath) {

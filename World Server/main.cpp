@@ -7,9 +7,10 @@ int main() {
 
 	MYSQL mysql;
 	WorldServer server(29200, &mysql);
+	server.dumpAISeparated("D:\\Games\\iROSE Online Server\\AI_Logs");
 	//server.dumpTelegates("D:\\Games\\iROSE Online Server\\telegates.log");
-	server.loadEncryption();
-	server.start();
+	//server.loadEncryption();
+	//server.start();
 	
 	/*
 	std::cout << "Input allowed now!\n";

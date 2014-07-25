@@ -99,6 +99,7 @@ class WorldServer : public ServerSocket {
 		__inline int getWorldVariable(BYTE varIdx) { return this->worldVar[varIdx]; }
 		__inline int getEconomyVariable(BYTE varIdx) { return this->economyVar[varIdx]; }
 		__inline NPCData* getNPCData(const DWORD& id) { return &this->npcData.at(id); }
+		NPCData* getNPCData(const AIP* ai);
 		__inline bool isValidNPCType(const DWORD id) { return this->npcData.at(id).getLevel() > 0; }
 
 		__inline time_t getWorldTime() const { return this->WorldTime.currentTime; }
@@ -135,6 +136,9 @@ class WorldServer : public ServerSocket {
 		__inline void dumpSectors(const WORD mapId, const char* filePath) {
 			return this->mapData[mapId]->dumpSectors(filePath);
 		}
+		void dumpAICombined(const char* totalFilePath);
+		
+		void dumpAISeparated(std::string filePath);
 		void dumpTelegates(const char *filePath);
 };
 
