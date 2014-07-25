@@ -1942,8 +1942,7 @@ struct AIACTION_30 {
 			//this->triggerName = trigger;
 		}
 		std::string getTriggerName() const { 
-			const char* triggerName = (reinterpret_cast<const char*>(&this[this->_size - this->length])); 
-			return std::string(triggerName);
+			return std::string(this->triggerName);
 		}
 		std::string toString(bool indent = true) const {
 			std::string triggerName = this->getTriggerName();
