@@ -7,7 +7,7 @@ CharServer::CharServer(WORD port, MYSQL* mysql) {
 	this->ipString = config->getValueString("ChannelIp");
 	this->sqlDataBase.init(__DATABASE_HOST__, __DATABASE_USERNAME__, __DATABASE_PASSWORD__, __DATABASE_DBNAME__, __DATABASE_PORT__, mysql);
 	mainServer = this;
-	std::cout << "[" << config->getValueString("WorldName") << "]: " << config->getValueString("WorldIp") << ":" << config->getValueString("WorldPort") << "\n";
+	std::cout << "[" << config->getValueString("ChannelName") << "]: " << config->getValueString("WorldIp") << ":" << config->getValueString("WorldPort") << "\n";
 }
 
 CharServer::~CharServer() {
