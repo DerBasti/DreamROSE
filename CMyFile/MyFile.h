@@ -6,7 +6,7 @@
 #include <iostream>
 #include <cstdarg>
 #include <time.h>
-#include "..\AdditionalFunctions.h"
+#include "..\QuickInfos\AdditionalFunctions.h"
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
