@@ -357,7 +357,8 @@ bool AIService::conditionHasEnoughTargets(NPC *npc, const AICOND_02* cond, AITra
 			Entity* curEntity = eNode->getValue();
 			if(!curEntity || !curEntity->isIngame() || curEntity->getEntityType() == Entity::TYPE_DROP) {
 				continue;
-			}short levelDiff = curEntity->getLevel() - npc->getLevel();
+			}
+			short levelDiff = curEntity->getLevel() - npc->getLevel();
 			if(cond->levelDiff[AICOND_02::LEVELDIFF_START] >= levelDiff &&
 				cond->levelDiff[AICOND_02::LEVELDIFF_END] <= levelDiff &&
 				dynamic_cast<Entity*>(npc)->isAllied( curEntity ) == alliedStatus) {

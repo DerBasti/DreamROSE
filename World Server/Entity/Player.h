@@ -7,6 +7,8 @@
 #include "..\..\Common\PacketIDs.h"
 #include "Entity.h"
 
+extern long PLAYER_ATTACK_INTERVAL;
+
 class Player : public Entity, public ClientSocket {
 	private:
 		struct _accountInfo {
@@ -90,13 +92,7 @@ class Player : public Entity, public ClientSocket {
 
 
 		Item inventory[Inventory::MAXIMUM];
-
-		struct BasicSkills {
-			WORD id;
-			BasicSkills() {
-				id = 0x00;
-			}
-		} basicSkills[30];
+		FixedArray<Skill*> skills;
 
 		bool handlePacket();
 
@@ -164,7 +160,8 @@ class Player : public Entity, public ClientSocket {
 		void updateMovementSpeed();
 		void checkRegeneration();
 
-		WORD checkClothesForStats(const DWORD statType, ...);
+		WORD checkClothesForStats(const DWORD statAmount, ...);
+		WORD checkSkillsForStats(const DWORD basicAmount, const DWORD statAmount, ...);
 
 		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
 
@@ -207,7 +204,7 @@ class Player : public Entity, public ClientSocket {
 		bool equipItem(const Item& item);
 
 		float getAttackRange();
-		__inline clock_t intervalBetweenAttacks() { return 125000 / this->getAttackSpeed(); }
+		__inline clock_t intervalBetweenAttacks() { return PLAYER_ATTACK_INTERVAL / this->getAttackSpeed(); }
 };
 
 #endif //__ROSE_PLAYER__

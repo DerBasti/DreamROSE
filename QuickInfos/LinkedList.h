@@ -32,8 +32,9 @@ template<class _Ty, class T = typename std::enable_if<std::has_trivial_copy<_Ty>
 		Node* getNode(const size_t pos);
 		_Ty& getValue(const size_t pos);
 
-		void remove(const _Ty& data);
-		void removeAt(const size_t pos);
+		Node* remove(const Node* node);
+		Node* remove(const _Ty& data);
+		Node* removeAt(const size_t pos);
 		void clear();
 };
 

@@ -7,6 +7,8 @@
 #include "..\FileTypes\IFO.h"
 #include "..\FileTypes\AIP.h"
 
+extern long NPC_ATTACK_INTERVAL;
+
 class NPC : public Entity {
 	private:
 		float direction;
@@ -67,7 +69,7 @@ class NPC : public Entity {
 
 		virtual bool onDamageReceived(Entity* enemy, const WORD damage);
 		virtual void addDamage(Entity* enemy, const DWORD amount) { }
-		virtual __inline clock_t intervalBetweenAttacks() { return 250000 / this->getAttackSpeed(); }
+		virtual __inline clock_t intervalBetweenAttacks() { return NPC_ATTACK_INTERVAL / this->getAttackSpeed(); }
 
 		__inline virtual const IFOSpawn* getSpawn() const { return this->spawn; }
 

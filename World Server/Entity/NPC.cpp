@@ -3,6 +3,8 @@
 #include "Player.h"
 #include "..\WorldServer.h"
 
+long NPC_ATTACK_INTERVAL = 250000;
+
 void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId, const Position& pos) {
 	this->data = newData;
 	this->ai = newAi;

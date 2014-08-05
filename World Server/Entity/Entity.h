@@ -142,7 +142,7 @@ class Entity {
 		__inline virtual void setMapId(const WORD newId) { this->entityInfo.setMapId(newId); }
 
 		__inline virtual MapSector* getSector() const { return this->entityInfo.getSector(); }
-		virtual void setSector(class MapSector* newSector);
+		virtual LinkedList<Entity*>::Node* setSector(class MapSector* newSector);
 
 		__inline virtual Entity* getTarget() const { return this->combat.getTarget(); }
 		virtual void setTarget(Entity* target);

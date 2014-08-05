@@ -2,6 +2,7 @@
 
 #include "Structures.h"
 #include ".\FileTypes\IFO.h"
+#include ".\FileTypes\ZON.h"
 
 #define __MAPSECTOR_LL__
 #define __MAPSECTOR_DEBUG__
@@ -50,8 +51,8 @@ class MapSector {
 		__inline void addEntity(Entity* newEntity) {
 			this->entitiesInSector.add(newEntity);
 		}
-		__inline void removeEntity(Entity* toRemove) {
-			this->entitiesInSector.remove(toRemove);
+		__inline LinkedList<Entity*>::Node* removeEntity(Entity* toRemove) {
+			return this->entitiesInSector.remove(toRemove);
 		}
 #endif
 		__inline DWORD getId() const { return this->id; }
@@ -78,6 +79,7 @@ class Map {
 		LinkedList<Entity*> entitiesOnMap;
 		std::vector<Position> respawnPoints;
 		void findMinMax(std::vector<std::string>& files, WORD* x, WORD* y);
+		ZON::EventInfo* getRespawn(Position& pos);
 	public:
 		const static DWORD MIN_DAYCYCLE = 0x64;
 		const static BYTE MAX_MAPS = 0xFF;
@@ -118,8 +120,10 @@ class Map {
 		__inline const DWORD getSectorCount() const { 
 			return this->mapSectors.capacity(); 
 		}
-
+		
 		const Position getRespawnPoint(Position& pos);
+		const Position getRespawnPoint(const size_t pos);
+		const WORD getRespawnPointId(Position& pos);
 	
 		__inline LinkedList<Entity*>::Node* getFirstEntity() {
 			return this->entitiesOnMap.getHeadNode();
