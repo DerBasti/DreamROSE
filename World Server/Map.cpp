@@ -165,9 +165,11 @@ MapSector* Map::getSectorBySpawn(const IFOSpawn* spawn) {
 	return this->getSector(spawn->getPosition()); 
 }
 
-const Position Map::getRespawnPoint(Position& pos) {
+ZON::EventInfo* Map::getRespawn(Position& pos) {
 	ZON* zon = mainServer->getZON(this->getId());
 	Position nearestPos; float distance = 999999.9f;
+
+	ZON::EventInfo* bestRespawn = nullptr;
 	for(unsigned int i=0;i<zon->getEventInfoAmount();i++) {
 		ZON::EventInfo& info = zon->getEventInfo(i);
 		Position infoPos = Position(info.x, info.y);
@@ -175,10 +177,39 @@ const Position Map::getRespawnPoint(Position& pos) {
 			if(distance > pos.distanceTo(infoPos)) {
 				nearestPos = infoPos;
 				distance = pos.distanceTo(infoPos);
+				bestRespawn = &info;
 			}
 		}
 	}
-	return nearestPos;
+	return bestRespawn;
+}
+
+const WORD Map::getRespawnPointId(Position& pos) {
+	ZON::EventInfo* respawn = this->getRespawn(pos);
+	if(respawn)
+		return respawn->id;
+	return 0x00;
+}
+
+const Position Map::getRespawnPoint(const size_t pos) {
+	ZON* zon = mainServer->getZON(this->getId());
+
+	ZON::EventInfo* bestRespawn = nullptr;
+	for(unsigned int i=0;i<zon->getEventInfoAmount();i++) {
+		if(i == pos)
+			return Position(zon->getEventInfo(i).x, zon->getEventInfo(i).y);
+	}
+	return Position(0.0f, 0.0f);
+}
+
+const Position Map::getRespawnPoint(Position& pos) {
+	Position retPos;
+	ZON::EventInfo* respawn = this->getRespawn(pos);
+	if(respawn) {
+		retPos.x = respawn->x;
+		retPos.y = respawn->y;
+	}
+	return retPos;
 }
 
 MapSector* Map::getSurroundingSector(MapSector* center, BYTE surroundingSectorType) {

@@ -15,6 +15,7 @@ typedef unsigned long DWORD;
 class ZON {
 	public:
 		struct EventInfo {
+			BYTE id;
 			float x;
 			float y;
 			float z;

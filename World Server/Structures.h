@@ -51,6 +51,12 @@ class Skill {
 	public:
 		const static BYTE REQUIREMENTS_MAX_NUM = 0x02;
 		const static BYTE WEAPONTYPE_MAX_MUM = 0x05;
+
+		const static BYTE BASIC_BEGIN = 0;
+		const static BYTE ACTIVE_BEGIN = 30;
+		const static BYTE PASSIVE_BEGIN = 60;
+		const static BYTE PREMIUM_BEGIN = 90;
+		const static BYTE PLAYER_MAX_SKILLS = 120;
 		Skill(SkillSTB* stb, const WORD rowId) {
 			this->aoeRange = stb->getAOERange(rowId);
 			this->attackPower = stb->getAttackpower(rowId);
@@ -85,6 +91,53 @@ class Skill {
 				this->requirements[i].type = stb->getRequiredConditionType(rowId, i);
 			}
 		}
+
+		__inline const WORD getId() const { return this->id + (this->level>0 ? this->level-1 : 0); }
+		__inline const WORD getBasicId() const { return this->id; }
+		__inline const BYTE getLevel() const { return this->level; }
+		__inline const BYTE getPointsRequiredPerLevelUp() const { return this->pointsRequiredPerLevelUp; }
+		__inline const BYTE getType() const { return this->type; }
+		__inline const DWORD getInitRange() const { return this->initRange; }
+		__inline const BYTE getTargetType() const { return this->targetType; }
+		__inline const DWORD getAoeRange() const { return this->aoeRange; }
+		__inline const WORD getAttackPower() const { return this->attackPower; }
+		__inline const bool getDoesHarm() const { return this->doesHarm; }
+		__inline const DWORD getStatus(const BYTE statusOutOfTwo) const { return this->status[statusOutOfTwo % 2]; }
+		__inline const BYTE getSuccessRate() const { return this->successRate; }
+		__inline const WORD getDuration() const { return this->duration; }
+		__inline const BYTE getCostType(const BYTE typeOutOfTwo) const { return this->costType[typeOutOfTwo % 2]; }
+		__inline const WORD getCostAmount(const BYTE typeOutOfTwo) const { return this->costAmount[typeOutOfTwo % 2]; }
+		__inline const WORD getCoolDown() const { return this->coolDown; }
+
+		__inline const WORD getBuffType(const BYTE typeOutOfThree) const { return this->buffs[typeOutOfThree % 3].type; }
+		__inline const WORD getBuffAmountFlat(const BYTE typeOutOfThree) const { return this->buffs[typeOutOfThree % 3].flatValue; }
+		__inline const WORD getBuffAmountPercentage(const BYTE typeOutOfThree) const { return this->buffs[typeOutOfThree % 3].percentValue; }
+
+		__inline const WORD getWeaponType(const BYTE typeOutOfFive) const { return this->weaponType[typeOutOfFive % 5]; }
+		__inline const WORD getClassType(const BYTE typeOutOfFour) const { return this->classType[typeOutOfFour % 4]; }
+
+		__inline const WORD getRequiredSkillBasicId(const BYTE typeOutOfThree) const { return this->requiredSkill[typeOutOfThree % 3].id; }
+		__inline const BYTE getRequiredSkillLevel(const BYTE typeOutOfThree) const { return this->requiredSkill[typeOutOfThree % 3].level; }
+		__inline const WORD getRequiredSkillId(const BYTE typeOutOfThree) const { return this->requiredSkill[typeOutOfThree % 3].id + (this->requiredSkill[typeOutOfThree % 3].level>0 ? this->requiredSkill[typeOutOfThree % 3].level - 1 : 0); }
+	
+		__inline const WORD getRequirementType(const BYTE typeOutOfTwo) const { return this->requirements[typeOutOfTwo % 2].type; }
+		__inline const WORD getRequirementAmount(const BYTE typeOutOfTwo) const { return this->requirements[typeOutOfTwo % 2].amount; }
+};
+
+//TODO: FILL BLANKS
+class SkillType {
+	private:
+		SkillType() {}
+		~SkillType() {}
+	public:
+		const static BYTE BASIC = 1;
+		const static BYTE CRAFTING = 2;
+		const static BYTE PHYSICAL_DAMAGE = 3;
+		const static BYTE POWER_UP_ONE = 4;
+		const static BYTE POWER_UP_TWO = 5;
+		const static BYTE MAGIC_DAMAGE_SINGLE = 5;
+		const static BYTE MAGIC_DAMAGE_AOE = 5;
+		const static BYTE PASSIVE = 15;
 };
 
 

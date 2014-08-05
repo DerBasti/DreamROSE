@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 CMyFile visualityLog;
+long PLAYER_ATTACK_INTERVAL = 125000;
 
 Player::Player(SOCKET sock, ServerSocket* server){ 
 	visualityLog.openFile("D:\\Games\\iROSE Online Server\\Visuality.log", "a+");
@@ -13,9 +14,13 @@ Player::Player(SOCKET sock, ServerSocket* server){
 	this->entityInfo.type = Entity::TYPE_PLAYER;
 	this->entityInfo.ingame = false;
 	this->status.updateLastRegen();
+
 	for (unsigned int i = 0; i < Inventory::MAXIMUM; i++) {
 		this->inventory[i].clear();
 	}
+	this->skills.reserve(Skill::PLAYER_MAX_SKILLS);
+	for(unsigned int i=0;i<this->skills.capacity();i++)
+		this->skills[i] = nullptr;
 }
 
 Player::~Player() {
@@ -199,6 +204,36 @@ WORD Player::checkClothesForStats(const DWORD statAmount, ...) {
 	return result;
 }
 
+WORD Player::checkSkillsForStats(const DWORD basicAmount, const DWORD statAmount, ...) {
+	std::vector<DWORD> stats;
+	va_list ap;
+	va_start(ap, statAmount);
+
+	WORD result = 0x00;
+	for(unsigned int i=0;i<statAmount;i++) {
+		stats.push_back(va_arg(ap, DWORD));
+	}
+	for(unsigned int i=0;i<this->skills.size();i++) {
+		if(!this->skills[i])
+			continue;
+		
+		Skill* currentSkill = this->skills[i];
+		if(currentSkill->getType() != SkillType::PASSIVE)
+			continue;
+		for(unsigned int j=0;j<3;j++) {
+			for(unsigned int k=0;k<stats.size();k++) {
+				if(currentSkill->getBuffType(j) == stats.at(k)) {
+					result += currentSkill->getBuffAmountFlat(j);
+					if(currentSkill->getBuffAmountPercentage(j)>0)
+						result += basicAmount * 100 / currentSkill->getBuffAmountPercentage(j);
+				}
+			}
+		}
+	}
+	return result;
+}
+
+
 //Ex.: Atkpower + 10 - (Defense * 0.7)+5 = 
 //33 - 23 = ~10 Dmg Jelly Bean
 //43 - 34 = ~9 Dmg Mother Choropy
@@ -294,37 +329,157 @@ void Player::updateAttackpower() {
 	this->stats.attackPower = totalAttackpower;
 }
 
+/**************************************************
+Weapon: 6 = 136
+Weapon: 7 = 125
+Weapon: 8 = 115
+Weapon: 9 = 107
+Weapon: 10 = 100
+Weapon: 11 = 93
+Weapon: 12 = 88
+Weapon: 13 = 83
+-----------------
+
+x / weaponSpeed = Atkspeed
+
+Weaponspeeds:
+6: x = 6 * 136 = 816
+7: x = 7 * 125 = 875
+8: x = 8 * 115 = 920
+9: x = 9 * 107 = 963
+10: x = 10 * 100 = 1000
+11: x = 11 * 93 = 1023
+12: x = 12 * 88 = 1056
+13: x = 13 * 83 = 1079
+-----------------------
+Growthrate decreases;
+Theory: divisor increases with increasing weaponSpeedType (static?)
+
+Y = 1; difference too big
+---------
+x / (weaponSpeed + y) = AtkSpeed
+x = Atkspeed * (weaponSpeed + y)
+x = 136 * (6 + 1)
+x = 136 * 7
+x = 952
+
+x = 125 * 8
+x = 1000
+----------
+
+Y = 2; difference too big
+-----------
+x = 136 * 8
+x = 1088
+
+x = 125 * 9
+x = 1125
+
+-----------
+Y=4; difference smaller, still too big
+
+x = 136 * 10
+x = 1360
+
+x = 125 * 11
+x = 1375
+
+----------
+Y = 6; difference smaller, still too big
+
+x = 136 * 12
+x = 1632
+
+x = 125 * 13
+x = 1625
+
+x = 115 * 14
+x = 1610
+------------
+Y = 5.5; first two values are suiting, afterwards too varying
+
+x = 136 * 11.5
+x = 1564
+
+x = 125 * 12.5
+x = 1562,5
+
+x = 115 * 13.5
+= 1552,5
+------------
+Y = 5.25; very fitting results
+
+x = 136 * 11.25
+x = 1530
+
+x = 125 * 12.25
+  = 1531,25
+
+x = 115 * 13,25
+x = 1523,75
+
+x = 107 * 14,25
+x = 1524,75
+
+x = 100 * 15,25
+x = 1525,00
+
+x = 93 * 16,25
+x = 1511,25
+
+x = 88 * 17,25
+  = 1518
+
+x = 83 * 18,25
+x = 1514,75
+----------------
+1522,34
+
+REVERSAL_PROCESS:
+1522,34 / (6 + 5,25) = 135,00 (+1) = 136
+1522,34 / (7 + 5,25) = 124,28 (+1) = 125
+1522,34 / (8 + 5,25) = 114,89 (+1) = 115
+1522,34 / (9 + 5,25) = 106,83 (+1) = 107
+1522,34 / (10 + 5,25) = 99,82 (+1) = 100
+1522,34 / (11 + 5,25) = 93,68 (+1) = 94  --- FAIL
+----------------
+Y = 5.0; best results
+
+136 * 11 = 1496
+125 * 12 = 1500
+115 * 13 = 1495
+107 * 14 = 1498
+100 * 15 = 1500
+93 * 16 = 1488
+88 * 17 = 1496
+83 * 18 = 1494
+----------------
+1496
+
+1496 / (6 + 5)  = 136,0
+1496 / 12 = 124,6666 -> FAIL; 
+
+As the first value has "space" until the next integer occurs,
+we can safely increase the average static value from before:
+125 * 12 = 1500
+----------------
+1500
+
+1500 / (6+5) = 136,36
+1500 / (7+5) = 125,00
+1500 / (8+5) = 115,38
+1500 / (9+5) = 107,14
+1500 / (10+15) = 100,00
+...............
+NECESSARY FUNCTION: 
+1500 / (WEAPON_SPEED + 5)
+*****************************************************/
+
 void Player::updateAttackSpeed() {
 	WORD atkSpeed = 115;
 	if(this->isWeaponEquipped()) {
-		//TODO
 		int speedType = mainServer->getWeaponAttackspeed(this->inventory[Inventory::WEAPON].id);
-		switch(speedType) {
-			case 6:
-				atkSpeed = 136;
-			break;
-			case 7:
-				atkSpeed = 125;
-			break;
-			case 8:
-				atkSpeed = 115;
-			break;
-			case 9:
-				atkSpeed = 107;
-			break;
-			case 10:
-				atkSpeed = 100;
-			break;
-			case 11:
-				atkSpeed = 93;
-			break;
-			case 12:
-				atkSpeed = 88;
-			break;
-			case 13:
-				atkSpeed = 83;
-			break;
-		}
+		atkSpeed = 1500 / (speedType + 5);
 	}
 	atkSpeed += this->getBuffAmount( Buffs::Visuality::ATTACKSPEED_UP );
 	atkSpeed -= this->getBuffAmount( Buffs::Visuality::ATTACKSPEED_DOWN );
@@ -538,11 +693,6 @@ bool Player::pakExit() {
 }
 
 bool Player::pakPlayerInfos() {
-	this->position.current.x = 520000;
-	this->position.current.y = 520000;
-	this->position.destination = this->position.current;
-	this->entityInfo.mapId = 22;
-
 	mainServer->changeToMap(this, this->getMapId());
 	
 	Packet pak(PacketID::World::Response::PLAYER_INFOS);
@@ -608,6 +758,12 @@ bool Player::pakPlayerInfos() {
 	for (short i = 0; i < 0x146; i++) {
 		pak.addByte(0x00); //?
 	}
+	
+	//Capacity = 120
+	for(unsigned int i=0;i<this->skills.capacity();i++) {
+		pak.addWord( this->skills[i] != nullptr ? this->skills[i]->getId() : 0x00 );
+	}
+	/*
 	for (unsigned int i = 0; i < 30; i++) {
 		pak.addWord(this->basicSkills[i].id); //BASIC SKILLS
 	}
@@ -620,6 +776,7 @@ bool Player::pakPlayerInfos() {
 	for (unsigned int i = 0; i < 30; i++) {
 		pak.addWord(0x00); //NOT USED
 	}
+	*/
 	for (unsigned int i = 0; i < 32; i++) {
 		pak.addWord(0x00); //QUICK BAR
 	}
@@ -683,7 +840,11 @@ bool Player::pakQuestData() {
 }
 
 bool Player::saveInfos() {
-	if(!mainServer->sqlInsert("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%i, statPoints=%i, skillPoints=%i WHERE id=%i", this->getLevel(), this->getExperience(), this->getJob(), this->inventory[0x00].amount, this->charInfo.statPoints, this->charInfo.skillPoints, this->charInfo.id))
+	Map *map = mainServer->getMap(this->getMapId());
+	WORD respawnId = 0x00;
+	if(map) 
+		respawnId = map->getRespawnPointId(this->getPositionCurrent());
+	if(!mainServer->sqlInsert("UPDATE characters SET level=%i, experience=%i, job=%i, zulies=%i, statPoints=%i, skillPoints=%i, respawnMap=%i, respawnId=%i WHERE id=%i", this->getLevel(), this->getExperience(), this->getJob(), this->inventory[0x00].amount, this->charInfo.statPoints, this->charInfo.skillPoints, this->getMapId(), respawnId, this->charInfo.id))
 		return false;
 	if(!mainServer->sqlInsert("UPDATE character_stats SET strength=%i, dexterity=%i, intelligence=%i, concentration=%i, charm=%i, sensibility=%i WHERE id=%i", this->attributes.strength, this->attributes.dexterity, this->attributes.intelligence, this->attributes.concentration, this->attributes.charm, this->attributes.sensibility, this->charInfo.id))
 		return false;
@@ -705,7 +866,7 @@ bool Player::loadInfos() {
 	this->accountInfo.accessLevel = static_cast<BYTE>(atoi(row[1]));
 	mainServer->sqlFinishQuery();
 
-	if (!mainServer->sqlRequest("SELECT name, level, experience, job, face, hair, sex, zulies, statPoints, skillPoints FROM characters WHERE id=%i", this->charInfo.id))
+	if (!mainServer->sqlRequest("SELECT name, level, experience, job, face, hair, sex, zulies, statPoints, skillPoints, respawnMap, respawnId FROM characters WHERE id=%i", this->charInfo.id))
 		return false;
 
 	row = mainServer->sqlGetNextRow();
@@ -720,6 +881,9 @@ bool Player::loadInfos() {
 	this->inventory[0x00].amount = static_cast<QWORD>(::atol(row[7]));
 	this->charInfo.statPoints = atoi(row[8]);
 	this->charInfo.skillPoints = atoi(row[9]);
+	this->entityInfo.mapId = atoi(row[10]);
+	this->setPositionCurrent(mainServer->getMap(this->getMapId())->getRespawnPoint(atoi(row[11])));
+	this->position.destination = this->position.current;
 
 	mainServer->sqlFinishQuery();
 	
@@ -765,7 +929,6 @@ bool Player::loadInfos() {
 	}
 	this->basicSkills[idx].id = atoi(str.c_str());
 
-	this->entityInfo.mapId = 22;
 	this->updateStats();
 
 	mainServer->sqlFinishQuery();

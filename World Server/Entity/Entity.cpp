@@ -38,9 +38,10 @@ void Entity::setTarget(Entity* target) {
 		pak.addWord ( this->getMovementSpeed() );
 		pak.addFloat( target->getCurrentX() );
 		pak.addFloat( target->getCurrentY() );
-		this->setStance( Stance::RUNNING );
+		this->setStance( (target->getEntityType() == Entity::TYPE_PLAYER ? Stance::RUNNING : Stance::NPC_RUNNING ) );
 		this->sendToVisible(pak);
 	}
+	this->combat.lastAttackTime = 0;
 	this->combat.setTarget(target); 
 }
 
@@ -74,6 +75,7 @@ bool Entity::movementRoutine() {
 			this->position.lastCheckTime = clock();
 			return false;
 		} else {
+			this->combat.lastAttackTime = 0;
 			this->position.destination = this->getTarget()->getPositionCurrent();
 		}
 	}
@@ -108,7 +110,15 @@ bool Entity::movementRoutine() {
 bool Entity::attackRoutine() {
 	if(this->getTarget() == nullptr)
 		return false;
-	if(clock() - this->combat.lastAttackTime <= this->intervalBetweenAttacks())
+	if(this->combat.lastAttackTime == 0) {
+		this->combat.lastAttackTime = clock() - (this->intervalBetweenAttacks() * 4 / 10);
+#ifdef __ROSE_DEBUG__
+		if(this->getEntityType() == Entity::TYPE_PLAYER)
+			ChatService::sendWhisper("Server", dynamic_cast<Player*>(this), "Time in ms till attack: %i", this->intervalBetweenAttacks() - (clock() - this->combat.lastAttackTime));
+#endif
+		return false;
+	}
+	if(clock() - this->combat.lastAttackTime < this->intervalBetweenAttacks() )
 		return false;
 	return this->attackEnemy();
 }
@@ -152,7 +162,6 @@ bool Entity::attackEnemy() {
 	}
 	enemy->addDamage( this, damage );
 
-	this->combat.lastAttackTime = clock();
 	Packet pak(PacketID::World::Response::BASIC_ATTACK);
 	pak.addWord( this->getClientId() );
 	pak.addWord( enemy->getClientId() );
@@ -163,6 +172,7 @@ bool Entity::attackEnemy() {
 		delete enemy;
 		enemy = nullptr;
 	}
+	this->combat.lastAttackTime = clock();
 	return this->sendToVisible( pak );
 }
 
@@ -282,15 +292,17 @@ bool Entity::sendToMap(Packet& pak) {
 #endif
 }
 
-void Entity::setSector(MapSector* newSector) {
+LinkedList<Entity*>::Node* Entity::setSector(MapSector* newSector) {
 #ifdef __MAPSECTOR_LL__
+	LinkedList<Entity*>::Node* returnNode = nullptr;
 	if(this->entityInfo.getSector() != nullptr) {
-		this->entityInfo.getSector()->removeEntity(this);
+		returnNode = this->entityInfo.getSector()->removeEntity(this);
 	}
 	if(newSector) {
 		newSector->addEntity(this);
 	}
 	this->entityInfo.setSector(newSector);
+	return returnNode;
 #else
 	this->entityInfo.sector = newSector;
 #endif

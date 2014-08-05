@@ -102,12 +102,21 @@ void WorldServer::runMap(Map* curMap) {
 		return;
 	Player* curPlayer = nullptr;
 	NPC* curNPC = nullptr;
+	MapSector* newSector = nullptr;
 
 	LinkedList<Entity*> entityToRemove;
 	for(unsigned int i=0;i<curMap->getSectorCount();i++) {
 		MapSector* curSector = curMap->getSector(i);
 		LinkedList<Entity*>::Node* entityNode = curSector->getFirstEntity();
-		for(;entityNode;entityNode = entityNode->getNextNode()) {
+		bool updateNextNode = false;
+		while(entityNode) {
+			if(updateNextNode) {
+				entityNode = entityNode->getNextNode();
+				if(!entityNode)
+					break;
+			} else {
+				updateNextNode = true;
+			}
 			Entity* curEntity = entityNode->getValue();
 			if (!curEntity || !curEntity->isIngame()) {
 				continue;
@@ -115,6 +124,13 @@ void WorldServer::runMap(Map* curMap) {
 			//If the movementRoutine() returns "false", no movement happened
 			//negate the false => true => entity idles
 			bool isIdling = !curEntity->movementRoutine();
+			
+			//In case we're idling and have a target --> attack!
+			if(isIdling && curEntity->getTarget() != nullptr) {
+				if(!curEntity->isAllied(curEntity->getTarget())) {
+					curEntity->attackRoutine();
+				}
+			}
 			switch (curEntity->getEntityType()) {
 				case Entity::TYPE_PLAYER:
 					curPlayer = dynamic_cast<Player*>(curEntity);
@@ -122,8 +138,11 @@ void WorldServer::runMap(Map* curMap) {
 					//If so, change the visuality vector
 					/*bool newSector = */
 					curPlayer->checkRegeneration();
- 					if(curEntity->checkForNewSector() != nullptr) {
-						entityToRemove.add(curEntity);
+ 					if( (newSector = curEntity->checkForNewSector()) != nullptr) {
+						entityNode = curEntity->setSector(newSector);
+						curEntity->checkVisuality();
+						if(entityNode) //in case we have a valid succeeding node
+							updateNextNode = false;
 					}
 				break;
 				case Entity::TYPE_NPC:
@@ -147,13 +166,8 @@ void WorldServer::runMap(Map* curMap) {
 					}
 				break;
 			}
-			//In case we're idling and have a target --> attack!
-			if(isIdling && curEntity->getTarget() != nullptr) {
-				if(!curEntity->isAllied(curEntity->getTarget())) {
-					curEntity->attackRoutine();
-				}
-			}
 		}
+		/*
 		while(entityToRemove.getNodeCount()>0) {
 			entityNode = entityToRemove.getHeadNode();
 			Entity* curEntity = entityNode->getValue();
@@ -163,6 +177,7 @@ void WorldServer::runMap(Map* curMap) {
 			entityNode = entityNode->getNextNode();
 			entityToRemove.removeAt(0x00);
 		}
+		*/
 	}
 	this->checkSpawns(curMap);
 }
@@ -668,6 +683,12 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 			if(mainServer->isValidItem(item.type, item.id))
 				new Drop(gm, item, false);
 		}
+	} else if(WANTED_COMMAND("pint")) {
+		::PLAYER_ATTACK_INTERVAL = atol(curValue.c_str());
+		ChatService::sendWhisper("Server", gm, "Player: %i [%ims]", ::PLAYER_ATTACK_INTERVAL, gm->intervalBetweenAttacks());
+	} else if(WANTED_COMMAND("mint")) {
+		::NPC_ATTACK_INTERVAL = atol(curValue.c_str());
+		ChatService::sendWhisper("Server", gm, "Monster: %i");
 	}
 #undef STRCMP
 #undef SPLIT
