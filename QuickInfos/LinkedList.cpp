@@ -37,53 +37,77 @@ template<class _Ty, class T> typename LinkedList<_Ty, T>::Node* LinkedList<_Ty, 
 template<class _Ty, class T>  _Ty& LinkedList<_Ty, T>::getValue(const size_t pos) {
 	LinkedList<_Ty, T>::Node* tmpNode = this->getNode(pos);
 	if(!tmpNode)
-		throw std::exception();
+		throw ::TraceableException("Invalid node requested!");
 	return tmpNode->getValue();
 }
 
-template<class _Ty, class T> void LinkedList<_Ty, T>::remove(const _Ty& data) {
+template<class _Ty, class T> typename LinkedList<_Ty, T>::Node* LinkedList<_Ty, T>::remove(const typename LinkedList<_Ty, T>::Node* tmpNode) {
+	if(tmpNode == nullptr || this->count == 0x00)
+		return nullptr;
+
+	Node* toReturn = nullptr;
+	if(tmpNode == this->head) {
+		if(this->count == 0x01) {
+			this->head = this->last = nullptr;
+		} else {
+			this->head = this->head->next;
+			this->head->prev = nullptr;
+
+			//next logical successor of the earlier "head"
+			toReturn = this->head;
+		}
+	} else if(tmpNode == this->last) {
+		//toReturn stays "nullptr" as the next node
+		//after the ex-last one is invalid
+		this->last = this->last->prev;
+		this->last->next = nullptr;
+	} else { 
+		//Here we can safely assume the node-count is bigger
+		//than 2; we'd end up with either the headNode or 
+		//the lastNode
+		tmpNode->prev->next = tmpNode->next;
+		tmpNode->next->prev = tmpNode->prev;
+
+		toReturn = tmpNode->next;
+	}
+	this->count--;
+	delete tmpNode;
+	tmpNode = nullptr;
+
+	return toReturn;
+}
+
+template<class _Ty, class T> typename LinkedList<_Ty, T>::Node* LinkedList<_Ty, T>::remove(const _Ty& data) {
 	LinkedList<_Ty, T>::Node* tmpNode = this->head;
 	size_t idx = 0x00;
 	while(tmpNode) {
 		if(tmpNode->value == data) {
-			return this->removeAt(idx);
+			return this->remove(tmpNode);
 		}
 		idx++;
 		tmpNode = tmpNode->next;
 	}
+	return nullptr;
 }
 
-template<class _Ty, class T> void LinkedList<_Ty, T>::removeAt(const size_t pos) {
+template<class _Ty, class T> typename LinkedList<_Ty, T>::Node* LinkedList<_Ty, T>::removeAt(const size_t pos) {
 	if(this->count == 0x00 || pos >= this->count)
-		return;
+		return nullptr;
 
 	LinkedList<_Ty, T>::Node* tmpNode = this->head;
 	if(pos == 0x00) {
-		if(this->count == 0x01) { //only header
-			this->head = this->last = nullptr;
-		} else { //other items are available -> create 
-			this->head->next->prev = nullptr; 
-			this->head = this->head->next;
-		}
-	} else { //something in between or last
-		size_t offset = 0x00;
-		while(tmpNode && offset != pos) {
-			tmpNode = tmpNode->next;
-			offset++;
-		}
-		if(tmpNode == this->last) {
-			this->last = this->last->prev;
-			this->last->next = nullptr;
-		} else {
-			tmpNode->prev->next = tmpNode->next;
-			tmpNode->next->prev = tmpNode->prev;
-		}
+		return this->remove(this->head);
+	} 
+	if(pos == this->count - 1)
+		return this->remove(this->last);
+	
+	size_t offset = 0x00;
+	//Iterate up to the wanted node
+	while(tmpNode && offset != pos) {
+		tmpNode = tmpNode->next;
+		offset++;
 	}
-	if(tmpNode) {
-		this->count--;
-		delete tmpNode;
-		tmpNode = nullptr;
-	}
+	return this->remove(tmpNode);
 }
 
 template<class _Ty, class T> void LinkedList<_Ty, T>::clear() {
