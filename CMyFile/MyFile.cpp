@@ -284,7 +284,8 @@ bool CMyFile::getLine(wchar_t *ptr, DWORD ptrLen, DWORD line) {
 
 bool CMyFile::putString(const wchar_t *str, bool attachTime) {
 	if (this->accessRights[0] == 'w' || this->accessRights[0] == 'a') {
-		this->reopen();
+		if (!this->reopen())
+			return false;
 		if (attachTime) {
 			if(this->unicode) {
 				ATTACH_TIME_VIA(fputwc);
@@ -311,7 +312,8 @@ bool CMyFile::putString(const wchar_t *str, bool attachTime) {
 
 bool CMyFile::putString(const char *str, bool attachTime) {
 	if (this->accessRights[0] == 'w' || this->accessRights[0] == 'a') {
-		this->reopen();
+		if (!this->reopen())
+			return false;
 		if (attachTime) {
 			if(this->unicode) {
 				ATTACH_TIME_VIA(fputwc);
@@ -341,7 +343,8 @@ bool CMyFile::writePlain(void *ptr, unsigned int sizeOfElement, unsigned int len
 bool CMyFile::putStringWithVarOnly(const char *fmt, ...) {
 	if (!(this->accessRights[0] == 'w' || this->accessRights[0] == 'a'))
 		return false;
-	this->reopen();
+	if (!this->reopen())
+		return false;
 	if (this->unicode) {
 		ArgConverter( wResult, fmt);
 		for (unsigned int i = 0; i < wResult.length(); i++) {
@@ -366,7 +369,8 @@ bool CMyFile::putStringWithVarOnly(const char *fmt, ...) {
 bool CMyFile::putStringWithVarOnly(const wchar_t *fmt, ...) {
 	if (!(this->accessRights[0] == 'w' || this->accessRights[0] == 'a'))
 		return false;
-	this->reopen();
+	if (!this->reopen())
+		return false;
 	ArgConverter(wResult, fmt);
 	for (unsigned int i = 0; i < wResult.length(); i++)
 		fputwc(wResult.c_str()[i], handle);
@@ -377,7 +381,8 @@ bool CMyFile::putStringWithVarOnly(const wchar_t *fmt, ...) {
 bool CMyFile::putStringWithVar(const char *fmt, ...) {
 	if (!(this->accessRights[0] == 'w' || this->accessRights[0] == 'a'))
 		return false;
-	this->reopen();
+	if (!this->reopen())
+		return false;
 	if (this->unicode) {
 		ArgConverter(wResult, fmt);
 		ATTACH_TIME_VIA(fputwc);
@@ -403,7 +408,8 @@ bool CMyFile::putStringWithVar(const char *fmt, ...) {
 bool CMyFile::putStringWithVar(const wchar_t *fmt, ...) {
 	if (!(this->accessRights[0] == 'w' || this->accessRights[0] == 'a'))
 		return false;
-	this->reopen();
+	if (!this->reopen())
+		return false;
 	ArgConverter(wResult, fmt);
 	ATTACH_TIME_VIA(fputwc);
 	for (unsigned int i = 0; i < wResult.length(); i++) {

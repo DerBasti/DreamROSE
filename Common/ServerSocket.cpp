@@ -8,8 +8,8 @@ ServerSocket::ServerSocket() {
 
 	logger.setFile( (workingPath + "\\logger.log").c_str() );
 
-	config = new ConfigA();
-	config->init( (workingPath + std::string("\\config.conf")).c_str() );
+	::config = new ConfigA();
+	::config->init((workingPath + std::string("\\config.conf")).c_str());
 
 	::initWinSocket();
 	this->clients.clear();
@@ -22,6 +22,8 @@ ServerSocket::~ServerSocket() {
 			this->disconnectClient(client);
 		}
 	}
+	delete ::config;
+	::config = nullptr;
 }
 
 bool ServerSocket::start() {

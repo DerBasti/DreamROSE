@@ -29,10 +29,14 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 	this->loadAI();
 	this->loadZones();
 	
+	float num = 0.0f;
 	for(unsigned int i=0;i<this->mapData.size();i++) {
+		std::cout << "Loading Map Infos: " << num << "%\r";
 		this->loadIFOs(this->mapData[i]);
 		this->checkSpawns(this->mapData[i]);
+		num = i * 100.0f / static_cast<float>(this->mapData.size());
 	}
+	std::cout << "Finished loading all map information!\n";
 }
 
 WorldServer::~WorldServer() {
