@@ -199,6 +199,7 @@ bool AIService::run(NPC* npc, const BYTE blockId, Entity* target, const DWORD dm
 	//Check overall conditions
 	switch(blockId) {
 		case AIP::ON_IDLE:
+		case AIP::ON_ATTACK:
 			if( timeDiff <= npc->getAI()->getCheckInterval() )
 				return false;
 		break;
@@ -894,7 +895,7 @@ void AIService::actionRunAway(NPC* npc, const AIACTION_16* act) {
 	Position newPos = npc->getPositionCurrent();
 
 	float xMod = QuickInfo::fRand(act->getDistance(), true);
-	float yMod = 1.0f - xMod;
+	float yMod = 1.0f - (xMod / act->getDistance());
 	newPos.x = newPos.x + static_cast<float>(xMod * act->getDistance());
 	newPos.y = newPos.y + static_cast<float>(yMod * act->getDistance());
 	

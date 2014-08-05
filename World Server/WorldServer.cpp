@@ -16,8 +16,6 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 	for(unsigned int i=0;i<0x10000;i++)
 		this->clientIDs[i] = std::pair<WORD, Entity*>(i, nullptr);
 
-	config = new ConfigA();
-	config->init( (workingPath + std::string("\\config.conf")).c_str() );
 	this->ipString = config->getValueString("WorldIp");
 	
 	this->WorldTime.lastCheck = time(NULL);
@@ -31,7 +29,7 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 	
 	float num = 0.0f;
 	for(unsigned int i=0;i<this->mapData.size();i++) {
-		std::cout << "Loading Map Infos: " << num << "%\r";
+		std::cout << "Loading Map Infos: " << num << "%        \r";
 		this->loadIFOs(this->mapData[i]);
 		this->checkSpawns(this->mapData[i]);
 		num = i * 100.0f / static_cast<float>(this->mapData.size());
@@ -55,9 +53,6 @@ WorldServer::~WorldServer() {
 
 	delete this->npcFile;
 	this->npcFile = nullptr;
-
-	delete ::config;
-	::config = nullptr;
 
 	delete this->zoneFile;
 	this->zoneFile = nullptr;
@@ -119,6 +114,10 @@ void WorldServer::runMap(Map* curMap) {
 			//If the movementRoutine() returns "false", no movement happened
 			//negate the false => true => entity idles
 			bool isIdling = !curEntity->movementRoutine();
+			
+ 			if(curEntity->checkForNewSector() != nullptr) {
+				entityToRemove.add(curEntity);
+			}
 			switch (curEntity->getEntityType()) {
 				case Entity::TYPE_PLAYER:
 					curPlayer = dynamic_cast<Player*>(curEntity);
@@ -126,9 +125,6 @@ void WorldServer::runMap(Map* curMap) {
 					//If so, change the visuality vector
 					/*bool newSector = */
 					curPlayer->checkRegeneration();
- 					if(curEntity->checkForNewSector() != nullptr) {
-						entityToRemove.add(curEntity);
-					}
 				break;
 				case Entity::TYPE_NPC:
 				case Entity::TYPE_MONSTER:

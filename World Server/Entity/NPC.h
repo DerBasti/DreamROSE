@@ -12,6 +12,7 @@ class NPC : public Entity {
 		float direction;
 	protected:
 		const AIP* ai;
+		SortedList<WORD, DWORD> damageDealers;
 		time_t lastAICheck;
 
 		const static BYTE MAX_AIVAR = 0x05;
@@ -64,6 +65,7 @@ class NPC : public Entity {
 
 		virtual void setStance(const BYTE newStance);
 
+		virtual bool onDamageReceived(Entity* enemy, const WORD damage);
 		virtual void addDamage(Entity* enemy, const DWORD amount) { }
 		virtual __inline clock_t intervalBetweenAttacks() { return 250000 / this->getAttackSpeed(); }
 

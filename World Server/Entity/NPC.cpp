@@ -73,10 +73,7 @@ void NPC::updateDodgerate() {
 }
 
 void NPC::setStance(const BYTE newStance) {
-	if(newStance == Stance::WALKING)
-		this->status.stance = Stance::NPC_WALKING;
-	else
-		this->status.stance = Stance::NPC_RUNNING;
+	this->status.stance = newStance;
 
 	this->updateMovementSpeed();
 }
@@ -95,6 +92,20 @@ void NPC::updateMovementSpeed() {
 				this->stats.movementSpeed = 200;
 		}
 	}
+}
+
+bool NPC::onDamageReceived(Entity* enemy, const WORD damage) {
+	AIService::run(this, AIP::ON_DAMAGED, enemy, damage);
+
+	if (this->damageDealers.containsKey(enemy->getClientId())) {
+		WORD id = enemy->getClientId();
+		this->damageDealers.getValueByKey(id) += damage;
+	}
+	else {
+		this->damageDealers.add(enemy->getClientId(), damage);
+	}
+
+	return true;
 }
 
 float NPC::getAttackRange() {

@@ -20,16 +20,6 @@ Monster::~Monster() {
 	this->owner = nullptr;
 }
 
-void Monster::addDamage(Entity* enemy, const DWORD amount) {
-	WORD randomChance = rand() % 100;
-	if(this->damageDealers.containsKey(enemy->getClientId())) {
-		WORD id = enemy->getClientId();
-		this->damageDealers.getValueByKey(id) += amount;
-	} else {
-		this->damageDealers.add(enemy->getClientId(), amount);
-	}
-}
-
 //Give Exp and drop something if suitable
 void Monster::onDeath() {
 	//Get the total amount of damage to determine the exp percentages
@@ -116,4 +106,7 @@ void Monster::onDeath() {
 	} else {
 		new Drop(dropOwner,toDrop, false);
 	}
+
+	AIService::run(this, AIP::ON_SELF_DEATH, this->getTarget(), totalAmountOfDamage);
+	this->setTarget(nullptr);
 }

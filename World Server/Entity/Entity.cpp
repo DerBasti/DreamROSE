@@ -38,7 +38,8 @@ void Entity::setTarget(Entity* target) {
 		pak.addWord ( this->getMovementSpeed() );
 		pak.addFloat( target->getCurrentX() );
 		pak.addFloat( target->getCurrentY() );
-		this->setStance( Stance::RUNNING );
+		if (this->getEntityType() != Entity::TYPE_PLAYER)
+			this->setStance( Stance::NPC_RUNNING );
 		this->sendToVisible(pak);
 	}
 	this->combat.setTarget(target); 
@@ -115,6 +116,10 @@ bool Entity::attackRoutine() {
 
 bool Entity::attackEnemy() { 
 	Entity *enemy = this->getTarget();
+	if (!enemy) {
+		std::cout << "attackEnemy() was called by " << this->getName().c_str() << "(" << this->getClientId() << ") without a target!\n";
+		return false;
+	}
 	WORD damage = 0x00;
 	WORD defense = 0x00;
 	printf("%s(%i) [%i] attacks %s(%i) [%i]\n", this->getName().c_str(), this->getClientId(),
@@ -135,35 +140,35 @@ bool Entity::attackEnemy() {
 
 	damage += QuickInfo::round<WORD>(static_cast<float>(rand() / static_cast<float>(RAND_MAX)) * damage * 0.1f);
 	WORD flag = 0x0000; //0x2000 = hit-animation; 0x4000 = crit, = 0x8000 = Dead
-	//enemy->addDamage( damage )
 	
-	if(enemy->getEntityType() == Entity::TYPE_MONSTER) {
-		AIService::run(dynamic_cast<Monster*>(enemy), AIP::ON_DAMAGED, this, damage );
-	}
-
-	if(damage >= enemy->getCurrentHP()) {
-		enemy->stats.curHP = 0x00;
-		flag |= 0x8000;
-
-		this->setTarget(nullptr);
-		enemy->setTarget(nullptr);
-	} else {
-		enemy->stats.curHP -= damage;
-	}
-	enemy->addDamage( this, damage );
-
-	this->combat.lastAttackTime = clock();
-	Packet pak(PacketID::World::Response::BASIC_ATTACK);
-	pak.addWord( this->getClientId() );
-	pak.addWord( enemy->getClientId() );
-	pak.addWord ( (damage & 0x7FF) | flag );
-
-	if(flag & 0x8000 && enemy->getEntityType() != Entity::TYPE_PLAYER) {
-		enemy->onDeath();
+	bool success = enemy->addDamage( this, damage, flag);
+	if (flag & 0x8000 && enemy->getEntityType() != Entity::TYPE_PLAYER) {
 		delete enemy;
 		enemy = nullptr;
+
+		this->setTarget(nullptr);
 	}
-	return this->sendToVisible( pak );
+
+	this->combat.lastAttackTime = clock();
+	return success;
+}
+
+bool Entity::addDamage(Entity* enemy, const WORD damage, WORD& flag) {
+	if (damage >= this->getCurrentHP()) {
+		this->stats.curHP = 0x00;
+		flag |= 0x8000;
+
+		this->onDeath();
+	}
+	else {
+		this->stats.curHP -= damage;
+		this->onDamageReceived(enemy, damage);
+	}
+	Packet pak(PacketID::World::Response::BASIC_ATTACK);
+	pak.addWord(enemy->getClientId());
+	pak.addWord(this->getClientId());
+	pak.addWord((damage & 0x7FF) | flag);
+	return this->sendToVisible(pak);
 }
 
 MapSector* Entity::checkForNewSector() {

@@ -147,7 +147,8 @@ class Entity {
 		__inline virtual Entity* getTarget() const { return this->combat.getTarget(); }
 		virtual void setTarget(Entity* target);
 
-		virtual void addDamage(Entity* enemy, const DWORD amount) { }
+		virtual bool addDamage(Entity* enemy, const WORD amount, WORD& flag);
+		virtual bool onDamageReceived(Entity* enemy, const WORD damage) { return true; };
 		virtual void onTargetDead() { };
 		virtual void onDeath() { };
 
