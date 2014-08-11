@@ -3,6 +3,8 @@
 #include "Entity\Drop.h"
 #include "Entity\Monster.h"
 #include "FileTypes\ZON.h"
+#include "FileTypes\VFS.h"
+#include "FileTypes\ZMO.h"
 
 #include "..\ConfigReader\Config.h"
 
@@ -26,11 +28,22 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 	this->loadMapData();
 	this->loadAI();
 	this->loadZones();
+	this->loadAttackTimings();
 	
 	float num = 0.0f;
+
+#ifdef __ROSE_USE_VFS__
+	VFS vfs(config->getValueString("GameFolder"));
+
+	Trackable<char> data; vfs.readFile("3DDATA\\STB\\WARP.STB", data);
+	STBFile warpFile(data, data.size());
+#else
+	STBFile warpFile((workingPath + std::string("\\3DDATA\\STB\\WARP.STB")).c_str());
+#endif
+
 	for(unsigned int i=0;i<this->mapData.size();i++) {
 		std::cout << "Loading Map Infos: " << num << "%        \r";
-		this->loadIFOs(this->mapData[i]);
+		this->loadIFOs(this->mapData[i], warpFile);
 		this->checkSpawns(this->mapData[i]);
 		num = i * 100.0f / static_cast<float>(this->mapData.size());
 	}
@@ -117,7 +130,7 @@ void WorldServer::runMap(Map* curMap) {
 				updateNextNode = true;
 			}
 			Entity* curEntity = entityNode->getValue();
-			if (!curEntity || !curEntity->isIngame()) {
+			if (!curEntity || !curEntity->isIngame() || curEntity->getEntityType() == Entity::TYPE_DROP) {
 				continue;
 			}
 			//If the movementRoutine() returns "false", no movement happened
@@ -199,7 +212,9 @@ bool WorldServer::checkSpawns(Map* currentMap) {
 			//(also, add it to the map and thus visuality of the players)
 			NPCData* npcData = &this->npcData.at(selectedSpawn->getMobId());
 			for(unsigned int i=0;i<selectedSpawn->getAmount();i++) {
-				Monster* newMon = new Monster( npcData, &this->aiData.getValue(npcData->getAIId()), currentMap->getId(), curSpawn->getPosition());
+				Position spawnPos(curSpawn->getPosition().x + QuickInfo::fRand(curSpawn->getAllowedSpawnDistance(), true),
+					curSpawn->getPosition().y + QuickInfo::fRand(curSpawn->getAllowedSpawnDistance(), true));
+				new Monster(npcData, &this->aiData.getValue(npcData->getAIId()), currentMap->getId(), spawnPos);
 			}
 			//Add the amount of spawned monsters to the total size of the spawn
 			curSpawn->setCurrentlySpawned(curSpawn->getCurrentlySpawned() + selectedSpawn->getAmount() );
@@ -214,79 +229,89 @@ bool WorldServer::checkSpawns(Map* currentMap) {
 
 bool WorldServer::loadSTBs() {
 
-	std::cout << "0% done reading\r";
-	float percentDone = 100.0f / 17.0f;
-	float totalPercent = 0.0f;
+	std::cout << "Reading all STBs...\r";
+#ifdef __ROSE_USE_VFS__
+	VFS vfs(config->getValueString("GameFolder"));
+	
+	Trackable<char> fileBuf;
+	vfs.readFile("3DDATA\\STB\\FILE_AI.STB", fileBuf);
+	this->aiFile = new AISTB(fileBuf, fileBuf.size());
 
-	this->aiFile = new AISTB( (workingPath + std::string("\\3DDATA\\STB\\FILE_AI.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
+	vfs.readFile("3DDATA\\STB\\LIST_NPC.STB", fileBuf);
+	this->npcFile = new NPCSTB(fileBuf, fileBuf.size());
+	
+	vfs.readFile("3DDATA\\STB\\LIST_SKILL.STB", fileBuf);
+	this->skillFile = new SkillSTB(fileBuf, fileBuf.size());
 
+	vfs.readFile("3DDATA\\STB\\ITEM_DROP.STB", fileBuf);
+	this->dropFile = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_ZONE.STB", fileBuf);
+	this->zoneFile = new ZoneSTB(fileBuf, fileBuf.size()); 
+
+	vfs.readFile("3DDATA\\STB\\LIST_CAP.STB", fileBuf);
+	this->equipmentFile[ItemType::HEADGEAR] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_BODY.STB", fileBuf);
+	this->equipmentFile[ItemType::ARMOR] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_ARMS.STB", fileBuf);
+	this->equipmentFile[ItemType::GLOVES] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_BACK.STB", fileBuf);
+	this->equipmentFile[ItemType::BACK] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_FACEITEM.STB", fileBuf);
+	this->equipmentFile[ItemType::FACE] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_FOOT.STB", fileBuf);
+	this->equipmentFile[ItemType::SHOES] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_JEMITEM.STB", fileBuf);
+	this->equipmentFile[ItemType::JEWELS] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_JEWEL.STB", fileBuf);
+	this->equipmentFile[ItemType::JEWELRY] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_NATURAL.STB", fileBuf);
+	this->equipmentFile[ItemType::OTHER] = new STBFile(fileBuf, fileBuf.size());
+	
+	vfs.readFile("3DDATA\\STB\\LIST_PAT.STB", fileBuf);
+	this->equipmentFile[ItemType::PAT] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_SUBWPN.STB", fileBuf);
+	this->equipmentFile[ItemType::SHIELD] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_USEITEM.STB", fileBuf);
+	this->equipmentFile[ItemType::CONSUMABLES] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_QUESTITEM.STB", fileBuf);
+	this->equipmentFile[ItemType::QUEST] = new STBFile(fileBuf, fileBuf.size());
+
+	vfs.readFile("3DDATA\\STB\\LIST_WEAPON.STB", fileBuf);
+	this->equipmentFile[ItemType::WEAPON] = new STBFile(fileBuf, fileBuf.size());
+#else
+	this->aiFile = new AISTB((workingPath + std::string("\\3DDATA\\STB\\FILE_AI.STB")).c_str());
 	this->npcFile = new NPCSTB((workingPath + std::string("\\3DDATA\\STB\\LIST_NPC.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
-	this->skillFile = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_SKILL.STB")).c_str());
+	this->skillFile = new SkillSTB((workingPath + std::string("\\3DDATA\\STB\\LIST_SKILL.STB")).c_str());
 	this->dropFile = new STBFile((workingPath + std::string("\\3DDATA\\STB\\ITEM_DROP.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->zoneFile = new ZoneSTB((workingPath + std::string("\\3DDATA\\STB\\LIST_ZONE.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::HEADGEAR] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_CAP.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::ARMOR] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_BODY.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::GLOVES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_ARMS.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::BACK] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_BACK.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::FACE] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_FACEITEM.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::SHOES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_FOOT.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::JEWELS] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_JEMITEM.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::JEWELRY] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_JEWEL.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::OTHER] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_NATURAL.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::PAT] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_PAT.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::SHIELD] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_SUBWPN.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::CONSUMABLES] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_USEITEM.STB")).c_str());
-	totalPercent += percentDone;
-	std::cout << totalPercent << "% done reading\r";
-
 	this->equipmentFile[ItemType::QUEST] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_QUESTITEM.STB")).c_str());
 	this->equipmentFile[ItemType::WEAPON] = new STBFile((workingPath + std::string("\\3DDATA\\STB\\LIST_WEAPON.STB")).c_str());
-	std::cout << "Finished reading all STBs!\r\n";
-	
+#endif
+	std::cout << "Finished reading all STBs!\n";
 	return true;
 }
 bool WorldServer::loadNPCData() {
@@ -344,7 +369,7 @@ bool WorldServer::loadZones() {
 	return true;
 }
 
-bool WorldServer::loadIFOs(Map* curMap) {
+bool WorldServer::loadIFOs(Map* curMap, STBFile& warpFile) {
 	std::string folderPath = std::string(curMap->getMapPath());
 	if (folderPath.length() == 0)
 		return true;
@@ -357,9 +382,8 @@ bool WorldServer::loadIFOs(Map* curMap) {
 		//In case there are none (for whatever reason), don't do anything
 		return true;
 	}
-	STBFile warpFile((workingPath + std::string("\\3DDATA\\STB\\WARP.STB")).c_str());
 	this->teleGates.reserve(warpFile.getRowCount());
-	for(unsigned int i=0;i<this->teleGates.capacity();i++)
+	for (unsigned int i = 0; i < this->teleGates.capacity(); i++)
 		this->teleGates.addValue(Telegate());
 
 	/** ASSIGN SECTORS **/
@@ -372,14 +396,14 @@ bool WorldServer::loadIFOs(Map* curMap) {
 
 		//Add all spawns of the current *.ifo to the map
 		for (unsigned int k = 0; k < ifo.getSpawnAmount(); k++) {
-			curMap->addSpawn( new IFOSpawn(ifo.getSpawn(k)) );
+			curMap->addSpawn(new IFOSpawn(ifo.getSpawn(k)));
 		}
 		//Add all (IFO-)NPCs to the map
 		for (unsigned int k = 0; k < ifo.getNPCAmount(); k++) {
 			IFONPC& npcINFO = ifo.getNPC(k);
 			NPCData& npcData = this->npcData.at(npcINFO.getObjectId());
 			NPC *newNpc = new NPC(&npcData, &this->aiData.getValue(npcData.getAIId()), curMap->getId(), npcINFO.getPosition());
-			newNpc->setDirection( npcINFO.getDirection() );
+			newNpc->setDirection(npcINFO.getDirection());
 			newNpc->setSector(curMap->getSector(newNpc->getPositionCurrent()));
 		}
 		//Create telegates from the previously read IFO-info
@@ -416,11 +440,46 @@ bool WorldServer::loadTelegates(const WORD currentMapId, STBFile& warpFile, IFO&
 bool WorldServer::loadAI() {
 	//Reserve an array with the size of the AIFile's row count
 	this->aiData.reserve(this->aiFile->getRowCount());
+	VFS vfs(config->getValueString("GameFolder"));
 	for (WORD i = 0; i < this->aiFile->getRowCount(); i++) {
 		//Read all AI-Files and store them in our array.
-		AIP aiFile( i, (workingPath + std::string("\\") + this->aiFile->getFilePath(i)).c_str() );
+#ifdef __ROSE_USE_VFS__
+		Trackable<char> data;
+		vfs.readFile(this->aiFile->getFilePath(i).c_str(), data);
+		AIP aiFile(i, data, data.size());
+#else
+		AIP aiFile(i, (workingPath + std::string("\\") + this->aiFile->getFilePath(i)).c_str());
+#endif
 		this->aiData.addValue(aiFile);
 	}
+	return true;
+}
+
+bool WorldServer::loadAttackTimings() {
+#ifdef __ROSE_USE_VFS__
+	VFS vfs(::config->getValueString("GameFolder"));
+
+	Trackable<char> data;
+
+	vfs.readFile("3DDATA\\STB\\TYPE_MOTION.STB", data);
+	STBFile_Template<STBEntry_INT> typeMotionSTB(data, data.size());
+	STBEntry_INT attackMotion = typeMotionSTB.getRow(0x08);
+
+	std::vector<DWORD> attackMotionEntries;
+	for (unsigned int i = 0; i < attackMotion.getColumnCount(); i++) {
+		attackMotionEntries.push_back(attackMotion.getColumn<DWORD>(i));
+	}
+	vfs.readFile("3DDATA\\STB\\FILE_MOTION.STB", data);
+	STBFile fileMotionSTB(data, data.size());
+
+	this->attackTimeData.reserve(attackMotionEntries.size());
+	for (unsigned int j = 0; j < attackMotionEntries.size(); j++) {
+		vfs.readFile(fileMotionSTB.getRow(attackMotionEntries.at(j)).getColumn(0x00).c_str(), data);
+		ZMO zmo(data, data.size());
+
+		this->attackTimeData.addValue(zmo.getFrameCount() * 1000 / zmo.getFPS());
+	}
+#endif
 	return true;
 }
 
@@ -497,7 +556,7 @@ DWORD WorldServer::buildItemData(const Item& item) {
 const WORD WorldServer::getQuality(const BYTE itemType, const DWORD itemId) {
 	try {
 		STBEntry& entry = this->getEquipmentEntry(itemType, itemId);
-		WORD result = entry.getColumn<WORD>(0x08);
+		WORD result = entry.getColumn<WORD>(EquipmentSTB::QUALITY);
 		return result;
 	} catch(std::exception& e) {
 		std::cout << e.what() << "\n";
@@ -519,7 +578,7 @@ const WORD WorldServer::getSubType(const BYTE itemType, const DWORD itemId) {
 const WORD WorldServer::getWeaponAttackpower(const DWORD itemId) {
 	try {
 		STBEntry& entry = this->getEquipmentEntry( ItemType::WEAPON, itemId );
-		WORD atkPower = entry.getColumn<WORD>(0x23);
+		WORD atkPower = entry.getColumn<WORD>(EquipmentSTB::ATTACK_POWER_PHYSICAL);
 		return atkPower;
 	} catch(std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -530,12 +589,29 @@ const WORD WorldServer::getWeaponAttackpower(const DWORD itemId) {
 const int WorldServer::getWeaponAttackspeed(const DWORD itemId) {
 	try {
 		STBEntry& entry = this->getEquipmentEntry( ItemType::WEAPON, itemId );
-		int atkSpeed = entry.getColumn<int>(0x24);
+		int atkSpeed = entry.getColumn<int>(EquipmentSTB::ATTACK_SPEED);
 		return atkSpeed;
 	} catch(std::exception& ex) {
 		std::cout << ex.what() << "\n";
 	}
 	return 0x00;
+}
+
+const BYTE WorldServer::getWeaponMotion(const DWORD itemId) {
+	try {
+		STBEntry& entry = this->getEquipmentEntry(ItemType::WEAPON, itemId);
+		int motionType = entry.getColumn<int>(EquipmentSTB::MOTION_COLUMN);
+		return motionType;
+	} catch (std::exception& ex) {
+		std::cout << ex.what() << "\n";
+	}
+	return 0x00;
+}
+
+const WORD WorldServer::getAttackTimeData(const BYTE motionId) {
+	if (this->attackTimeData.size() <= motionId)
+		return this->attackTimeData[0x00];
+	return this->attackTimeData[motionId];
 }
 
 STBEntry& WorldServer::getEquipmentEntry(const BYTE itemType, const DWORD itemId) {
@@ -545,6 +621,16 @@ STBEntry& WorldServer::getEquipmentEntry(const BYTE itemType, const DWORD itemId
 	if(itemId >= eqFile->getRowCount())
 		throw TraceableExceptionARGS("Invalid Item [%i, %i]!", itemType, itemId);
 	return eqFile->getRow(itemId);
+}
+
+bool ChatService::sendDebugMessage(Player* receiver, const char* msg, ...) {
+	ArgConverterA(aMsg, msg);
+	Packet pak(PacketID::World::Response::LOCAL_CHAT);
+	pak.addWord(receiver->getClientId());
+	pak.addString("[DEBUG] ");
+	pak.addString(aMsg.c_str());
+	pak.addByte(0x00);
+	return receiver->sendData(pak);
 }
 
 bool ChatService::sendMessage(Entity* sender, const char* msg) {
@@ -734,6 +820,22 @@ void WorldServer::dumpAICombined(const char* filePath) {
 		}
 		file.putString("\n\n");
 	}
+}
+
+Skill* WorldServer::getSkill(const WORD skillId) {
+	if (skillId >= this->skillFile->getRowCount())
+		return nullptr;
+	return &this->skillFile->getRow(skillId);
+}
+
+Skill* WorldServer::getSkill(const WORD skillIdBasic, const BYTE level) {
+	if (skillIdBasic >= this->skillFile->getRowCount() || (skillIdBasic + level) >= this->skillFile->getRowCount())
+		return nullptr;
+
+	Skill* skill = &this->skillFile->getRow(skillIdBasic);
+	if (skill->getLevel() == 0x00)
+		return skill;
+	return this->getSkill(skillIdBasic + level - 1);
 }
 
 

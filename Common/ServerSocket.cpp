@@ -31,11 +31,13 @@ bool ServerSocket::start() {
 	DWORD errorCode = 0x00;
 	if (this->socket == SOCKET_ERROR) {
 		errorCode = WSAGetLastError();
+		std::cout << "Error while creating Socket: " << errorCode << "\n";
 		return false;
 	}
 	int optVal = 1;
 	if (::setsockopt(this->socket, SOL_SOCKET, SO_KEEPALIVE, (const char*)&optVal, sizeof(optVal)) == SOCKET_ERROR) {
 		errorCode = WSAGetLastError();
+		std::cout << "Error while changing socket settings: " << errorCode << "\n";
 		return false;
 	}
 	::setsockopt(this->socket, IPPROTO_TCP, TCP_NODELAY, (const char*)&optVal, sizeof(optVal));
@@ -45,10 +47,13 @@ bool ServerSocket::start() {
 	memset(&(this->ain.sin_zero), '\0', 8);
 	if (::bind(this->socket, (const sockaddr*)&this->ain, sizeof(struct sockaddr))) {
 		errorCode = WSAGetLastError();
+		std::cout << "Error while binding socket: " << errorCode << "\n";
 		this->closeSocket();
 		return false;
 	}
 	if (::listen(this->socket, SOMAXCONN) == SOCKET_ERROR) {
+		errorCode = WSAGetLastError();
+		std::cout << "Error while trying to listen on socket: " << errorCode << "\n";
 		this->closeSocket();
 		return false;
 	}

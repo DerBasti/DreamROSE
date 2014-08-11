@@ -166,7 +166,7 @@ class IFOSpawn : public _basicIFOEntry {
 		DWORD respawnInterval; 
 		DWORD currentlySpawned;
 		DWORD limit;
-		DWORD allowedSpawnDistance;
+		float allowedSpawnDistance;
 		DWORD tacPoints;
 		DWORD currentSpawnId;
 public:
@@ -222,10 +222,8 @@ public:
 			if(this->currentSpawnId >= (this->getBasicMobSpawnCount() + this->getTacticalMobSpawnCount()))
 				this->currentSpawnId = 0;
 		}
-		//01523 435 86 42 christian hüttenberger
-		//Brockenbergstrasse 5, Holzgerlingen 71088
 		__inline DWORD getMaxSimultanouslySpawned() const { return this->limit; }
-		__inline DWORD getAllowedSpawnDistance() const { return this->allowedSpawnDistance; }
+		__inline float getAllowedSpawnDistance() const { return this->allowedSpawnDistance; }
 		/*
 		bool operator==(const IFOSpawn& ifo) {
 			return (this->id == ifo.id);

@@ -64,10 +64,18 @@ bool Entity::isAllied( Entity* entity ) {
 bool Entity::movementRoutine() {
 	//In case there is no change in the wanted position, do nothing
 	if(this->getTarget() == nullptr) {
+		if (this->combat.lastAttackTime > 0 && clock() - this->combat.lastAttackTime >= this->intervalBetweenAttacks())
+			this->combat.lastAttackTime = 0;
 		if(this->position.current == this->position.destination) {
 			this->position.lastCheckTime = clock();
 			return false;
 		}
+#ifdef __ROSE_DEBUG__
+		if ((clock() - this->combat.lastAttackTime) < this->intervalBetweenAttacks()) {
+			if (this->getEntityType() == Entity::TYPE_PLAYER)
+				ChatService::sendWhisper("Server", dynamic_cast<Player*>(this), "Movement is not allowed as of yet!");
+		}
+#endif
 	} else { //We have a target, let's find out if we're in attack range
 		float distToTarget = this->position.current.distanceTo(this->getTarget()->getPositionCurrent());
 		
@@ -75,6 +83,8 @@ bool Entity::movementRoutine() {
 		if(!this->isAllied(this->getTarget()))
 			range = this->getAttackRange();
 		if(distToTarget <= range) {
+			if (this->combat.lastAttackTime == 0)
+				this->combat.lastAttackTime = clock() - this->intervalBetweenAttacks() * 6 / 10;
 			this->position.lastCheckTime = clock();
 			return false;
 		} else {
@@ -113,16 +123,13 @@ bool Entity::movementRoutine() {
 bool Entity::attackRoutine() {
 	if(this->getTarget() == nullptr)
 		return false;
-	if(this->combat.lastAttackTime == 0) {
-		this->combat.lastAttackTime = clock() - (this->intervalBetweenAttacks() * 4 / 10);
+	if (clock() - this->combat.lastAttackTime < this->intervalBetweenAttacks())  {
 #ifdef __ROSE_DEBUG__
-		if(this->getEntityType() == Entity::TYPE_PLAYER)
-			ChatService::sendWhisper("Server", dynamic_cast<Player*>(this), "Time in ms till attack: %i", this->intervalBetweenAttacks() - (clock() - this->combat.lastAttackTime));
+		if (this->getEntityType() == Entity::TYPE_PLAYER)
+			ChatService::sendDebugMessage(dynamic_cast<Player*>(this), "Time in ms till attack: %i", this->intervalBetweenAttacks() - (clock() - this->combat.lastAttackTime));
 #endif
 		return false;
 	}
-	if(clock() - this->combat.lastAttackTime < this->intervalBetweenAttacks() )
-		return false;
 	return this->attackEnemy();
 }
 
@@ -165,6 +172,7 @@ bool Entity::attackEnemy() {
 }
 
 bool Entity::addDamage(Entity* enemy, const WORD damage, WORD& flag) {
+	this->onDamageReceived(enemy, damage);
 	if (damage >= this->getCurrentHP()) {
 		this->stats.curHP = 0x00;
 		flag |= 0x8000;
@@ -173,7 +181,6 @@ bool Entity::addDamage(Entity* enemy, const WORD damage, WORD& flag) {
 	}
 	else {
 		this->stats.curHP -= damage;
-		this->onDamageReceived(enemy, damage);
 	}
 	Packet pak(PacketID::World::Response::BASIC_ATTACK);
 	pak.addWord(enemy->getClientId());

@@ -174,7 +174,7 @@ class Entity {
 
 		bool movementRoutine();
 		bool attackRoutine();
-		virtual __inline clock_t intervalBetweenAttacks() { return 100000 / this->getAttackSpeed(); }
+		virtual clock_t intervalBetweenAttacks() { return 100000 / this->getAttackSpeed(); }
 
 		bool sendToVisible(class Packet& pak, Entity* exceptThis = nullptr);
 		bool sendToMap(class Packet& pak);

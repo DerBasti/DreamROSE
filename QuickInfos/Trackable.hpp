@@ -4,6 +4,8 @@
 #define __TRACKABLE_DATA__
 
 typedef unsigned long DWORD;
+typedef unsigned short WORD;
+typedef unsigned char BYTE;
 
 template<class _Ty, class = typename std::enable_if<std::is_integral<_Ty>::value>::type> class Trackable {
 	private:
@@ -22,8 +24,11 @@ template<class _Ty, class = typename std::enable_if<std::is_integral<_Ty>::value
 		}
 		
 		Trackable(const Trackable<_Ty>& rhs) {
-			this->data = nullptr;
-			this->_size = 0x00;
+			if (this->data) {
+				delete[] this->data;
+				this->data = nullptr;
+				this->_size = 0x00;
+			}
 			(*this) = rhs;
 		}
 
@@ -48,8 +53,10 @@ template<class _Ty, class = typename std::enable_if<std::is_integral<_Ty>::value
 			return (*this);
 		}
 		void init(const _Ty* newData, DWORD newLen) {
-			if(this->data != nullptr)
-				return;
+			if (this->data) {
+				delete[] this->data;
+				this->data = nullptr;
+			}
 			this->data = new _Ty[newLen + 1];
 			this->_size = newLen;
 			
@@ -59,7 +66,7 @@ template<class _Ty, class = typename std::enable_if<std::is_integral<_Ty>::value
 		}
 		//Allow implicit casting on this one.
 		__inline operator _Ty*() const { return this->data; }
-		__inline const DWORD size() const { return this->usedSize; }
+		__inline const DWORD size() const { return this->_size; }
 		__inline const _Ty* getData() const { return this->data; }
 };
 

@@ -6,6 +6,15 @@
 
 #include "D:\Programmieren\CMyFile\MyFile.h"
 
+#ifdef __ROSE_USE_VFS__
+AIP::AIP(const WORD id, char* fileBuf, const DWORD fileLen) {
+	CMyBufferedReader reader(fileBuf, fileLen);
+	this->id = id;
+	this->checkInterval = this->damageAmountTrigger = 0x00;
+	this->filePath = std::string("");
+	this->loadFrom(reader);
+}
+#else
 AIP::AIP(const WORD id, const char* fileName) {
 	CMyFile file(fileName, "rb");
 	this->id = id;
@@ -17,14 +26,11 @@ AIP::AIP(const WORD id, const char* fileName) {
 	}
 	file.close();
 }
+#endif //__ROSE_USE_VFS__
 
 AIP::~AIP() {
 
 }
-
-#ifndef __READ_STRING__
-#define __READ_STRING__(len, buf) fread(&len, 1, 1, fh); fread(buf, 1, len, fh); buf[len] = 0x00;
-#endif
 /*
 	FORMAT:
 		DWORD blockCount;
@@ -52,7 +58,7 @@ AIP::~AIP() {
 		end_foreach(block)
 
 */
-void AIP::loadFrom(CMyFile &fh) {
+template<class FileType> void AIP::loadFrom(FileType &fh) {
 	DWORD triggerCount = fh.read<DWORD>();
 
 	if(triggerCount != AIP::MAX_BLOCKS)
@@ -61,10 +67,10 @@ void AIP::loadFrom(CMyFile &fh) {
 	BYTE len = 0x00; char buf[0x200] = {0x00};
 	this->checkInterval = fh.read<DWORD>();
 	this->damageAmountTrigger = fh.read<DWORD>();
-	fh.readStringT<DWORD, char>(buf);
+	fh.readStringT<DWORD>(buf);
 
 	for(unsigned int i=0;i<AIP::MAX_BLOCKS;i++) {
-		DWORD dTmp = fh.skip(0x20); //0x20 FIXED STRING LENGTH
+		fh.skip(0x20); //0x20 FIXED STRING LENGTH
 		
 		DWORD recordCount = fh.read<DWORD>();
 		this->blocks[i].records.reserve(recordCount);
@@ -76,9 +82,9 @@ void AIP::loadFrom(CMyFile &fh) {
 				std::vector<Trackable<char>>& conditions = this->blocks[i].records[j].conditions;
 				conditions.reserve(condCount);
 				for(unsigned int k=0;k<condCount;k++) {
-					fh.readStringT(0x08, buf);
+					fh.readString(0x08, buf);
 					DWORD dLen = *((DWORD*)buf);
-					fh.readStringT(dLen - 0x08, &buf[0x08]);
+					fh.readString(dLen - 0x08, &buf[0x08]);
 					conditions.push_back(Trackable<char>(buf, dLen));
 				}
 			}
@@ -87,9 +93,9 @@ void AIP::loadFrom(CMyFile &fh) {
 				std::vector<Trackable<char>>& actions = this->blocks[i].records[j].actions;
 				actions.reserve(actionCount);
 				for(unsigned int k=0;k<actionCount;k++) {
-					fh.readStringT(0x08, buf);
+					fh.readString(0x08, buf);
 					DWORD aLen = *((DWORD*)buf);
-					fh.readStringT(aLen - 0x08, &buf[0x08]);
+					fh.readString(aLen - 0x08, &buf[0x08]);
 					actions.push_back(Trackable<char>(buf, aLen));
 				}
 			}

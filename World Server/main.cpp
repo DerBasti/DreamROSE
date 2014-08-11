@@ -1,17 +1,43 @@
 #include "WorldServer.h"
 #include "Entity\Monster.h"
 #include "FileTypes\ZON.h"
-
+#include "FileTypes\ZMO.h"
+#include "FileTypes\VFS.h"
 
 int main() {
+	/*
+	::ConfigA conf; conf.init("D:\\Games\\iROSE Online Server\\config.conf");
+	VFS vfs(conf.getValueString("GameFolder"));
 
+	Trackable<char> data;
+
+	vfs.readFile("3DDATA\\STB\\TYPE_MOTION.STB", data);
+	STBFile_Template<STBEntry_INT> typeMotionSTB(data, data.size());
+	STBEntry_INT attackMotion = typeMotionSTB.getRow(0x08);
+
+	std::vector<DWORD> attackMotionEntries;
+	for (unsigned int i = 0; i < attackMotion.getColumnCount(); i++) {
+		attackMotionEntries.push_back(attackMotion.getColumn<DWORD>(i));
+	}
+	vfs.readFile("3DDATA\\STB\\FILE_MOTION.STB", data);
+	STBFile fileMotionSTB(data, data.size());
+	
+	std::vector<DWORD> timePerAttack;
+	for (unsigned int j = 0; j < attackMotionEntries.size(); j++) {
+		vfs.readFile(fileMotionSTB.getRow(attackMotionEntries.at(j)).getColumn(0x00).c_str(), data);
+		ZMO zmo(data, data.size());
+
+		timePerAttack.push_back(zmo.getFrameCount() * 1000 / zmo.getFPS());
+	}
+	*/
+	//STBFile npc(".\\3DDATA\\STB\\LIST_NPC.STB");
+	
 	MYSQL mysql;
 	WorldServer server(29200, &mysql);
-	//server.dumpAISeparated("D:\\Games\\iROSE Online Server\\AI_Logs");
-	//server.dumpTelegates("D:\\Games\\iROSE Online Server\\telegates.log");
 	server.loadEncryption();
 	server.start();
 	
+
 	/*
 	std::cout << "Input allowed now!\n";
 	std::string input = "";

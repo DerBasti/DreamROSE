@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include "..\Common\Definitions.h"
 #include "..\Common\ServerSocket.h"
 #include "Entity\Player.h"
 #include "FileTypes\IFO.h"
@@ -18,7 +19,7 @@ class WorldServer : public ServerSocket {
 	private:
 		NPCSTB *npcFile;
 		AISTB *aiFile;
-		STBFile *skillFile;
+		SkillSTB *skillFile;
 		STBFile *statusFile;
 		STBFile *questFile;
 		STBFile *equipmentFile[15]; //0 = NOT VALID
@@ -29,15 +30,19 @@ class WorldServer : public ServerSocket {
 		bool loadNPCData();
 		bool loadTelegates(const WORD currentMapId, STBFile& warpFile, IFO& ifoFile);
 		bool loadZones();
-		bool loadIFOs(Map* mapData);
+		bool loadIFOs(Map* mapData, STBFile& warpFile);
 		bool loadAI();
+		bool loadSkills();
+		bool loadAttackTimings();
 
 		std::pair<WORD, Entity*> clientIDs[0x10000];
 		std::vector<NPCData> npcData;
+		FixedArray<Skill*> skillData;
 		FixedArray<class ZON*> zoneData;
 		FixedArray<Telegate> teleGates;
 		FixedArray<AIP> aiData;
 		FixedArray<Map*> mapData;
+		FixedArray<WORD> attackTimeData;
 		
 		struct worldTime {
 			time_t lastCheck;
@@ -59,6 +64,7 @@ class WorldServer : public ServerSocket {
 				ChatService() {}
 				~ChatService() {}
 			public:
+				static bool sendDebugMessage(Player* entity, const char* msg, ...);
 				static bool sendMessage(Entity* entity, const char* msg);
 				static bool sendWhisper(Player* from, Player* to, const char *msg);
 
@@ -102,6 +108,9 @@ class WorldServer : public ServerSocket {
 		NPCData* getNPCData(const AIP* ai);
 		__inline bool isValidNPCType(const DWORD id) { return this->npcData.at(id).getLevel() > 0; }
 
+		Skill* getSkill(const WORD skillId);
+		Skill* getSkill(const WORD skillIdBasic, const BYTE level);
+
 		__inline time_t getWorldTime() const { return this->WorldTime.currentTime; }
 		DWORD getMapTime(const WORD mapId) {
 			return this->mapData[mapId]->getLocalTime(this->getWorldTime());
@@ -125,6 +134,8 @@ class WorldServer : public ServerSocket {
 		const WORD getSubType(const BYTE itemType, const DWORD itemId);
 		const WORD getWeaponAttackpower(const DWORD itemId);
 		const int getWeaponAttackspeed(const DWORD itemId);
+		const BYTE getWeaponMotion(const DWORD itemId);
+		const WORD getAttackTimeData(const BYTE motionId);
 
 		__inline STBFile* getEquipmentSTB(const BYTE itemType) const { return (itemType <= ItemType::PAT ? this->equipmentFile[itemType] : nullptr); }
 		__inline STBEntry& getDropTable(const WORD rowId) const { return this->dropFile->getRow(rowId); }

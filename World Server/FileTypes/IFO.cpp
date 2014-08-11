@@ -116,7 +116,9 @@ bool IFO::loadInfos() {
 					}
 					__READ__(&spawn.respawnInterval, 4);
 					__READ__(&spawn.limit, 4);
-					__READ__(&spawn.allowedSpawnDistance, 4);
+
+					__READ__(&dTmp, 4);
+					spawn.allowedSpawnDistance = static_cast<float>(dTmp) * 100.0f;
 					__READ__(&spawn.tacPoints, 4);
 
 					dTmp = 0x00; //Temporary spawn amount counter

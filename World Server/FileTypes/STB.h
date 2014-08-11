@@ -3,7 +3,6 @@
 #ifndef __ROSE_STB__
 #define __ROSE_STB__
 
-#define __ROSE_APPLY_STL__
 #pragma warning(disable:4996)
 
 #include <vector>
@@ -11,6 +10,8 @@
 #include <iostream>
 
 #include "STL.h"
+#include "..\..\CMyFile\MyFile.h"
+#include "..\..\Common\Definitions.h"
 
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
@@ -18,13 +19,25 @@ typedef unsigned long DWORD;
 
 
 class STBEntry {
-	private:
-		friend class STBFile;
+	protected:
 		std::vector<std::string> columns;
 	public:
-		STBEntry(const DWORD& columnsAmount) {
-			columns.reserve(columnsAmount);
+		STBEntry() {
+			this->columns.clear();
 		}
+		template<class FileType> void init(FileType& file, const DWORD& columnCount) {
+			char tmpField[0x400] = { 0x00 };
+			for (unsigned int j = 0; j < columnCount; j++) {
+				WORD length = file.read<WORD>();
+				file.readString(length, tmpField);
+				this->columns.push_back(std::string(tmpField));
+			}
+		}
+#ifdef __ROSE_APPLY_STL__
+		void changeName(std::string& newName) {
+			this->columns.at(0x00) = newName;
+		}
+#endif
 		__inline virtual const DWORD operator[](const size_t colId) {
 			return this->getColumnAsInt(colId);
 		}
@@ -41,59 +54,75 @@ class STBEntry {
 		__inline DWORD getColumnCount() const { return this->columns.size(); }
 };
 
-class STBFile {
+class STBEntry_INT {
 	protected:
-		std::vector<STBEntry> entries;
+		std::vector<DWORD> columns;
+	public:
+		STBEntry_INT() {
+			this->columns.clear();
+		}
+		template<class FileType> void init(FileType& file, const DWORD& columnCount) {
+			char tmpField[0x400] = { 0x00 };
+			for (unsigned int j = 0; j < columnCount; j++) {
+				WORD length = file.read<WORD>();
+				file.readString(length, tmpField);
+				this->columns.push_back(atol(tmpField));
+			}
+		}
+	#ifdef __ROSE_APPLY_STL__
+		void changeName(std::string& newName) {
+			//do nothing
+		}
+	#endif
+		__inline virtual const DWORD operator[](const size_t colId) {
+			return this->getColumn(colId);
+		}
+		__inline const DWORD getColumn(const DWORD colId) {
+			return this->columns.at(colId);
+		}
+		template<class _Ty> __inline const _Ty getColumn(const DWORD colId) {
+			return (std::is_arithmetic<_Ty>::value == true ? static_cast<_Ty>(this->getColumn(colId)) : _Ty(0x00));
+		}
+
+		__inline DWORD getColumnCount() const { return this->columns.size(); }
+};
+
+template<class _STBEntry = ::STBEntry> class STBFile_Template {
+	protected:
+		std::vector<_STBEntry> entries;
 		std::string filePath;
 
-		bool storeData() {
-			char tmpField[0x200];
+		template<class FileType> bool storeData(FileType& file) {
 			unsigned dataOffset = 0;
-			unsigned short fieldlen = 0;
 
-			FILE *fh = fopen(this->filePath.c_str(), "rb");
-			if (!fh) {
-				std::cout << "Couldn't open: " << this->filePath.c_str() << "\n";
-				return false;
-			}
-
-			fseek(fh, 4, SEEK_SET);
-			fread(&dataOffset, 4, 1, fh);
+			file.skip(0x04);
+			dataOffset = file.read<DWORD>();
 			
-			DWORD entryCount = 0x00;
-			fread(&entryCount, 4, 1, fh);
+			DWORD entryCount = file.read<DWORD>();
 			entryCount--;
 			this->entries.reserve(entryCount);
 
-			DWORD columnCount = 0x00;
-			fread(&columnCount, 4, 1, fh);
+			DWORD columnCount = file.read<DWORD>();
 			columnCount--;
 			for (unsigned int i = 0; i < entryCount; i++) {
-				this->entries.push_back(STBEntry(columnCount));
+				this->entries.push_back(_STBEntry());
 			}
 			
-			fseek(fh, dataOffset, SEEK_SET);
+			file.setPosition(dataOffset);
 			for (unsigned int i = 0; i < entryCount; i++) {
-				STBEntry& entry = this->entries.at(i);
-				entry.columns.reserve(columnCount);
-				for (unsigned int j = 0; j < columnCount; j++) {
-					fread(&fieldlen, 2, 1, fh);
-					fread(tmpField, 1, fieldlen, fh);
-					tmpField[fieldlen] = 0x00;
-					entry.columns.push_back(std::string(tmpField));
-				}
+				_STBEntry& entry = this->entries.at(i);
+				entry.init<FileType>(file, columnCount);
 			}
-			fclose(fh);
 			return true;
 		}
-		STBFile() {
+		STBFile_Template() {
 			this->filePath = "";
 			this->entries.clear();
 		}
-		void construction() {
+		template<class FileType> void construction(FileType& file) {
 			this->entries.clear();
 
-			this->storeData();
+			this->storeData<FileType>(file);
 
 #ifdef __ROSE_APPLY_STL__
 			std::string stlFile = filePath;
@@ -101,24 +130,47 @@ class STBFile {
 			stlFile += "_S.STL";
 			STLFile stl(stlFile.c_str());
 			for(unsigned int i=0;i<stl.size();i++) {
-				STBEntry& entry = this->entries.at(stl.getEntryId(i));
-				entry.columns.at(0x00) = stl.getEntryName(i).c_str();
+				_STBEntry& entry = this->entries.at(stl.getEntryId(i));
+				entry.changeName(stl.getEntryName(i));
 			}
 #endif //__ROSE_APPLY_STL__
 		}
-	public:
-		STBFile(const char* filePath) {
+#ifdef __ROSE_USE_VFS__
+		void read(char* bufferedFile, const DWORD fileLen) {
+			this->filePath = "";
+
+			CMyBufferedReader reader(bufferedFile, fileLen);
+			this->construction<CMyBufferedReader>(reader);
+#else
+		void init(const char* filePath) {
 			this->filePath = filePath;
-			this->construction();
+			CMyFile file(this->filePath.c_str(), "rb");
+			if (!file.exists()) {
+				std::cout << "Couldn't open: " << this->filePath.c_str() << "\n";
+				return;
+			}
+			this->construction<CMyFile>(file);
+#endif
 		}
-		virtual ~STBFile() {
+	public:
+#ifdef __ROSE_USE_VFS__
+		STBFile_Template(char* fileBuffer, const DWORD fileLen) {
+			this->read(fileBuffer, fileLen);
+#else
+		STBFile_Template(const char* filePath) {
+			this->read(filePath);
+#endif
+		}
+		virtual ~STBFile_Template() {
 			this->filePath = "";
 			this->entries.clear();
 		}
-		__inline virtual STBEntry& operator[](const size_t rowId) { return this->getRow(rowId); }
-		__inline STBEntry& getRow(const DWORD rowId) { return this->entries.at(rowId); }
+		__inline virtual _STBEntry& operator[](const size_t rowId) { return this->getRow(rowId); }
+		__inline _STBEntry& getRow(const DWORD rowId) { return this->entries.at(rowId); }
 		__inline DWORD getRowCount() const { return this->entries.size(); }
 };
+
+typedef STBFile_Template<> STBFile;
 
 class NPCSTB : public STBFile {
 	public:
@@ -139,9 +191,13 @@ class NPCSTB : public STBFile {
 		const static WORD DROPCHANCE_COLUMN = 0x14;
 		const static WORD ATTACKRANGE_COLUMN = 0x1A;
 		const static WORD AGGRO_COLUMN = 0x1B;
+#ifdef __ROSE_USE_VFS__
+		NPCSTB(char* fileBuffer, const DWORD fileLen) {
+			this->read(fileBuffer, fileLen);
+#else
 		NPCSTB(const char* filePath) {
-			this->filePath = filePath;
-			this->construction();
+			this->read(filePath);
+#endif
 		}
 		__inline std::string getName(const WORD row) {
 			return this->entries.at(row).getColumn(NPCSTB::NAME_COLUMN);
@@ -208,9 +264,13 @@ class ZoneSTB : public STBFile {
 		const static WORD EVENING_BEGIN = 0x10;
 		const static WORD NIGHT_BEGIN = 0x11;
 		const static WORD ZONESIZE_COLUMN = 0x19;
+#ifdef __ROSE_USE_VFS__
+		ZoneSTB(char* fileBuffer, const DWORD fileLen) {
+			this->read(fileBuffer, fileLen);
+#else
 		ZoneSTB(const char* filePath) {
-			this->filePath = filePath;
-			this->construction();
+			this->read(filePath);
+#endif
 		}
 		__inline WORD getId(const WORD& row) { return row; }
 		__inline std::string getZoneFile(const WORD row) { return std::string(this->entries.at(row).getColumn(ZoneSTB::ZONE_COLUMN)); }
@@ -252,12 +312,170 @@ class EquipmentSTB {
 		const static WORD DEFENSE_MAGICAL = 0x20;
 		const static WORD ATTACK_RANGE = 0x21;
 		const static WORD MOVEMENT_SPEED = 0x21;
+		const static WORD MOTION_COLUMN = 0x22;
 		const static WORD ATTACK_POWER_PHYSICAL = 0x23;
 		const static WORD ATTACK_SPEED = 0x24;
 		const static WORD ATTACK_POWER_MAGICAL = 0x25;
 };
 
-class SkillSTB : public STBFile {
+class SkillEntry : public STBEntry {
+	public:
+		const static BYTE CONDITIONS_MAX_NUM = 0x02;
+		const static BYTE COSTS_MAX_NUM = 0x02;
+		const static BYTE BUFF_MAX_NUM = 0x03;
+		const static BYTE REQUIRED_SKILL_MAX_NUM = 0x03;
+		const static BYTE CLASS_MAX_NUM = 0x04;
+		const static BYTE WEAPONS_MAX_NUM = 0x05;
+
+		const static BYTE COLUMN_BASIC_ID = 0x01;
+		const static BYTE COLUMN_LEVEL = 0x02;
+		const static BYTE COLUMN_REQUIRED_POINTS_PER_LEVELUP = 0x03;
+		const static BYTE COLUMN_SKILLTYPE = 0x04;
+		const static BYTE COLUMN_INITRANGE = 0x06;
+		const static BYTE COLUMN_TARGETTYPE = 0x07;
+		const static BYTE COLUMN_AOERANGE = 0x08;
+		const static BYTE COLUMN_ATTACKPOWER = 0x09;
+		const static BYTE COLUMN_DOESHARM = 0x0A;
+		const static BYTE COLUMN_STATUS_FIRST = 0x0B;
+		const static BYTE COLUMN_STATUS_SECOND = 0x0C;
+		const static BYTE COLUMN_SUCCESSRATE = 0x0D;
+		const static BYTE COLUMN_DURATION = 0x0E;
+		const static BYTE COLUMN_COST_TYPE_FIRST = 0x10;
+		const static BYTE COLUMN_COST_TYPE_SECOND = 0x12;
+		const static BYTE COLUMN_COST_AMOUNT_FIRST = 0x11;
+		const static BYTE COLUMN_COST_AMOUNT_SECOND = 0x13;
+		const static BYTE COLUMN_COOLDOWN = 0x14;
+		const static BYTE COLUMN_BUFF_TYPE_FIRST = 0x15;
+		const static BYTE COLUMN_BUFF_TYPE_SECOND = 0x18;
+		const static BYTE COLUMN_BUFF_TYPE_LAST = 0x0B;
+		const static BYTE COLUMN_BUFF_FLATVALUE_FIRST = 0x16;
+		const static BYTE COLUMN_BUFF_FLATVALUE_SECOND = 0x19;
+		const static BYTE COLUMN_BUFF_FLATVALUE_LAST = 0x9;
+		const static BYTE COLUMN_BUFF_PERCENTVALUE_FIRST = 0x17;
+		const static BYTE COLUMN_BUFF_PERCENTVALUE_SECOND = 0x1A;
+		const static BYTE COLUMN_WEAPONS_BEGIN = 0x1E;
+		const static BYTE COLUMN_WEAPONS_END = 0x22;
+		const static BYTE COLUMN_CLASS_BEGIN = 0x23;
+		const static BYTE COLUMN_CLASS_END = 0x26;
+		const static BYTE COLUMN_REQUIRED_SKILL_ID_FIRST = 0x27;
+		const static BYTE COLUMN_REQUIRED_SKILL_ID_SECOND = 0x29;
+		const static BYTE COLUMN_REQUIRED_SKILL_ID_LAST = 0x2B;
+
+		const static BYTE COLUMN_REQUIRED_SKILL_LEVEL_FIRST = 0x28;
+		const static BYTE COLUMN_REQUIRED_SKILL_LEVEL_SECOND = 0x2A;
+		const static BYTE COLUMN_REQUIRED_SKILL_LEVEL_LAST = 0x2C;
+		const static BYTE REQUIRED_SKILL_MAX = 0x03;
+
+		const static BYTE COLUMN_REQUIRED_CONDITION_TYPE_FIRST = 0x2D;
+		const static BYTE COLUMN_REQUIRED_CONDITION_TYPE_LAST = 0x30;
+		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST = 0x2E;
+		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_LAST = 0x31;
+
+		SkillEntry() {
+		}
+
+		__inline WORD getIdBasic() { return this->getColumn<WORD>(SkillEntry::COLUMN_BASIC_ID); }
+		WORD getId() { 
+			BYTE level = this->getLevel();
+			WORD basicId = this->getColumn<WORD>(SkillEntry::COLUMN_BASIC_ID);
+			if (level == 0)
+				return basicId;
+			return basicId + level - 1;
+		}
+		__inline BYTE getLevel() { return this->getColumn<BYTE>(SkillEntry::COLUMN_LEVEL); }
+		__inline BYTE getRequiredPointsPerLevelup() { return this->getColumn<BYTE>(SkillEntry::COLUMN_REQUIRED_POINTS_PER_LEVELUP); }
+		__inline BYTE getType() { return this->getColumn<BYTE>(SkillEntry::COLUMN_SKILLTYPE); }
+		__inline DWORD getInitRange() { return this->getColumn<DWORD>(SkillEntry::COLUMN_INITRANGE); }
+		__inline BYTE getTargetType() { return this->getColumn<BYTE>(SkillEntry::COLUMN_TARGETTYPE); }
+		__inline DWORD getAOERange() {
+			return this->getColumn<DWORD>(SkillEntry::COLUMN_AOERANGE);
+		}
+		__inline WORD getAttackpower() {
+			return this->getColumn<WORD>(SkillEntry::COLUMN_ATTACKPOWER);
+		}
+		__inline bool getDoesHarm() {
+			DWORD res = this->getColumn<DWORD>(SkillEntry::COLUMN_DOESHARM);
+			return (res > 0);
+		}
+		__inline BYTE getStatus(const WORD rowId, bool firstStatusEQFalse_SecondStatusEQTrue) {
+			BYTE colId = static_cast<BYTE>(firstStatusEQFalse_SecondStatusEQTrue) | SkillEntry::COLUMN_STATUS_FIRST;
+			return this->getColumn<BYTE>(colId);
+		}
+		__inline BYTE getSuccessrate() {
+			return this->getColumn<BYTE>(SkillEntry::COLUMN_SUCCESSRATE);
+		}
+		__inline WORD getDuration() {
+			return this->getColumn<WORD>(SkillEntry::COLUMN_DURATION);
+		}
+		__inline BYTE getCostType(BYTE firstTypeFalse_secondTypeTrue) {
+			BYTE colId = (firstTypeFalse_secondTypeTrue % 2) | SkillEntry::COLUMN_COST_TYPE_FIRST;
+			return this->getColumn<BYTE>(colId);
+		}
+		__inline WORD getCostAmount(BYTE firstTypeFalse_secondTypeTrue) {
+			BYTE colId = (firstTypeFalse_secondTypeTrue % 2) | COLUMN_COST_AMOUNT_FIRST;
+			return this->getColumn<WORD>(colId);
+		}
+		__inline WORD getCooldown() {
+			return this->getColumn<WORD>(SkillEntry::COLUMN_COOLDOWN);;
+		}
+		WORD getBuffType(BYTE wantedTypeOutOfThree) {
+			wantedTypeOutOfThree %= SkillEntry::BUFF_MAX_NUM; //3 MAX
+			wantedTypeOutOfThree += SkillEntry::COLUMN_BUFF_TYPE_FIRST;
+			return this->getColumn<WORD>(wantedTypeOutOfThree);
+		}
+		WORD getBuffValueFlat(BYTE wantedTypeOutOfThree) {
+			wantedTypeOutOfThree %= SkillEntry::BUFF_MAX_NUM;
+			wantedTypeOutOfThree += SkillEntry::COLUMN_BUFF_FLATVALUE_FIRST;
+			return this->getColumn<WORD>(wantedTypeOutOfThree);
+		}
+		WORD getBuffValuePercentage(BYTE wantedTypeOutOfThree) {
+			wantedTypeOutOfThree %= SkillEntry::BUFF_MAX_NUM;
+			BYTE colId = 0x00;
+			switch (wantedTypeOutOfThree) {
+			case 0x00:
+				return this->getColumn<WORD>(SkillEntry::COLUMN_BUFF_PERCENTVALUE_FIRST);
+				break;
+			case 0x01:
+				return this->getColumn<WORD>(SkillEntry::COLUMN_BUFF_PERCENTVALUE_SECOND);
+				break;
+			}
+			return static_cast<WORD>(0x00);
+		}
+
+		WORD getWeaponType(BYTE weaponTypeOutOfFive) {
+			weaponTypeOutOfFive %= (SkillEntry::COLUMN_WEAPONS_END - SkillEntry::COLUMN_WEAPONS_BEGIN);
+			weaponTypeOutOfFive += SkillEntry::COLUMN_WEAPONS_BEGIN;
+			return this->getColumn<WORD>(weaponTypeOutOfFive);
+		}
+		WORD getClassType(BYTE classTypeOutOfFour) {
+			classTypeOutOfFour %= (SkillEntry::COLUMN_CLASS_END - SkillEntry::COLUMN_CLASS_BEGIN);
+			classTypeOutOfFour += COLUMN_CLASS_BEGIN;
+			return this->getColumn<WORD>(classTypeOutOfFour);
+		}
+
+		WORD getRequiredSkillID(BYTE idOutOfThree) {
+			idOutOfThree %= REQUIRED_SKILL_MAX;
+			idOutOfThree = (idOutOfThree * 2) + COLUMN_REQUIRED_SKILL_ID_FIRST;
+			return this->getColumn<WORD>(idOutOfThree);
+		}
+
+		BYTE getRequiredSkillLevel(BYTE levelOutOfThree) {
+			levelOutOfThree %= REQUIRED_SKILL_MAX;
+			levelOutOfThree = (levelOutOfThree * 2) + COLUMN_REQUIRED_SKILL_LEVEL_FIRST;
+			return this->getColumn<BYTE>(levelOutOfThree);
+		}
+		__inline BYTE getRequiredConditionType(BYTE typeOutOfTwo) {
+			typeOutOfTwo = (typeOutOfTwo % SkillEntry::CONDITIONS_MAX_NUM) * 2;
+			return this->getColumn<BYTE>(typeOutOfTwo + COLUMN_REQUIRED_CONDITION_TYPE_FIRST);
+		}
+
+		__inline WORD getRequiredConditionAmount(BYTE amountOutOfTwo) {
+			amountOutOfTwo = (amountOutOfTwo % SkillEntry::CONDITIONS_MAX_NUM) * 2;
+			return this->getColumn<WORD>(amountOutOfTwo + COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST);
+		}
+};
+
+class SkillSTB : public STBFile_Template<SkillEntry> {
 	public:
 		const static BYTE CONDITIONS_MAX_NUM = 0x02;
 		const static BYTE COSTS_MAX_NUM = 0x02;
@@ -308,12 +526,15 @@ class SkillSTB : public STBFile {
 		const static BYTE COLUMN_REQUIRED_CONDITION_TYPE_LAST = 0x30;
 		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST = 0x2E;
 		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_LAST = 0x31;
-
+		
+#ifdef __ROSE_USE_VFS__
+		SkillSTB(char* fileBuffer, const DWORD fileLen) {
+			this->read(fileBuffer, fileLen);
+#else
 		SkillSTB(const char* filePath) {
-			this->filePath = filePath;
-			this->construction();
+			this->read(filePath);
+#endif
 		}
-
 		__inline BYTE getLevel(const WORD rowId) { return this->entries.at(rowId).getColumn<BYTE>(SkillSTB::COLUMN_LEVEL); }
 		__inline BYTE getRequiredPointsPerLevelup(const WORD rowId) { return this->entries.at(rowId).getColumn<BYTE>(SkillSTB::COLUMN_REQUIRED_POINTS_PER_LEVELUP); }
 		__inline BYTE getType(const WORD rowId) { return this->entries.at(rowId).getColumn<BYTE>(SkillSTB::COLUMN_SKILLTYPE); }
@@ -417,9 +638,13 @@ class SkillSTB : public STBFile {
 class AISTB : public STBFile {
 	public:
 		const static WORD PATH_COLUMN = 0x00;
+#ifdef __ROSE_USE_VFS__
+		AISTB(char* fileBuffer, const DWORD fileLen) {
+			this->read(fileBuffer, fileLen);
+#else
 		AISTB(const char* filePath) {
-			this->filePath = filePath;
-			this->construction();
+			this->read(filePath);
+#endif
 		}
 		__inline std::string getFilePath(const WORD row) { return std::string(this->entries.at(row).getColumn(AISTB::PATH_COLUMN)); }
 };

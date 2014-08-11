@@ -7,6 +7,7 @@
 #include "Buffs.h"
 #include <algorithm>
 
+/*
 class Skill {
 	private:
 		WORD id;
@@ -123,6 +124,7 @@ class Skill {
 		__inline const WORD getRequirementType(const BYTE typeOutOfTwo) const { return this->requirements[typeOutOfTwo % 2].type; }
 		__inline const WORD getRequirementAmount(const BYTE typeOutOfTwo) const { return this->requirements[typeOutOfTwo % 2].amount; }
 };
+*/
 
 //TODO: FILL BLANKS
 class SkillType {
@@ -140,6 +142,19 @@ class SkillType {
 		const static BYTE PASSIVE = 15;
 };
 
+class PlayerSkill {
+	private:
+		PlayerSkill() {}
+		~PlayerSkill() {}
+	public:
+		const static BYTE BASIC_BEGIN = 0;
+		const static BYTE ACTIVE_BEGIN = 30;
+		const static BYTE PASSIVE_BEGIN = 60;
+		const static BYTE PREMIUM_BEGIN = 90;
+		const static BYTE PLAYER_MAX_SKILLS = 120;
+};
+
+typedef SkillEntry Skill;
 
 struct Stats {
 	WORD curHP;
@@ -149,6 +164,7 @@ struct Stats {
 
 	WORD attackPower;
 	WORD attackSpeed;
+	clock_t attackDelay;
 	WORD defensePhysical;
 	WORD defenseMagical;
 	WORD movementSpeed;

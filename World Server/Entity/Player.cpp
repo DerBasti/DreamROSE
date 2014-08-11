@@ -18,9 +18,9 @@ Player::Player(SOCKET sock, ServerSocket* server){
 	for (unsigned int i = 0; i < Inventory::MAXIMUM; i++) {
 		this->inventory[i].clear();
 	}
-	this->skills.reserve(Skill::PLAYER_MAX_SKILLS);
-	for(unsigned int i=0;i<this->skills.capacity();i++)
-		this->skills[i] = nullptr;
+	this->skills.reserve(PlayerSkill::PLAYER_MAX_SKILLS);
+	for (unsigned int i = 0; i < this->skills.capacity(); i++)
+		this->skills.addValue(nullptr);
 }
 
 Player::~Player() {
@@ -173,7 +173,7 @@ bool Player::pakUpdateLifeStats() {
 }
 
 //TODO: ADD TO STAT CALCULATION
-WORD Player::checkClothesForStats(const DWORD statAmount, ...) {
+WORD Player::checkClothesForStats(const WORD statAmount, ...) {
 	std::vector<DWORD> stats;
 	va_list ap;
 	va_start(ap, statAmount);
@@ -204,7 +204,7 @@ WORD Player::checkClothesForStats(const DWORD statAmount, ...) {
 	return result;
 }
 
-WORD Player::checkSkillsForStats(const DWORD basicAmount, const DWORD statAmount, ...) {
+WORD Player::checkSkillsForStats(const WORD basicAmount, const WORD statAmount, ...) {
 	std::vector<DWORD> stats;
 	va_list ap;
 	va_start(ap, statAmount);
@@ -223,9 +223,9 @@ WORD Player::checkSkillsForStats(const DWORD basicAmount, const DWORD statAmount
 		for(unsigned int j=0;j<3;j++) {
 			for(unsigned int k=0;k<stats.size();k++) {
 				if(currentSkill->getBuffType(j) == stats.at(k)) {
-					result += currentSkill->getBuffAmountFlat(j);
-					if(currentSkill->getBuffAmountPercentage(j)>0)
-						result += basicAmount * 100 / currentSkill->getBuffAmountPercentage(j);
+					result += currentSkill->getBuffValueFlat(j);
+					if(currentSkill->getBuffValuePercentage(j)>0)
+						result += basicAmount * 100 / currentSkill->getBuffValuePercentage(j);
 				}
 			}
 		}
@@ -485,6 +485,12 @@ void Player::updateAttackSpeed() {
 	atkSpeed -= this->getBuffAmount( Buffs::Visuality::ATTACKSPEED_DOWN );
 
 	this->stats.attackSpeed = atkSpeed;
+	this->updateIntervalBetweenAttacks();
+}
+
+void Player::updateIntervalBetweenAttacks() {
+	BYTE motionType = mainServer->getWeaponMotion(this->inventory[Inventory::WEAPON].id);
+	this->stats.attackDelay = mainServer->getAttackTimeData(motionType) * 100 / this->stats.attackSpeed;
 }
 
 void Player::updateDefense() {
@@ -920,14 +926,16 @@ bool Player::loadInfos() {
 		return false;
 	std::string str = std::string(mainServer->sqlGetNextRow()[0]);
 	DWORD idx = 0x00;
+	WORD skillId = 0x00;
 	while (str.find(",") != -1) {
-		this->basicSkills[idx].id = atoi(str.substr(0, str.find(",")).c_str());
+		skillId = atoi(str.substr(0, str.find(",")).c_str());
+		this->skills[PlayerSkill::BASIC_BEGIN + idx] = mainServer->getSkill(skillId);
 		idx++;
 
 		//min_value of str.find is 0 -> no check necessary
 		str = str.substr(str.find(",")+1);
 	}
-	this->basicSkills[idx].id = atoi(str.c_str());
+	this->skills[PlayerSkill::BASIC_BEGIN + idx] = mainServer->getSkill(atoi(str.c_str()));
 
 	this->updateStats();
 

@@ -13,6 +13,7 @@
 #include <mysql.h>
 
 #include "Logger.h"
+#include "Definitions.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "libmysql")
@@ -22,7 +23,6 @@ typedef unsigned short WORD;
 typedef unsigned long DWORD;
 typedef unsigned long long QWORD;
 
-#define __ROSE_DEBUG__
 
 class Packet {
 public:

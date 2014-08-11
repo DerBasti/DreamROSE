@@ -158,10 +158,11 @@ class Player : public Entity, public ClientSocket {
 		void updateDodgerate();
 		void updateCritrate();
 		void updateMovementSpeed();
+		void updateIntervalBetweenAttacks();
 		void checkRegeneration();
 
-		WORD checkClothesForStats(const DWORD statAmount, ...);
-		WORD checkSkillsForStats(const DWORD basicAmount, const DWORD statAmount, ...);
+		WORD checkClothesForStats(const WORD statAmount, ...);
+		WORD checkSkillsForStats(const WORD basicAmount, const WORD statAmount, ...);
 
 		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
 
@@ -204,7 +205,7 @@ class Player : public Entity, public ClientSocket {
 		bool equipItem(const Item& item);
 
 		float getAttackRange();
-		__inline clock_t intervalBetweenAttacks() { return PLAYER_ATTACK_INTERVAL / this->getAttackSpeed(); }
+		__inline clock_t getIntervalBetweenAttacks() { return this->stats.attackDelay; }
 };
 
 #endif //__ROSE_PLAYER__

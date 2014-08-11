@@ -638,7 +638,7 @@ namespace QuickInfo {
 	}
 
 	float fRand(const float max, bool allowNegative) {
-		float res = static_cast<float>(rand() % static_cast<DWORD>(max)) + static_cast<float>(rand() / static_cast<float>(RAND_MAX));
+		float res = static_cast<float>(rand() / static_cast<float>(RAND_MAX)) * max;
 		if(allowNegative) {
 			res = (rand() % 100 < 50 ? res : res * -1);
 		}

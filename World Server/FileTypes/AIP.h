@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include "D:\Programmieren\QuickInfos\Trackable.hpp"
+#include "..\..\Common\Definitions.h"
 
 #pragma warning(disable:4996)
 
@@ -2286,7 +2287,7 @@ class AIP {
 		std::string filePath;
 		DWORD checkInterval;
 		DWORD damageAmountTrigger; //Or Damage dealt/received?
-		void loadFrom(class CMyFile& file);
+		template<class FileType> void loadFrom(FileType& file);
 	public:
 		const static BYTE ON_SPAWN = 0x00;
 		const static BYTE ON_IDLE = 0x01;
@@ -2301,7 +2302,11 @@ class AIP {
 			this->filePath = std::string("");
 			this->id = 0x00;
 		}
+#ifdef __ROSE_USE_VFS__
+		AIP(const WORD id, char* fileBuf, const DWORD fileLen);
+#else
 		AIP(const WORD id, const char* fileName);
+#endif
 		~AIP();
 
 		__inline WORD getId() const { return this->id; }
