@@ -8,8 +8,10 @@
 #include <vector>
 #include <Psapi.h>
 #include <tlhelp32.h>
+#include <DbgHelp.h>
 
 #pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "DbgHelp.lib")
 
 namespace QuickInfo {
 	#ifndef WINDOW_SEARCH_TYPES

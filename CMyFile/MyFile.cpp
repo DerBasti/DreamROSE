@@ -1,5 +1,7 @@
 #include "MyFile.h"
 #include "..\QuickInfos\QuickInfoFuncDefs.h"
+#include "..\QuickInfos\QuickInfo.h"
+#include <fstream>
 
 #define ATTACH_TIME_VIA(func) SYSTEMTIME st; GetSystemTime(&st); \
 		func('[', handle); \
@@ -53,21 +55,7 @@ CMyFile::CMyFile() {
 
 CMyFile::CMyFile( const char *path, const char *accessRights)
 {
-	this->unicode = false; 
-	handle = fopen(path, accessRights);
-	memset(this->accessRights, 0x00, 3 * sizeof(wchar_t));
-	int idx = 0;
-	while (*accessRights) {
-		this->accessRights[idx] = *accessRights & 0xFF;
-		*accessRights++;
-		idx++;
-	}
-	//ERROR_FILE_ALREADY_EXISTS
-	if (GetLastError() == 0xb7) {
-		SetLastError(0);
-	}
-	strcpy(this->cPath, path);
-	memset(this->wPath, 0x00, sizeof(wchar_t)*MAX_PATH);
+	this->openFile(path, accessRights);
 }
 
 CMyFile::CMyFile(const wchar_t *path, const wchar_t *accessRights) {
@@ -96,25 +84,31 @@ bool CMyFile::openFile(const char *path, const char *accessRights) {
 		this->handle = nullptr;
 	}
 	this->unicode = false;
-	strcpy(this->cPath, path);
-	for (int i = 0; i < 3; i++) {
-		this->accessRights[i] = 0x00;
-	}
-	this->immediateSafe = immediateSafe;
-
+	memset(this->accessRights, 0x00, 3 * sizeof(wchar_t));
 	int idx = 0;
-	char tmp[3] = { 0x00 };
-	while (accessRights[idx] && idx < 3) {
-		this->accessRights[idx] = accessRights[idx];
-		tmp[idx] = accessRights[idx];
+	while (*accessRights) {
+		this->accessRights[idx] = *accessRights & 0xFF;
+		*accessRights++;
 		idx++;
 	}
-
 	//ERROR_FILE_ALREADY_EXISTS
 	if (GetLastError() == 0xb7) {
 		SetLastError(0);
 	}
-	return (handle != nullptr);
+	if (path[0] == '.' && path[1] == '\\') {
+		std::string workPath = "";
+		QuickInfo::getPath(&workPath);
+		workPath += &path[1];
+		strcpy(this->cPath, workPath.c_str());
+	}
+	else {
+		strcpy(this->cPath, path);
+	}
+	memset(this->wPath, 0x00, sizeof(wchar_t)*MAX_PATH);
+
+	char access[4] = { this->accessRights[0] & 0xFF, this->accessRights[1] & 0xFF, this->accessRights[2] & 0xFF, 0x00 };
+	this->handle = fopen(this->cPath, access);
+	return this->handle != nullptr;
 }
 
 
@@ -136,6 +130,19 @@ bool CMyFile::openFile(const wchar_t *path, const wchar_t *accessRights) {
 		SetLastError(0);
 	}
 	return (handle != nullptr);
+}
+
+void CMyFile::clear() {
+	if (this->handle)
+		this->close();
+	if (this->unicode) {
+		std::wfstream f(this->wPath, std::ios::out | std::ios::trunc);
+		f.close();
+	}
+	else {
+		std::fstream f(this->cPath, std::ios::out | std::ios::trunc);
+		f.close();
+	}
 }
 
 bool CMyFile::reopen() {

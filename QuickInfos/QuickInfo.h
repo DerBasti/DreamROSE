@@ -13,6 +13,7 @@
 #include "..\Exceptions\TrackableException.h"
 #include <functional>
 #include <xutility>
+#include <DbgHelp.h>
 
 namespace QuickInfo {
 
@@ -245,6 +246,9 @@ namespace QuickInfo {
 
 	void getAllDllsOfProcess(DWORD threadId, std::wstring *result, bool removePath = true);
 	void getAllDllsOfProcess(HANDLE process, std::wstring *result, bool removePath = true);
+	
+	void loadAllDllsOfProcess(HANDLE process);
+	void getCallStack(std::string& log);
 
 	void getDllExports(std::wstring pathToDll, std::wstring* result);
 	void getDllExports(HMODULE hDll, std::wstring* result);
@@ -1533,13 +1537,13 @@ template<class _Ty> class FixedArray {
 			}
 		}
 		const _Ty& getValueCONST(const size_t pos) const {
-			if(pos >= this->usedSize)
-				throw std::exception();
+			if (pos >= this->usedSize)
+				throw TraceableExceptionARGS("Position %i is outside of max %i", pos, this->usedSize);
 			return this->container[pos];
 		}
 		_Ty& getValue(const size_t pos) const {
 			if(pos >= this->usedSize)
-				throw std::exception();
+				throw TraceableExceptionARGS("Position %i is outside of max %i", pos, this->usedSize);
 			return this->container[pos];
 		}
 		const size_t capacity() const { return this->maxSize; }

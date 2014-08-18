@@ -19,8 +19,10 @@ ConfigA::~ConfigA()
 {
 	for(unsigned int i=0;i<this->configValues.size();i++) {
 		delete this->configValues.at(i);
+		this->configValues.at(i) = nullptr;
 	}
 	this->configValues.clear();
+	fclose(this->handle);
 }
 
 bool ConfigA::init() {
@@ -30,6 +32,7 @@ bool ConfigA::init() {
 			ValueKeyPairA* pair = this->configValues.at(i);
 
 			delete pair;
+			pair = nullptr;
 
 			this->configValues.pop_back();
 		}

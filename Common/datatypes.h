@@ -142,13 +142,14 @@ private:
 	DWORD port;
 	MYSQL* sql;
 	MYSQL_RES *result;
+	std::string lastQuery;
 
 	bool isConnected;
 	const char* errorDesc;
 
 	void showErrorMsg() {
 		this->errorDesc = this->lastError();
-		std::cout << "[MYSQL ERROR]: " << this->errorDesc << "\n";
+		std::cout << "[MYSQL ERROR]: " << this->errorDesc << " for query: " << lastQuery.c_str() << "\n";
 	}
 public:
 	DataBase() {
@@ -190,6 +191,7 @@ public:
 		if (this->checkIsConnected())
 			return false;
 		if (!mysql_real_connect(this->sql, this->server, this->userName, this->pw, this->database, this->port, nullptr, 0)) {
+			this->lastQuery = "MYSQL_RECONNECT";
 			return false;
 		}
 		return true;
@@ -199,6 +201,7 @@ public:
 		if (!isInit && this->checkIsConnected())
 			return false;
 		if (!mysql_real_connect(this->sql, this->server, this->userName, this->pw, this->database, this->port, nullptr, 0)) {
+			this->lastQuery = "MYSQL_CONNECT";
 			this->showErrorMsg();
 			return false;
 		}
@@ -217,6 +220,7 @@ public:
 	MYSQL_RES* get(const char* fmt, ...) {
 		ArgConverterA(result, fmt);
 		if (mysql_query(this->sql, result.c_str()) != 0) {
+			this->lastQuery = std::string("MYSQL_GET: ") + result;
 			this->showErrorMsg();
 			if (this->reconnect())
 				return get(result.c_str());
@@ -233,6 +237,7 @@ public:
 	bool put(const char* fmt, ...) {
 		ArgConverterA(result, fmt);
 		if (mysql_query(this->sql, result.c_str()) != 0) {
+			this->lastQuery = std::string("MYSQL_PUT: ") + result;
 			this->showErrorMsg();
 			if (this->reconnect())
 				return put(result.c_str());

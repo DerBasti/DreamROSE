@@ -57,11 +57,10 @@ template<class _Ty, class = typename std::enable_if<std::is_integral<_Ty>::value
 				delete[] this->data;
 				this->data = nullptr;
 			}
-			this->data = new _Ty[newLen + 1];
 			this->_size = newLen;
+			this->data = new _Ty[this->_size + 1];
 			
-			for(unsigned int i=0;i<newLen;i++)
-				this->data[i] = newData[i];
+			memcpy(this->data, newData, this->_size);
 			this->data[this->_size] = 0x00;
 		}
 		//Allow implicit casting on this one.

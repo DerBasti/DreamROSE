@@ -7,6 +7,7 @@
 #include <cstdarg>
 #include <time.h>
 #include "..\QuickInfos\AdditionalFunctions.h"
+#include "..\QuickInfos\Trackable.hpp"
 
 #ifndef MAX_PATH
 #define MAX_PATH 260
@@ -82,6 +83,7 @@ class CMyFile
 		//Functions
 		bool openFile(const char *, const char *);
 		bool openFile(const wchar_t *, const wchar_t *);
+		void clear();
 
 		bool getLine(char *ptr, DWORD ptrLen, DWORD line = 0);
 		bool getLine(wchar_t *ptr, DWORD ptrLen, DWORD line = 0);
@@ -108,10 +110,18 @@ class CMyFile
 			buf[len] = 0x00;
 			return len;
 		}
-		template<class _TyLen, class _Ty> _TyLen readStringT( _TyLen len, _Ty* buf ) {
+		template<class _TyLen, class _Ty> _TyLen readString( _TyLen len, _Ty* buf ) {
 			_TyLen readBytes = fread(buf, 1, len, this->handle);
 			buf[len] = 0x00;
 			return readBytes;
+		}
+		template<class _TyLen> void readAndAlloc(Trackable<char>& data, const _TyLen length) {
+			char* tmpData = new char[length];
+			this->readString(length, tmpData);
+			data.init(tmpData, length);
+
+			delete[] tmpData;
+			tmpData = nullptr;
 		}
 		__inline DWORD skip(const DWORD len) {
 			DWORD previousPos = ftell(this->handle);
@@ -120,6 +130,14 @@ class CMyFile
 		}
 		__inline void setPosition(const DWORD pos) {
 			fseek(this->handle, pos, SEEK_SET);
+		}
+
+		const DWORD getTotalSize() {
+			DWORD curPos = ftell(this->handle);
+			fseek(this->handle, 0, SEEK_END);
+			DWORD result = ftell(this->handle);
+			fseek(this->handle, curPos, SEEK_SET);
+			return result;
 		}
 
 		bool writePlain(void *, unsigned int, unsigned int);
@@ -146,6 +164,54 @@ class CMyFile
 		bool exists();
 		bool reopen();
 		bool close();
+};
+
+class CMyBufferedReader {
+	private:
+		char *buffer;
+		DWORD totalSize;
+		DWORD offset;
+	public:
+		CMyBufferedReader(char* newBuffer, const DWORD newTotalSize) {
+			this->buffer = newBuffer;
+			this->totalSize = newTotalSize;
+		}
+		template<class _Ty> __inline _Ty read() {
+			if (std::is_arithmetic<_Ty>::value && this->offset < this->totalSize) {
+				_Ty value = *(reinterpret_cast<_Ty*>(&this->buffer[offset]));
+				offset += sizeof(_Ty);
+				return value;
+			}
+			return _Ty(0x00);
+		}
+		std::string readStringZero() {
+			std::string res = "";
+			DWORD strLen = 0x00;
+			while ((this->offset + strLen) < this->totalSize && this->buffer[this->offset + strLen]) {
+				res += this->buffer[this->offset + strLen];
+				strLen++;
+			}
+			this->offset += strLen + 1;
+			return std::string(res);
+		}
+		template<class _TyLen, class _Ty> void readString(const _TyLen lengthToRead, _Ty buffer) {
+			memcpy(buffer, &this->buffer[offset], lengthToRead);
+			this->offset += lengthToRead;
+			buffer[lengthToRead] = 0x00; 
+		}
+		template<class _TyLen, class _Ty> void readStringT(_Ty buffer) {
+			_TyLen length = *(reinterpret_cast<_TyLen*>(&this->buffer[this->offset]));
+			this->offset += sizeof(_TyLen);
+			this->readString(length, buffer);
+		}
+		template<class _TyLen> void readAndAlloc(Trackable<char>* data, const _TyLen length) {
+			std::vector<char> buffer(length+1);
+			this->readString(length, buffer.data());
+			data->init(buffer.data(), length);
+		}
+		__inline void skip(const DWORD bytesToSkip) { this->offset += bytesToSkip; }
+		__inline void setPosition(const DWORD newPos) { this->offset = newPos; }
+		DWORD getTotalSize() { return this->totalSize; }
 };
 
 #define putStringWithVar putStringWithVarAndTime

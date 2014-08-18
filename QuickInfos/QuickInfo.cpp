@@ -574,6 +574,110 @@ namespace QuickInfo {
 		return -1;
 	}
 
+	void loadAllDllsOfProcess(HANDLE process) {
+		HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetProcessId(process));
+		MODULEENTRY32 entry;
+		entry.dwSize = sizeof(MODULEENTRY32);
+		if (Module32First(snapshot, &entry) == TRUE) {
+			do {
+				SymLoadModuleExW(process, 0, entry.szExePath, entry.szModule, (DWORD64)entry.modBaseAddr, entry.modBaseSize, nullptr, 0);
+			} while (Module32Next(snapshot, &entry) == TRUE);
+		}
+	}
+
+	void getCallStack(std::string& stackToWriteOn) {
+		HMODULE dbgHelp = LoadLibraryA("%windir%\\system32\\dbghelp.dll");
+		HANDLE currentProcess = GetCurrentProcess();
+		std::string symInit = "SRV*%windir%\\system32\\symsrv.dll*http://msdl.microsoft.com/download/symbols";
+		if (!SymInitialize(currentProcess, nullptr, false)) {
+			return;
+		}
+		QuickInfo::loadAllDllsOfProcess(currentProcess);
+		DWORD symFlags = SymGetOptions();
+		SymSetOptions(symFlags | SYMOPT_LOAD_LINES | SYMOPT_FAIL_CRITICAL_ERRORS);
+		CONTEXT context;
+		context.ContextFlags = CONTEXT_FULL;
+
+		HANDLE currentThread = GetCurrentThread();
+		if (!currentThread) {
+			return;
+		}
+		do {
+			memset(&context, 0, sizeof(CONTEXT));
+			__asm    call x
+			__asm x: pop eax
+			__asm    mov context.Eip, eax
+			__asm    mov context.Ebp, ebp
+			__asm    mov context.Esp, esp
+		} while (0);
+
+		STACKFRAME64 stackFrame;
+#ifdef _M_IX86
+		DWORD imageType = IMAGE_FILE_MACHINE_I386;
+		stackFrame.AddrPC.Offset = context.Eip;
+		stackFrame.AddrPC.Mode = AddrModeFlat;
+		stackFrame.AddrFrame.Offset = context.Ebp;
+		stackFrame.AddrFrame.Mode = AddrModeFlat;
+		stackFrame.AddrStack.Offset = context.Esp;
+		stackFrame.AddrStack.Mode = AddrModeFlat;
+#elif _M_X64
+		DWORD imageType = IMAGE_FILE_MACHINE_AMD64;
+		stackFrame.AddrPC.Offset = context.Rip;
+		stackFrame.AddrPC.Mode = AddrModeFlat;
+		stackFrame.AddrFrame.Offset = context.Ebp;
+		stackFrame.AddrFrame.Mode = AddrModeFlat;
+		stackFrame.AddrStack.Offset = context.Esp;
+		stackFrame.AddrStack.Mode = AddrModeFlat;
+#else
+#error "Not supported"
+#endif
+		//For some reason, trying to allocate space to the char-array 
+		IMAGEHLP_SYMBOL64 *symbol = (IMAGEHLP_SYMBOL64*)malloc(sizeof(IMAGEHLP_SYMBOL64)+1024);
+		memset(symbol, 0, sizeof(IMAGEHLP_SYMBOL64)+1024);
+		symbol->SizeOfStruct = sizeof(IMAGEHLP_SYMBOL64);
+		symbol->MaxNameLength = 1024;
+
+		IMAGEHLP_LINE64 line;
+		memset(&line, 0, sizeof(IMAGEHLP_LINE));
+		line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
+
+		IMAGEHLP_MODULE module;
+		memset(&module, 0, sizeof(IMAGEHLP_MODULE));
+		module.SizeOfStruct = sizeof(IMAGEHLP_MODULE);
+
+		//auto readProcessMemory = [](HANDLE hProcess, DWORD64 qwBaseAddress, PVOID lpBuffer, DWORD nSize, LPDWORD lpNumberOfBytesRead) -> BOOL {
+		//	return ReadProcessMemory(hProcess, &qwBaseAddress, lpBuffer, nSize, lpNumberOfBytesRead);
+		//};
+		DWORD64 offsetFromSymbol64 = 0x00;
+		DWORD offsetFromLine = 0x00;
+		char buf[1024] = { 0x00 };
+		for (unsigned int frameNum = 0;; ++frameNum) {
+			if (!StackWalk64(imageType, currentProcess, currentThread, &stackFrame, &context, nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr))
+				break;
+
+			//Loop?
+			if (stackFrame.AddrPC.Offset == stackFrame.AddrReturn.Offset)
+				break;
+
+			if (stackFrame.AddrPC.Offset != 0) {
+				if (SymGetSymFromAddr64(currentProcess, stackFrame.AddrPC.Offset, &offsetFromSymbol64, symbol)) {
+					UnDecorateSymbolName(symbol->Name, buf, 1024, UNDNAME_COMPLETE);
+					stackToWriteOn += buf;
+				}
+				if (SymGetLineFromAddr64(currentProcess, stackFrame.AddrPC.Offset, &offsetFromLine, &line)) {
+					sprintf_s(buf, " (File: %s, Line: %i)\n", line.FileName, line.LineNumber);
+					stackToWriteOn += buf;
+				}
+				else {
+					stackToWriteOn += "\n";
+				}
+			}
+		}
+		free(symbol);
+		FreeLibrary(dbgHelp);
+	}
+	
+
 	DWORD getParentThreadId()  {
 		wchar_t wDllName[MAX_PATH] = { 0x00 };
 		GetModuleFileName(GetModuleHandle(nullptr), wDllName, MAX_PATH);
