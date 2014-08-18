@@ -7,8 +7,8 @@
 #include "D:\Programmieren\CMyFile\MyFile.h"
 
 #ifdef __ROSE_USE_VFS__
-AIP::AIP(const WORD id, char* fileBuf, const DWORD fileLen) {
-	CMyBufferedReader reader(fileBuf, fileLen);
+AIP::AIP(const WORD id, VFSData& vfsData) {
+	CMyBufferedReader reader(vfsData.data, vfsData.data.size());
 	this->id = id;
 	this->checkInterval = this->damageAmountTrigger = 0x00;
 	this->filePath = std::string("");
@@ -322,6 +322,18 @@ bool AIService::checkConditions( const std::vector<Trackable<char>>& ai, NPC *np
 			case BasicAIP::__AIP_CONDITION_26__:
 				result &= conditionUnknown(reinterpret_cast<const AICOND_26*>(curAI));
 			break;
+			case BasicAIP::__AIP_CONDITION_27__:
+				result &= conditionLevelDiffToSurrounding(npc, reinterpret_cast<const AICOND_27*>(curAI), trans);
+			break;
+			case BasicAIP::__AIP_CONDITION_28__:
+				result &= conditionAIVariable(npc, reinterpret_cast<const AICOND_28*>(curAI));
+			break;
+			case BasicAIP::__AIP_CONDITION_29__:
+				result &= conditionIsTargetClanmaster(npc, reinterpret_cast<const AICOND_29*>(curAI), trans);
+			break;
+			case BasicAIP::__AIP_CONDITION_30__:
+				result &= conditionCreationTime(npc, reinterpret_cast<const AICOND_30*>(curAI));
+			break;
 			default:
 				result &= true;
 		}
@@ -608,6 +620,68 @@ bool AIService::conditionMonthTime(const AICOND_25* cond) {
 bool AIService::conditionUnknown(const AICOND_26* ai) { 
 	return true; //??x
 }
+
+bool AIService::conditionLevelDiffToSurrounding(NPC* npc, const AICOND_27* ai, AITransfer* trans) {
+	DWORD foundAmount = 0;
+	for (unsigned int i = 0; i < npc->getVisibleSectors().size(); i++) {
+		MapSector* sector = npc->getVisibleSectors().getValue(i);
+		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
+		while (eNode) {
+			Entity* entity = eNode->getValue();
+			eNode = sector->getNextEntity(eNode);
+			if (!entity || entity->getEntityType() == Entity::TYPE_DROP)
+				continue;
+			int currentLevelDiff = npc->getLevel() - entity->getLevel();
+			if (dynamic_cast<Entity*>(npc)->isAllied(entity) &&
+				ai->getLevelDiff(0) >= currentLevelDiff && ai->getLevelDiff(1) <= currentLevelDiff) {
+				foundAmount++;
+				if (AIService::checkOperation(foundAmount, ai->amount, ai->operation)) {
+					trans->lastFound = entity;
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+bool AIService::conditionAIVariable(class NPC* npc, const struct AICOND_28* ai) {
+	int aiValue = npc->getAIVar(ai->getVarIndex());
+	return AIService::checkOperation(aiValue, ai->value, ai->getOperationType());
+}
+
+bool AIService::conditionIsTargetClanmaster(class NPC* npc, const struct AICOND_29* ai, AITransfer* trans) {
+	//TODO: CLANMASTER CHECK
+	switch (ai->getTargetType()) {
+		case 0x00:
+			if (trans->designatedTarget == nullptr)
+				return false;
+			//if(dynamic_cast<Player*>(trans->designatedTarget)->isClanMaster()) return true;
+		break;
+		case 0x01:
+			if (npc->getTarget() == nullptr)
+				return false;
+			//if(dynamic_cast<Player*>(npc->getTarget())->isClanMaster()) return true;
+		break;
+	}
+	return false;
+}
+
+bool AIService::conditionCreationTime(class NPC* npc, const struct AICOND_30* ai) {
+	//TODO: IMPLEMENT CREATION TIME
+	return false;
+}
+
+bool AIService::conditionIsCallerAvailable(class NPC* npc, AITransfer* trans) {
+	if (npc->getEntityType() == Entity::TYPE_MONSTER) {
+		Monster* mon = dynamic_cast<Monster*>(npc);
+		trans->lastFound = mon->getOwner();
+		if (trans->lastFound != nullptr)
+			return true;
+	}
+	return false;
+}
+
 #pragma endregion
 
 #pragma region Action Functions
@@ -709,6 +783,9 @@ void AIService::executeActions( const std::vector<Trackable<char>>& ai, NPC* npc
 			break;
 			case BasicAIP::__AI_ACTION_34__:
 				AIService::actionGiveItemsToOwner(npc, reinterpret_cast<const AIACTION_34*>(aip));
+				break;
+			case BasicAIP::__AI_ACTION_35__:
+				AIService::actionSetAIVar(npc, reinterpret_cast<const AIACTION_35*>(aip));
 			break;
 				/*
 			case BasicAIP::__AI_ACTION_15__:
@@ -834,7 +911,7 @@ void AIService::actionConvert(NPC* npc, const AIACTION_09* act) {
 }
 
 void AIService::actionSpawnPet(NPC* npc, const AIACTION_10* act) {
-	//TODO: SPAWN MONSTER
+	new Monster(mainServer->getNPCData(act->getMonsterId()), mainServer->getAIData(act->getMonsterId()), npc->getMapId(), npc->getPositionCurrent());
 }
 
 void AIService::actionCallAlliesForAttack(NPC* npc, const AIACTION_11 *act) {
@@ -1016,7 +1093,10 @@ void AIService::actionMoveToOwner(NPC *npc, const AIACTION_29* act) {
 }
 
 void AIService::actionSetQuestTrigger(NPC *npc, const AIACTION_30* act) {
-	//TODO: QUESTING
+	const DWORD hash = QuestService::makeQuestHash(act->triggerName);
+	try { throw TraceableExceptionARGS("NPC %s RUNS QUESTTRIGGER %i", npc->getName().c_str(), hash); }
+	catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
+	QuestService::runQuest(npc, hash);
 }
 
 void AIService::actionAttackOwnersTarget(NPC* npc) {
@@ -1043,7 +1123,7 @@ void AIService::actionGiveItemsToOwner(NPC* npc, const AIACTION_34* act) {
 		return;
 
 	Player* player = reinterpret_cast<Player*>(mon->getOwner());
-	if(!player)
+	if (!player)
 		return;
 
 	//TODO: player->addToInventory( act->getItemNum(), act->getAmount() );

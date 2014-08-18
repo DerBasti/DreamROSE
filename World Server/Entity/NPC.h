@@ -13,6 +13,7 @@ class NPC : public Entity {
 	private:
 		float direction;
 	protected:
+		const ZMO* attackAnimation;
 		const AIP* ai;
 		SortedList<WORD, DWORD> damageDealers;
 		time_t lastAICheck;
@@ -69,7 +70,9 @@ class NPC : public Entity {
 
 		virtual bool onDamageReceived(Entity* enemy, const WORD damage);
 		virtual void addDamage(Entity* enemy, const DWORD amount) { }
-		virtual __inline clock_t intervalBetweenAttacks() { return NPC_ATTACK_INTERVAL / this->getAttackSpeed(); }
+		virtual bool getAttackAnimation();
+		virtual WORD getNextAttackTime() const;
+		virtual WORD getTotalAttackAnimationTime();
 
 		__inline virtual const IFOSpawn* getSpawn() const { return this->spawn; }
 

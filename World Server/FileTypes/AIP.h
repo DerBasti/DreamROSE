@@ -9,6 +9,10 @@
 #include "D:\Programmieren\QuickInfos\Trackable.hpp"
 #include "..\..\Common\Definitions.h"
 
+#ifdef __ROSE_USE_VFS__
+#include "VFS.h"
+#endif
+
 #pragma warning(disable:4996)
 
 typedef unsigned char BYTE;
@@ -196,6 +200,11 @@ class AIService {
 		static bool conditionWeekTime(const struct AICOND_24* ai);
 		static bool conditionMonthTime(const struct AICOND_25* ai);
 		static bool conditionUnknown(const struct AICOND_26* ai);
+		static bool conditionLevelDiffToSurrounding(class NPC* npc, const struct AICOND_27* ai, AITransfer* trans);
+		static bool conditionAIVariable(class NPC* npc, const struct AICOND_28* ai);
+		static bool conditionIsTargetClanmaster(class NPC* npc, const struct AICOND_29* ai, AITransfer* trans);
+		static bool conditionCreationTime(class NPC* npc, const struct AICOND_30* ai);
+		static bool conditionIsCallerAvailable(class NPC* npc, AITransfer* trans);
 #pragma endregion
 #pragma region Action Execution
 		static void actionStop(class NPC* npc);
@@ -1047,7 +1056,7 @@ struct AICOND_28 {
 		}
 		std::string toString(bool indent = true) const {
 			char buf[0x80] = {0x00};
-			sprintf(buf,"Check Variables (0x1C)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
+			sprintf(buf,"Check AI-Variables (0x1C)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVarIndex(),
 				indent ? "\t\t\t" : "", this->getValue(),
 				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
@@ -2303,7 +2312,7 @@ class AIP {
 			this->id = 0x00;
 		}
 #ifdef __ROSE_USE_VFS__
-		AIP(const WORD id, char* fileBuf, const DWORD fileLen);
+		AIP(const WORD id, VFSData& data);
 #else
 		AIP(const WORD id, const char* fileName);
 #endif

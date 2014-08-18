@@ -7,7 +7,7 @@ MapSector::MapSector() {
 #ifdef __MAPSECTOR_LL__
 	this->entitiesInSector.clear();
 #endif
-	this->center = Position(520000, 520000);
+	this->center = Position(520000.0f, 520000.0f);
 }
 
 MapSector::MapSector(const MapSector& rhs) {

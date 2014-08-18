@@ -5,6 +5,7 @@
 
 #include "..\..\Common\ClientSocket.h"
 #include "..\..\Common\PacketIDs.h"
+#include "..\FileTypes\QSD.h"
 #include "Entity.h"
 
 extern long PLAYER_ATTACK_INTERVAL;
@@ -90,8 +91,61 @@ class Player : public Entity, public ClientSocket {
 			}
 		} charInfo;
 
-
+		//std::vector<ConsumedItem> consumedItems;
 		Item inventory[Inventory::MAXIMUM];
+
+		class PlayerQuest {
+			public:
+				const static BYTE QUEST_VAR_MAX = 10;
+				const static BYTE QUEST_ITEMS_MAX = 5;
+			private:
+				FixedArray<WORD> questVars;
+				FixedArray<Item> questItems;
+				QuestEntry* entry;
+				DWORD passedTime;
+			public:
+				PlayerQuest(QuestEntry* newEntry) {
+					this->entry = newEntry;
+					this->passedTime = 0x00;
+					this->questVars.reserve(PlayerQuest::QUEST_VAR_MAX);
+					this->questItems.reserve(PlayerQuest::QUEST_ITEMS_MAX);
+				}
+				~PlayerQuest() {
+					this->entry = nullptr;
+				}
+				__inline Item getItem(const BYTE slot) const { return this->questItems[slot]; }
+				__inline Item getVar(const BYTE slot) const { return this->questVars[slot]; }
+				__inline QuestEntry* getQuest() const { return this->entry; }
+				__inline void setQuest(QuestEntry* newQuest) { this->entry = newQuest; }
+				__inline bool isEntryFree() const { return (this->getQuest() == nullptr); }
+
+				__inline const DWORD getQuestId() const { return this->entry->getQuestId(); }
+				__inline const DWORD getQuestHash() const { return this->entry->getQuestHash(); }
+				__inline const WORD getQuestVar(const WORD varType) { return this->questVars[varType]; }
+				__inline const void setQuestVar(const WORD varType, const WORD newValue) { this->questVars[varType] = newValue; }
+				__inline const DWORD getPassedTime() const { return this->passedTime; }
+		};
+
+		struct questInfo {
+			const static BYTE JOURNEY_MAX = 10;
+
+			PlayerQuest* selected;
+			FixedArray<PlayerQuest*> journey;
+
+			struct questVars {
+				const static BYTE EPISODE_MAX = 5;
+				const static BYTE JOB_MAX = 3;
+				const static BYTE PLANET_MAX = 7;
+				const static BYTE UNION_MAX = 10;
+
+				FixedArray<WORD> switches;
+				FixedArray<WORD> episode;
+				FixedArray<WORD> job;
+				FixedArray<WORD> planet;
+				FixedArray<WORD> fraction;
+			} var;
+		} quest;
+
 		FixedArray<Skill*> skills;
 
 		bool handlePacket();
@@ -149,6 +203,8 @@ class Player : public Entity, public ClientSocket {
 		virtual void setPositionCurrent(const Position& newPos);
 		virtual void setPositionDest(const Position& newPos);
 		
+		DWORD getSpecialStatType(const WORD statType);
+
 		void updateAttackpower();
 		void updateAttackSpeed();
 		void updateDefense();
@@ -160,6 +216,10 @@ class Player : public Entity, public ClientSocket {
 		void updateMovementSpeed();
 		void updateIntervalBetweenAttacks();
 		void checkRegeneration();
+
+		bool searchAndSelectQuest(const DWORD questHash);
+		__inline PlayerQuest* getSelectedQuest() const { return this->quest.selected; }
+		const WORD getQuestVariable(WORD varType, const WORD varId);
 
 		WORD checkClothesForStats(const WORD statAmount, ...);
 		WORD checkSkillsForStats(const WORD basicAmount, const WORD statAmount, ...);
@@ -173,6 +233,11 @@ class Player : public Entity, public ClientSocket {
 		__inline std::string getName() const { return this->charInfo.name; }
 
 		__inline BYTE getLevel() const { return this->charInfo.level; }
+		__inline void setLevel(const BYTE newLevel) { 
+			this->charInfo.level = newLevel-1; 
+			this->charInfo.experience = this->getExperienceForLevelup();
+			this->addExperience(0);
+		}
 		__inline WORD getJob() const { return this->charInfo.job; }
 		__inline DWORD getExperience() const { return this->charInfo.experience; }
 		DWORD getExperienceForLevelup();
@@ -203,9 +268,11 @@ class Player : public Entity, public ClientSocket {
 		__inline WORD getSensibilityTotal() { return this->attributes.getSensibilityTotal(); }
 
 		bool equipItem(const Item& item);
+		Item getItemFromInventory(const WORD itemSlot); 
+		Item getQuestItem(const DWORD itemId);
 
 		float getAttackRange();
-		__inline clock_t getIntervalBetweenAttacks() { return this->stats.attackDelay; }
+		bool getAttackAnimation(); 
 };
 
 #endif //__ROSE_PLAYER__

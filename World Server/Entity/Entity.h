@@ -125,6 +125,57 @@ class Entity {
 		__inline virtual WORD getConcentration() const { return 0; }		
 		__inline virtual WORD getCharm() const { return 0; }
 		__inline virtual WORD getSensibility() const { return 0; }
+		template<class _Ty> _Ty getStatType(const WORD statType) {
+			_Ty result = 0;
+			switch (statType) {
+				case StatType::ATTACK_POWER:
+					result = this->stats.attackPower;
+				break;
+				case StatType::ATTACK_SPEED:
+					result = this->stats.attackSpeed;
+					break;
+				case StatType::CRIT_RATE:
+					result = this->stats.critRate;
+					break;
+				case StatType::CURRENT_HP:
+					result = this->stats.curHP;
+					break;
+				case StatType::CURRENT_MP:
+					result = this->stats.curMP;
+					break;
+				case StatType::DEFENSE_MAGICAL:
+					result = this->stats.defenseMagical;
+					break;
+				case StatType::DEFENSE_PHYSICAL:
+					result = this->stats.defensePhysical;
+					break;
+				case StatType::DODGE_RATE:
+					result = this->stats.dodgeRate;
+					break;
+				case StatType::EXPERIENCE_RATE:
+					result = 0;
+					break;
+				case StatType::HIT_RATE:
+					result = this->stats.hitRate;
+					break;
+				case StatType::LEVEL:
+					result = this->getLevel();
+					break;
+				case StatType::MAX_HP:
+					result = this->stats.maxHP;
+					break;
+				case StatType::MAX_MP:
+					result = this->stats.maxMP;
+					break;
+				case StatType::MOVEMENT_SPEED:
+					result = this->stats.movementSpeed;
+					break;
+			}
+			if (result > 0)
+				return result;
+			return _Ty(this->getSpecialStatType(statType));
+		}
+		virtual DWORD getSpecialStatType(const WORD statType) { return 0; }
 
 		__inline virtual float getCurrentX() const { return this->position.current.x; }
 		__inline virtual float getCurrentY() const { return this->position.current.y; }
@@ -174,7 +225,11 @@ class Entity {
 
 		bool movementRoutine();
 		bool attackRoutine();
-		virtual clock_t intervalBetweenAttacks() { return 100000 / this->getAttackSpeed(); }
+		virtual bool getAttackAnimation() {
+			return false;
+		}
+		virtual WORD getNextAttackTime() const;
+		virtual WORD getTotalAttackAnimationTime();
 
 		bool sendToVisible(class Packet& pak, Entity* exceptThis = nullptr);
 		bool sendToMap(class Packet& pak);

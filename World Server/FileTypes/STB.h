@@ -10,8 +10,6 @@
 #include <iostream>
 
 #include "STL.h"
-#include "..\..\CMyFile\MyFile.h"
-#include "..\..\Common\Definitions.h"
 
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
@@ -116,31 +114,31 @@ template<class _STBEntry = ::STBEntry> class STBFile_Template {
 			return true;
 		}
 		STBFile_Template() {
-			this->filePath = "";
 			this->entries.clear();
 		}
 		template<class FileType> void construction(FileType& file) {
 			this->entries.clear();
 
 			this->storeData<FileType>(file);
-
-#ifdef __ROSE_APPLY_STL__
-			std::string stlFile = filePath;
-			stlFile = stlFile.substr(0,stlFile.find_last_of("."));
-			stlFile += "_S.STL";
-			STLFile stl(stlFile.c_str());
-			for(unsigned int i=0;i<stl.size();i++) {
-				_STBEntry& entry = this->entries.at(stl.getEntryId(i));
-				entry.changeName(stl.getEntryName(i));
-			}
-#endif //__ROSE_APPLY_STL__
 		}
 #ifdef __ROSE_USE_VFS__
-		void read(char* bufferedFile, const DWORD fileLen) {
-			this->filePath = "";
-
-			CMyBufferedReader reader(bufferedFile, fileLen);
+		void read(VFS* pVFS) {
+			VFSData vfsData; pVFS->readFile(this->filePath.c_str(), vfsData);
+			CMyBufferedReader reader(vfsData.data, vfsData.data.size());
 			this->construction<CMyBufferedReader>(reader);
+
+#ifdef __ROSE_APPLY_STL__
+			std::string stlPath = vfsData.filePath;
+			stlPath = stlPath.substr(0, stlPath.find_last_of(".")) + std::string("_S.STL");
+			pVFS->readFile(stlPath.c_str(), vfsData);
+			if (vfsData.data.size() > 0) {
+				STLFile stlFile(vfsData);
+				for (unsigned int i = 0; i < stlFile.size(); i++) {
+					this->entries.at(stlFile.getEntryId(i)).changeName(stlFile.getEntryName(i));
+				}
+			}
+#endif //__ROSE_APPLY_STL__
+
 #else
 		void init(const char* filePath) {
 			this->filePath = filePath;
@@ -154,13 +152,15 @@ template<class _STBEntry = ::STBEntry> class STBFile_Template {
 		}
 	public:
 #ifdef __ROSE_USE_VFS__
-		STBFile_Template(char* fileBuffer, const DWORD fileLen) {
-			this->read(fileBuffer, fileLen);
-#else
+		STBFile_Template(VFS* pVFS, std::string pathInVFS) {
+			this->filePath = pathInVFS;
+			this->read(pVFS);
+
+#else //__ROSE_USE_VFS__
 		STBFile_Template(const char* filePath) {
 			this->read(filePath);
-#endif
-		}
+#endif //__ROSE_USE_VFS__
+		} 
 		virtual ~STBFile_Template() {
 			this->filePath = "";
 			this->entries.clear();
@@ -192,8 +192,9 @@ class NPCSTB : public STBFile {
 		const static WORD ATTACKRANGE_COLUMN = 0x1A;
 		const static WORD AGGRO_COLUMN = 0x1B;
 #ifdef __ROSE_USE_VFS__
-		NPCSTB(char* fileBuffer, const DWORD fileLen) {
-			this->read(fileBuffer, fileLen);
+		NPCSTB(VFS* pVFS, std::string pathInVFS) {
+			this->filePath = pathInVFS;
+			this->read(pVFS);
 #else
 		NPCSTB(const char* filePath) {
 			this->read(filePath);
@@ -265,8 +266,9 @@ class ZoneSTB : public STBFile {
 		const static WORD NIGHT_BEGIN = 0x11;
 		const static WORD ZONESIZE_COLUMN = 0x19;
 #ifdef __ROSE_USE_VFS__
-		ZoneSTB(char* fileBuffer, const DWORD fileLen) {
-			this->read(fileBuffer, fileLen);
+		ZoneSTB(VFS* pVFS, std::string pathInVFS) {
+			this->filePath = pathInVFS;
+			this->read(pVFS);
 #else
 		ZoneSTB(const char* filePath) {
 			this->read(filePath);
@@ -528,8 +530,9 @@ class SkillSTB : public STBFile_Template<SkillEntry> {
 		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_LAST = 0x31;
 		
 #ifdef __ROSE_USE_VFS__
-		SkillSTB(char* fileBuffer, const DWORD fileLen) {
-			this->read(fileBuffer, fileLen);
+		SkillSTB(VFS* pVFS, std::string pathInVFS) {
+			this->filePath = pathInVFS;
+			this->read(pVFS);
 #else
 		SkillSTB(const char* filePath) {
 			this->read(filePath);
@@ -635,12 +638,33 @@ class SkillSTB : public STBFile_Template<SkillEntry> {
 		
 };
 
+class ConsumeSTB : public STBFile {
+public:
+	const static WORD STAT_TYPE_NEEDED = 0x11;
+	const static WORD STAT_VALUE_NEEDED = 0x12;
+
+	const static WORD STAT_TYPE_ADD = 0x13;
+	const static WORD STAT_VALUE_ADD = 0x14;
+	const static WORD STATUS_STB_REFERENCE = 0x18;
+#ifdef __ROSE_USE_VFS__
+	ConsumeSTB(VFS* pVFS, std::string pathInVFS) {
+		this->filePath = pathInVFS;
+		this->read(pVFS);
+
+#else
+	ConsumeSTB(const char* filePath) {
+		this->read(filePath);
+#endif
+	}
+};
+
 class AISTB : public STBFile {
 	public:
 		const static WORD PATH_COLUMN = 0x00;
 #ifdef __ROSE_USE_VFS__
-		AISTB(char* fileBuffer, const DWORD fileLen) {
-			this->read(fileBuffer, fileLen);
+		AISTB(VFS* pVFS, std::string pathInVFS) {
+			this->filePath = pathInVFS;
+			this->read(pVFS);
 #else
 		AISTB(const char* filePath) {
 			this->read(filePath);

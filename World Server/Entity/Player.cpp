@@ -21,6 +21,25 @@ Player::Player(SOCKET sock, ServerSocket* server){
 	this->skills.reserve(PlayerSkill::PLAYER_MAX_SKILLS);
 	for (unsigned int i = 0; i < this->skills.capacity(); i++)
 		this->skills.addValue(nullptr);
+
+	this->quest.journey.reserve(Player::questInfo::JOURNEY_MAX);
+	this->quest.var.episode.reserve(Player::questInfo::questVars::EPISODE_MAX);
+	this->quest.var.fraction.reserve(Player::questInfo::questVars::UNION_MAX);
+	this->quest.var.job.reserve(Player::questInfo::questVars::JOB_MAX);
+	this->quest.var.planet.reserve(Player::questInfo::questVars::PLANET_MAX);
+	for (unsigned int i = 0; i < this->quest.journey.capacity(); i++) {
+
+		if (i < Player::questInfo::questVars::EPISODE_MAX)
+			this->quest.var.episode.addValue(0x00);
+		if (i < Player::questInfo::questVars::UNION_MAX)
+			this->quest.var.fraction.addValue(0x00);
+		if (i < Player::questInfo::questVars::JOB_MAX)
+			this->quest.var.job.addValue(0x00);
+		if (i < Player::questInfo::questVars::PLANET_MAX)
+			this->quest.var.planet.addValue(0x00);
+
+		this->quest.journey.addValue(new PlayerQuest(nullptr));
+	}
 }
 
 Player::~Player() {
@@ -28,6 +47,8 @@ Player::~Player() {
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
 		this->removeSectorVisually(this->visibleSectors.getValue(i));
 	}
+	for (unsigned int i = 0; i < this->quest.journey.capacity(); i++)
+		delete this->quest.journey.getValue(i);
 }
 
 void Player::setPositionCurrent(const Position& newPos) {
@@ -144,12 +165,15 @@ bool Player::pakRemoveEntityVisually(Entity* entity) {
 void Player::checkRegeneration() {
 	if(time(NULL) - this->status.lastRegenCheck >= Status::DEFAULT_CHECK_TIME) {
 		if(this->getCurrentHP() != this->getMaxHPW() || this->getCurrentMP() != this->getMaxMPW()) {
-			WORD hpRegenAmount = static_cast<WORD>(ceil(this->getMaxHP() * 2.0f / 100.0f));
-			WORD mpRegenAmount = static_cast<WORD>(ceil(this->getMaxMP() * 2.0f / 100.0f));
+			float hpRegenAmountF = static_cast<float>(ceil(this->getMaxHP() * 2.0f / 100.0f));
+			float mpRegenAmountF = static_cast<float>(ceil(this->getMaxMP() * 2.0f / 100.0f));
 			if(this->getStance().asBYTE() == Stance::SITTING) {
-				hpRegenAmount *= 4;
-				mpRegenAmount *= 4;
+				hpRegenAmountF *= 4;
+				mpRegenAmountF *= 4;
 			}
+			//Just to be sure we add enough HP when one sits
+			WORD hpRegenAmount = static_cast<WORD>(hpRegenAmountF);
+			WORD mpRegenAmount = static_cast<WORD>(mpRegenAmountF);
 
 			this->stats.curHP += hpRegenAmount;
 			if(this->stats.curHP > this->getMaxHPW())
@@ -172,6 +196,106 @@ bool Player::pakUpdateLifeStats() {
 	return this->sendData(pak);
 }
 
+bool Player::searchAndSelectQuest(const DWORD questHash) {
+	for (unsigned int i = 0; i < this->quest.journey.size(); i++) {
+		PlayerQuest* entry = this->quest.journey[i];
+		if (entry && entry->getQuestHash() == questHash) {
+			this->quest.selected = this->quest.journey[i];
+			return true;
+		}
+	}
+	return false;
+}
+
+const WORD Player::getQuestVariable(WORD varType, const WORD varId) {
+	varType >>= 8;
+	try {
+		switch (varType) {
+			case 0x00:
+				if (this->quest.selected)
+					return this->quest.selected->getQuestVar(varId);
+				return 0;
+			case 0x01:
+				return this->quest.var.switches[varId];
+			case 0x02: //Time?
+				return 0x00;
+			case 0x03:
+				return this->quest.var.episode[varId];
+			case 0x04:
+				return this->quest.var.job[varId];
+			case 0x05:
+				return this->quest.var.planet[varId];
+			case 0x06:
+				return this->quest.var.fraction[varId];
+			default:
+				throw TraceableExceptionARGS("varType %i is illegal!", varType);
+		}
+	} catch (std::exception& ex) {
+		std::cout << ex.what() << "\n";
+	}
+	return 0x00;
+}
+
+Item Player::getItemFromInventory(const WORD itemSlot) {
+	if (itemSlot == 0 || itemSlot >= Inventory::MAXIMUM)
+		return Item();
+	return this->inventory[itemSlot];
+}
+
+Item Player::getQuestItem(const DWORD itemId) {
+	Item wantedItem(itemId);
+	for (unsigned int i = 0; i < PlayerQuest::QUEST_ITEMS_MAX; i++) {
+		Item currentItem = this->quest.selected->getItem(i);
+		if (wantedItem.type == currentItem.type && wantedItem.id == currentItem.id)
+			return currentItem;
+	}
+	return Item();
+}
+
+DWORD Player::getSpecialStatType(const WORD statType) {
+	switch (statType) {
+		case StatType::CHARM:
+			return this->getCharmTotal();
+		case StatType::CONCENTRATION:
+			return this->getConcentrationTotal();
+		case StatType::DEXTERITY:
+			return this->getDexterityTotal();
+		case StatType::FACE_STYLE:
+			return this->getVisualTraits().faceStyle;
+		case StatType::HAIR_STYLE:
+			return this->getVisualTraits().hairStyle;
+		case StatType::HEAD_SIZE:
+			return 0;
+		case StatType::HP_RECOVERY_RATE:
+			return 0;
+		case StatType::INTELLIGENCE:
+			return this->getIntelligenceTotal();
+		case StatType::JOB:
+			return this->getJob();
+		case StatType::MONEY:
+			return this->inventory[0x00].amount;
+		case StatType::MP_CONSUMPTION_RATE:
+			return 0;
+		case StatType::MP_RECOVERY_RATE:
+			return 0;
+		case StatType::PK_LEVEL:
+		case StatType::POINT:
+		case StatType::RANKING:
+		case StatType::REPUTATION:
+		case StatType::TENDENCY:
+			return 0;
+		case StatType::SENSIBILITY:
+			return this->getSensibilityTotal();
+		case StatType::SKILL_POINTS:
+			return this->charInfo.skillPoints;
+		case StatType::STRENGTH:
+			return this->getStrengthTotal();
+		case StatType::UNION_FACTION:
+			return 0;
+	}
+	return 0;
+}
+
 //TODO: ADD TO STAT CALCULATION
 WORD Player::checkClothesForStats(const WORD statAmount, ...) {
 	std::vector<DWORD> stats;
@@ -182,7 +306,7 @@ WORD Player::checkClothesForStats(const WORD statAmount, ...) {
 	for(unsigned int i=0;i<statAmount;i++) {
 		stats.push_back(va_arg(ap, DWORD));
 	}
-	for(unsigned int i=1;i<Inventory::SHIELD;i++) {
+	for(unsigned int i=1;i<=Inventory::SHIELD;i++) {
 		if(!this->inventory[i].isValid())
 			continue;
 		try {
@@ -481,16 +605,16 @@ void Player::updateAttackSpeed() {
 		int speedType = mainServer->getWeaponAttackspeed(this->inventory[Inventory::WEAPON].id);
 		atkSpeed = 1500 / (speedType + 5);
 	}
+	atkSpeed += this->checkClothesForStats(1, StatType::ATTACK_SPEED);
 	atkSpeed += this->getBuffAmount( Buffs::Visuality::ATTACKSPEED_UP );
 	atkSpeed -= this->getBuffAmount( Buffs::Visuality::ATTACKSPEED_DOWN );
 
 	this->stats.attackSpeed = atkSpeed;
-	this->updateIntervalBetweenAttacks();
 }
 
-void Player::updateIntervalBetweenAttacks() {
-	BYTE motionType = mainServer->getWeaponMotion(this->inventory[Inventory::WEAPON].id);
-	this->stats.attackDelay = mainServer->getAttackTimeData(motionType) * 100 / this->stats.attackSpeed;
+bool Player::getAttackAnimation() {
+	this->combat.attackAnimation = mainServer->getAttackMotionPlayer(mainServer->getWeaponMotion(this->inventory[Inventory::WEAPON].id)); 
+	return this->combat.attackAnimation != nullptr;
 }
 
 void Player::updateDefense() {
@@ -501,7 +625,7 @@ void Player::updateDefense() {
 	defense += static_cast<WORD>((this->attributes.getStrengthTotal() + 5) * 0.35);
 	defense += static_cast<WORD>((this->getLevel() + 15) * 0.7);
 
-	//TODO: CLOTHES STATS
+	defense += this->checkClothesForStats(1, StatType::DEFENSE_PHYSICAL);
 	defense += this->getBuffAmount( Buffs::Visuality::DEFENSE_UP );
 	defense -= this->getBuffAmount( Buffs::Visuality::DEFENSE_DOWN );
 	for(unsigned int i=Inventory::FACE;i<Inventory::SHIELD;i++) {
@@ -532,14 +656,7 @@ void Player::updateHitrate() {
 	} else {
 		newHitrate = static_cast<WORD>(((this->attributes.getConcentrationTotal() + 10)*0.5) + 15);
 	}
-	for(unsigned int i=Inventory::FACE;i<=Inventory::SHIELD;i++) {
-		if(this->inventory[i].isValid()) {
-			//TODO: CLOTHES STATS
-		}
-	}
-	for(unsigned int i=0;i<30;i++) {
-		//TODO: SKILL MAY INCREASE STAT
-	}
+	newHitrate += this->checkClothesForStats(1, StatType::HIT_RATE);
 	newHitrate += this->getBuffAmount( Buffs::Visuality::HITRATE_UP );
 	newHitrate -= this->getBuffAmount( Buffs::Visuality::HITRATE_DOWN );
 
@@ -604,6 +721,7 @@ void Player::updateMaxHP() {
 	if(this->getJob() & 0x17) { //Second Jobs: X2Y = X ClassType, Y = SubClass (e.g. Scout)
 		additionalMaxHP = 300;
 	}
+	additionalMaxHP += this->checkClothesForStats(1, StatType::MAX_HP);
 	additionalMaxHP += this->getBuffAmount( Buffs::Visuality::HP_UP);
 	maxHp += additionalMaxHP;
 
@@ -1197,7 +1315,7 @@ bool Player::pakLocalChat() {
 }
 
 bool Player::pakShoutChat() {
-	ChatService::sendShout(this, this->packet.getString(0x00));
+	ChatService::sendShout(this, this->packet.getString(0x00), nullptr);
 	return true;
 }
 

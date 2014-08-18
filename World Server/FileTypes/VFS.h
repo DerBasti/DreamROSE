@@ -3,26 +3,32 @@
 #ifndef __ROSE_VFS__
 #define __ROSE_VFS__
 
-#include <Windows.h>
 #include <string>
 
 #include "..\..\QuickInfos\Trackable.hpp"
 
-typedef DWORD(CALLBACK* OpenVFS_FUNCPTR)(const char*, const char*);
-typedef DWORD(CALLBACK* CloseVFS_FUNCPTR)(DWORD fileHandle);
-typedef DWORD(CALLBACK* GetVFSCount_FUNCPTR)(DWORD fileHandle);
-typedef void(CALLBACK* GetVFSNames_FUNCPTR)(DWORD fileHandle, const char **array, DWORD maxLen);
-typedef DWORD(CALLBACK* GetFileCount_FUNCPTR)(DWORD fileHandle, const char*);
-typedef void(CALLBACK* GetFileNames_FUNCPTR)(DWORD fileHandle, const char* name, const char **fileNameArray, DWORD, DWORD maxLen);
-typedef DWORD(CALLBACK* OpenFile_FUNCPTR)(const char* fileName, DWORD fileHandle);
-typedef DWORD(CALLBACK* RemoveFile_FUNCPTR)(DWORD handle, const char* fileName);
-typedef void(CALLBACK* CloseFile_FUNCPTR)(DWORD fileHandle);
-typedef DWORD(CALLBACK* ReadFile_FUNCPTR)(void* buffer, DWORD size, DWORD count, DWORD fileHandle);
-typedef DWORD(CALLBACK* GetFileSize_FUNCPTR)(DWORD fileHandle);
+typedef DWORD(__stdcall* OpenVFS_FUNCPTR)(const char*, const char*);
+typedef DWORD(__stdcall* CloseVFS_FUNCPTR)(DWORD fileHandle);
+typedef DWORD(__stdcall* GetVFSCount_FUNCPTR)(DWORD fileHandle);
+typedef void(__stdcall* GetVFSNames_FUNCPTR)(DWORD fileHandle, const char **array, DWORD maxLen);
+typedef DWORD(__stdcall* GetFileCount_FUNCPTR)(DWORD fileHandle, const char*);
+typedef void(__stdcall* GetFileNames_FUNCPTR)(DWORD fileHandle, const char* name, const char **fileNameArray, DWORD, DWORD maxLen);
+typedef DWORD(__stdcall* OpenFile_FUNCPTR)(const char* fileName, DWORD fileHandle);
+typedef DWORD(__stdcall* RemoveFile_FUNCPTR)(DWORD handle, const char* fileName);
+typedef void(__stdcall* CloseFile_FUNCPTR)(DWORD fileHandle);
+typedef DWORD(__stdcall* ReadFile_FUNCPTR)(void* buffer, DWORD size, DWORD count, DWORD fileHandle);
+typedef DWORD(__stdcall* GetFileSize_FUNCPTR)(DWORD fileHandle);
+
+struct VFSData {
+	Trackable<char> data;
+	std::string filePath;
+};
 
 class VFS {
 	private:
-		HMODULE triggerVFSDLL;
+
+		//Dirty work-around to avoid using <windows.h>; it would lead to several instances of "makro already defined"-situations.
+		void* triggerVFSDLL;
 		std::string filePath;
 		DWORD vfsHandle;
 		DWORD currentFileHandle;
@@ -42,8 +48,10 @@ class VFS {
 		VFS(const char* gameFolder);
 		~VFS();
 
+		void close();
+
 		DWORD readFile(const char *pathInVFS, char** ppBuffer);
-		void readFile(const char *pathInVFS, Trackable<char>& buf);
+		void readFile(const char *pathInVFS, VFSData& buf);
 };
 
 #endif //__ROSE_VFS__

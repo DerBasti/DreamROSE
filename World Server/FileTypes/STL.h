@@ -13,6 +13,13 @@ typedef unsigned long DWORD;
 #include <string>
 #include "..\..\QuickInfos\Trackable.hpp"
 
+#include "..\..\CMyFile\MyFile.h"
+#include "..\..\Common\Definitions.h"
+
+#ifdef __ROSE_USE_VFS__
+#include "VFS.h"
+#endif
+
 class STLEntryMULTI {
 	private:
 		friend class STLFileMULTI;
@@ -62,6 +69,56 @@ class STLFileMULTI {
 		bool descriptionAdded;
 		std::vector<STLEntryMULTI> entries;
 
+#ifdef __ROSE_USE_VFS__
+		template<class FileReader> void loadInfos(FileReader& file) {
+			char buf[0x800] = { 0x00 };
+			file.readStringT<BYTE, char*>(buf);
+			if (_stricmp(buf, "ITST01") == 0)
+				this->descriptionAdded = true;
+
+			this->entries.reserve(file.read<DWORD>());
+
+			for(unsigned int i=0;i<this->entries.capacity();i++) {
+				file.readStringT<BYTE, char*>(buf);
+				this->entries.push_back(STLEntryMULTI(std::string(buf), file.read<DWORD>()));
+			}
+			DWORD numOfLanguages = file.read<DWORD>();
+			std::vector<DWORD> languageOffsets; languageOffsets.reserve(numOfLanguages);
+			for(unsigned int i=0;i<numOfLanguages;i++) {
+				languageOffsets.push_back(file.read<DWORD>());
+			}
+
+			std::vector<DWORD> substrOffsets;
+			for(unsigned int i=0;i<numOfLanguages;i++) {
+				file.setPosition(languageOffsets.at(i));
+
+				substrOffsets.clear(); substrOffsets.reserve(this->entries.capacity());
+				for(unsigned int j=0;j<substrOffsets.capacity();j++) {
+					substrOffsets.push_back(file.read<DWORD>());
+				}
+				for (unsigned int j = 0; j<substrOffsets.capacity(); j++) {
+					file.setPosition(substrOffsets.at(j));
+					WORD len = file.read<BYTE>();
+					if (len > 0x7F) {
+						len = file.read<BYTE>() << 8 | len;
+					}
+					file.readString(len, buf);
+					std::string res = std::string(buf);
+					std::string desc = "";
+					STLEntryMULTI& entry = this->entries.at(j);
+					if (this->descriptionAdded) {
+						len = file.read<BYTE>();
+						if (len > 0x7F) {
+							len = file.read<BYTE>() << 8 | len;
+						}
+						file.readString(len, buf);
+						desc = std::string(buf);
+					}
+					entry.addLanguage(res, desc);
+				}
+			}
+		}
+#else
 		void loadInfos(FILE* fh) {
 			char buf[0x800] = {0x00};
 			BYTE len = 0x00;
@@ -130,12 +187,22 @@ class STLFileMULTI {
 				}
 			}
 		}
+#endif
 		STLFileMULTI() { }
 	public:
 		const static BYTE JAPANESE = 0x00;
 		const static BYTE ENGLISH = 0x01;
 		const static BYTE TAIWANESE = 0x02;
 		const static BYTE LANGUAGE_MAX = 0x05;
+#ifdef __ROSE_USE_VFS__
+		STLFileMULTI(VFSData& vfsData) {
+			this->descriptionAdded = false;
+			if (vfsData.data.size() > 0) {
+				CMyBufferedReader reader(vfsData.data, vfsData.data.size());
+				this->loadInfos(reader);
+			}
+		}
+#else
 		STLFileMULTI(const char* pathToFile) {
 			this->descriptionAdded = false;
 			FILE *fh = fopen(pathToFile, "rb");
@@ -144,6 +211,7 @@ class STLFileMULTI {
 				fclose(fh);
 			}
 		}
+#endif
 		virtual ~STLFileMULTI() {
 			this->entries.clear();
 		}
@@ -225,12 +293,11 @@ class STLEntry {
 class STLFile {
 	private:
 		std::vector<STLEntry> entries;
-	public:
-		STLFile(const char* filePath) {
-			STLFileMULTI multiFile(filePath);
-			this->entries.reserve(multiFile.size());
-			for(unsigned int i=0;i<multiFile.size();i++) {
-				STLEntryMULTI& curEntry = multiFile.entries.at(i);
+
+		void copyPrimaryLanguage(STLFileMULTI& file) {
+			this->entries.reserve(file.size());
+			for (unsigned int i = 0; i<file.size(); i++) {
+				STLEntryMULTI& curEntry = file.entries.at(i);
 				STLEntry cpy(curEntry.getIDName().getData(), curEntry.getID());
 #ifdef __ROSE_READ_DESCRIPTION__
 				cpy.addLanguage(curEntry.getEntry(STLFileMULTI::ENGLISH),
@@ -240,6 +307,16 @@ class STLFile {
 #endif
 				this->entries.push_back(cpy);
 			}
+		}
+	public:
+#ifdef __ROSE_USE_VFS__
+		STLFile(VFSData& data) {
+			STLFileMULTI multiFile(data);
+#else
+		STLFile(const char* filePath) {
+			STLFileMULTI multiFile(filePath);
+#endif
+			this->copyPrimaryLanguage(multiFile);
 		}
 		__inline DWORD getEntryId(const size_t pos) {
 			return this->entries.at(pos).getID();

@@ -7,31 +7,34 @@
 #include "..\..\QuickInfos\QuickInfo.h"
 #include <string>
 
+#ifdef __ROSE_USE_VFS__
+#include "VFS.h"
+#endif
+
 class ZMO {
 	public:
-		struct Channel {
-			DWORD type;
-			DWORD index;
-			DWORD frameCount;
-		};
 	private:
 		std::string filePath;
-		WORD framesPerSecond;
-		WORD totalFrameCount;
+		DWORD framesPerSecond;
+		DWORD totalFrameCount;
+		WORD totalAnimationTime;
+		std::vector<WORD> attackTimers;
 
 		template<class FileType> void init(FileType& file);
 	public:
 #ifdef __ROSE_USE_VFS__
-		ZMO(char* fileBuf, const DWORD fileLen);
+		ZMO() {}
+		ZMO(VFS* pVFS, const char *filePath);
 #else
 		ZMO(const char* filePath);
 #endif
 		~ZMO();
 
-		__inline WORD getFPS() const { return this->framesPerSecond; }
-		__inline WORD getFrameCount() const { return this->totalFrameCount; }
-		//__inline WORD getActionPointCount() const { return this->actionPoints.size(); }
-		//__inline WORD getActionPoint(const WORD point) const { return this->actionPoints[point]; }
+		__inline DWORD getFPS() const { return this->framesPerSecond; }
+		__inline DWORD getFrameCount() const { return this->totalFrameCount; }
+		__inline WORD getTotalAnimationTime() const { return this->totalAnimationTime; }
+		__inline BYTE getAttackTimerCount() const { return this->attackTimers.size(); }
+		__inline WORD getAttackTimer(const BYTE timerId) { return this->attackTimers.at(timerId); }
 };
 
 #endif //__ROSE_ZMO__

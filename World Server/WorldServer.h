@@ -8,15 +8,20 @@
 #include "..\Common\Definitions.h"
 #include "..\Common\ServerSocket.h"
 #include "Entity\Player.h"
-#include "FileTypes\IFO.h"
-#include "FileTypes\STB.h"
 #include "FileTypes\AIP.h"
+#include "FileTypes\IFO.h"
+#include "FileTypes\QSD.h"
+#include "FileTypes\STB.h"
+#include "FileTypes\VFS.h"
+#include "FileTypes\CHR.h"
 #include "Map.h"
 
 extern class WorldServer* mainServer;
 
 class WorldServer : public ServerSocket {
 	private:
+		VFS* vfs;
+		CHR* npcAnimationInfos;
 		NPCSTB *npcFile;
 		AISTB *aiFile;
 		SkillSTB *skillFile;
@@ -28,21 +33,23 @@ class WorldServer : public ServerSocket {
 		ZoneSTB *zoneFile;
 		STBFile *dropFile;
 		bool loadNPCData();
+		bool loadNPCAnimations();
 		bool loadTelegates(const WORD currentMapId, STBFile& warpFile, IFO& ifoFile);
 		bool loadZones();
 		bool loadIFOs(Map* mapData, STBFile& warpFile);
 		bool loadAI();
-		bool loadSkills();
+		bool loadQuests();
 		bool loadAttackTimings();
 
 		std::pair<WORD, Entity*> clientIDs[0x10000];
 		std::vector<NPCData> npcData;
+		std::map<const DWORD, QuestEntry*> questData;
 		FixedArray<Skill*> skillData;
 		FixedArray<class ZON*> zoneData;
 		FixedArray<Telegate> teleGates;
 		FixedArray<AIP> aiData;
 		FixedArray<Map*> mapData;
-		FixedArray<WORD> attackTimeData;
+		FixedArray<ZMO> playerAttackAnimations;
 		
 		struct worldTime {
 			time_t lastCheck;
@@ -71,7 +78,8 @@ class WorldServer : public ServerSocket {
 				//for server internal stuff.
 				static bool sendWhisper(const char* from, Player* to, const char *msg, ...);
 				static bool sendShout(Entity* entity, const char* msg);
-				static bool sendAnnouncement(Entity* entity, const char* msg);
+				static bool sendShout(Entity* entity, const char* msg, ...);
+				static bool sendAnnouncement(Entity* entity, const char* msg, ...);
 		};
 		class GMService {
 			private:
@@ -106,10 +114,16 @@ class WorldServer : public ServerSocket {
 		__inline int getEconomyVariable(BYTE varIdx) { return this->economyVar[varIdx]; }
 		__inline NPCData* getNPCData(const DWORD& id) { return &this->npcData.at(id); }
 		NPCData* getNPCData(const AIP* ai);
+		AIP* getAIData(const DWORD monId);
 		__inline bool isValidNPCType(const DWORD id) { return this->npcData.at(id).getLevel() > 0; }
 
 		Skill* getSkill(const WORD skillId);
 		Skill* getSkill(const WORD skillIdBasic, const BYTE level);
+
+		//TODO
+		QuestEntry* getQuest(const DWORD questHash) {
+			return this->questData[questHash];
+		}
 
 		__inline time_t getWorldTime() const { return this->WorldTime.currentTime; }
 		DWORD getMapTime(const WORD mapId) {
@@ -135,7 +149,9 @@ class WorldServer : public ServerSocket {
 		const WORD getWeaponAttackpower(const DWORD itemId);
 		const int getWeaponAttackspeed(const DWORD itemId);
 		const BYTE getWeaponMotion(const DWORD itemId);
-		const WORD getAttackTimeData(const BYTE motionId);
+
+		__inline ZMO* getAttackMotionPlayer(const BYTE motionId) { return &this->playerAttackAnimations[motionId]; }
+		__inline ZMO* getAttackMotionNPC(const WORD npcId) { return this->npcAnimationInfos->getAttackMotion(npcId); }
 
 		__inline STBFile* getEquipmentSTB(const BYTE itemType) const { return (itemType <= ItemType::PAT ? this->equipmentFile[itemType] : nullptr); }
 		__inline STBEntry& getDropTable(const WORD rowId) const { return this->dropFile->getRow(rowId); }
@@ -150,7 +166,7 @@ class WorldServer : public ServerSocket {
 		void dumpAICombined(const char* totalFilePath);
 		
 		void dumpAISeparated(std::string filePath);
-		void dumpTelegates(const char *filePath);
+		void dumpTelegates(std::string filePath);
 };
 
 typedef WorldServer::ChatService ChatService;

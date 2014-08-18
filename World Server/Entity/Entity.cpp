@@ -44,7 +44,6 @@ void Entity::setTarget(Entity* target) {
 
 		this->sendToVisible(pak);
 	}
-	this->combat.lastAttackTime = 0;
 	this->combat.setTarget(target); 
 }
 
@@ -64,18 +63,24 @@ bool Entity::isAllied( Entity* entity ) {
 bool Entity::movementRoutine() {
 	//In case there is no change in the wanted position, do nothing
 	if(this->getTarget() == nullptr) {
-		if (this->combat.lastAttackTime > 0 && clock() - this->combat.lastAttackTime >= this->intervalBetweenAttacks())
-			this->combat.lastAttackTime = 0;
+		//still doing the whole animation thing
+		if (this->combat.attackAnimation != nullptr) {
+			if (this->combat.animationTimePassed < this->combat.attackAnimation->getTotalAnimationTime()) {
+#ifdef __ROSE_DEBUG__
+				if (this->getEntityType() == Entity::TYPE_PLAYER) {
+					ChatService::sendWhisper("Server", dynamic_cast<Player*>(this), "Attack animation is still ongoing.");
+				}
+#endif
+				return false;
+			}
+			this->combat.attackAnimation = nullptr;
+			this->combat.animationTimePassed = 0;
+			this->combat.nextAttackId = 0;
+		}
 		if(this->position.current == this->position.destination) {
 			this->position.lastCheckTime = clock();
 			return false;
 		}
-#ifdef __ROSE_DEBUG__
-		if ((clock() - this->combat.lastAttackTime) < this->intervalBetweenAttacks()) {
-			if (this->getEntityType() == Entity::TYPE_PLAYER)
-				ChatService::sendWhisper("Server", dynamic_cast<Player*>(this), "Movement is not allowed as of yet!");
-		}
-#endif
 	} else { //We have a target, let's find out if we're in attack range
 		float distToTarget = this->position.current.distanceTo(this->getTarget()->getPositionCurrent());
 		
@@ -83,12 +88,23 @@ bool Entity::movementRoutine() {
 		if(!this->isAllied(this->getTarget()))
 			range = this->getAttackRange();
 		if(distToTarget <= range) {
-			if (this->combat.lastAttackTime == 0)
-				this->combat.lastAttackTime = clock() - this->intervalBetweenAttacks() * 6 / 10;
+			//In case we are in range and apply the first attack -> load animation
+			//and start it.
+			if (this->combat.attackAnimation == nullptr) {
+				if (this->getAttackAnimation()) {
+					this->combat.animationTimePassed = clock();
+				}
+			}
+			else {
+				//In case we keep attacking, make sure the cycle gets 'reset'.
+				if ((clock() - this->combat.animationTimePassed) > this->getTotalAttackAnimationTime()) {
+					this->combat.animationTimePassed = clock() - ((clock() - this->combat.animationTimePassed) - this->getTotalAttackAnimationTime()) - 2;
+					this->combat.nextAttackId = 0;
+				}
+			}
 			this->position.lastCheckTime = clock();
 			return false;
 		} else {
-			this->combat.lastAttackTime = 0;
 			this->position.destination = this->getTarget()->getPositionCurrent();
 		}
 	}
@@ -120,17 +136,39 @@ bool Entity::movementRoutine() {
 	return true;
 }
 
+WORD Entity::getNextAttackTime() const {
+	if (this->combat.attackAnimation != nullptr) {
+		if (this->combat.nextAttackId < this->combat.attackAnimation->getAttackTimerCount())
+			return this->combat.attackAnimation->getAttackTimer(this->combat.nextAttackId) * 100 / this->getAttackSpeed();
+		return this->combat.attackAnimation->getTotalAnimationTime() + 500; //safe amount to make sure animation gets reset
+	}
+	return 0;
+}
+
+WORD Entity::getTotalAttackAnimationTime() {
+	return this->combat.attackAnimation->getTotalAnimationTime() * 100 / this->getAttackSpeed(); 
+}
+
 bool Entity::attackRoutine() {
 	if(this->getTarget() == nullptr)
 		return false;
-	if (clock() - this->combat.lastAttackTime < this->intervalBetweenAttacks())  {
+	clock_t currentAnimationTime = clock() - this->combat.animationTimePassed;
+	WORD nextAttackTime = this->getNextAttackTime();
+
+	bool success = false;
+	if (currentAnimationTime > nextAttackTime) {
 #ifdef __ROSE_DEBUG__
-		if (this->getEntityType() == Entity::TYPE_PLAYER)
-			ChatService::sendDebugMessage(dynamic_cast<Player*>(this), "Time in ms till attack: %i", this->intervalBetweenAttacks() - (clock() - this->combat.lastAttackTime));
+		if (this->getEntityType() == Entity::TYPE_MONSTER) {
+			ChatService::sendShout(this, "AttackTime: %i out of max %i", currentAnimationTime, this->getTotalAttackAnimationTime());
+		}
+		if (this->getEntityType() == Entity::TYPE_PLAYER) {
+			ChatService::sendDebugMessage(dynamic_cast<Player*>(this), "AttackTime: %i out of max %i", currentAnimationTime, this->getTotalAttackAnimationTime());
+		}
 #endif
-		return false;
+		success = this->attackEnemy();
+		this->combat.nextAttackId++;
 	}
-	return this->attackEnemy();
+	return success;
 }
 
 bool Entity::attackEnemy() { 
@@ -141,9 +179,6 @@ bool Entity::attackEnemy() {
 	}
 	WORD damage = 0x00;
 	WORD defense = 0x00;
-	printf("%s(%i) [%i] attacks %s(%i) [%i]\n", this->getName().c_str(), this->getClientId(),
-		this->intervalBetweenAttacks(), enemy->getName().c_str(), enemy->getClientId(),
-		enemy->intervalBetweenAttacks());
 	if(this->getEntityType() == Entity::TYPE_PLAYER) {
 		if((this->getAttackPower() + 20) > (enemy->getDefensePhysical() * 7 / 10 + 5))
 			damage = (this->getAttackPower() + 20) - (enemy->getDefensePhysical() * 7 / 10 + 5);
@@ -160,14 +195,13 @@ bool Entity::attackEnemy() {
 	damage += QuickInfo::round<WORD>(static_cast<float>(rand() / static_cast<float>(RAND_MAX)) * damage * 0.1f);
 	WORD flag = 0x0000; //0x2000 = hit-animation; 0x4000 = crit, = 0x8000 = Dead
 	
-	bool success = enemy->addDamage( this, damage, flag);
+	bool success = enemy->addDamage(this, damage, flag);
 	if (flag & 0x8000 && enemy->getEntityType() != Entity::TYPE_PLAYER) {
 		delete enemy;
 		enemy = nullptr;
 
 		this->setTarget(nullptr);
 	}
-	this->combat.lastAttackTime = clock();
 	return success;
 }
 
@@ -243,6 +277,46 @@ void Entity::checkVisuality() {
 	}
 	//visualityLog.putStringWithVarOnly("-=-=-=-=-=-=-=-=-\n\n", sector->getId(), sector->getCenter().x, sector->getCenter().y);
 }
+
+/*
+template<class _Ty> _Ty* Entity::getStatType(const WORD statType) {
+	switch (statType) {
+		case StatType::ATTACK_POWER:
+			return &this->stats.attackPower;
+		case StatType::ATTACK_SPEED:
+			return &this->stats.attackSpeed;
+		case StatType::CRIT_RATE:
+			return &this->stats.critRate;
+		case StatType::CURRENT_HP:
+			return &this->stats.curHP;
+		case StatType::CURRENT_MP:
+			return &this->stats.curMP;
+		case StatType::DEFENSE_MAGICAL:
+			return &this->stats.defenseMagical;
+		case StatType::DEFENSE_PHYSICAL:
+			return &this->stats.defensePhysical;
+		case StatType::DODGE_RATE:
+			return &this->stats.dodgeRate;
+		case StatType::EXPERIENCE_RATE:
+			return nullptr;
+		case StatType::HIT_RATE:
+			return &this->stats.hitRate;
+		case StatType::LEVEL:
+			return &this->getLevel();
+		case StatType::MAX_HP:
+			return &this->stats.maxHP();
+		case StatType::MAX_MP:
+			return &this->stats.maxMP();
+		case StatType::MOVEMENT_SPEED:
+			return &this->stats.getMovementSpeed();
+	}
+	if (this->getEntityType() == Entity::TYPE_PLAYER) {
+		Player* player = dynamic_cast<Player*>(this);
+		return player->getSpecialStatType(statType);
+	}
+	return nullptr;
+}
+*/
 
 void Entity::addSectorVisually(MapSector* newSector) {
 	LinkedList<Entity*>::Node* pNode = newSector->getFirstEntity();

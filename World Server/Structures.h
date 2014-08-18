@@ -251,6 +251,11 @@ struct Position {
 		this->y = _y;
 	}
 
+	explicit Position(const DWORD _x, const DWORD _y) {
+		this->x = static_cast<float>(_x);
+		this->y = static_cast<float>(_y);
+	}
+
 	Position(const Position& rhs) {
 		this->x = rhs.x;
 		this->y = rhs.y;
@@ -389,6 +394,10 @@ struct Item {
 	Item() {
 		this->clear();
 	}
+	Item(const DWORD itemId) {
+		this->id = static_cast<WORD>(itemId % 1000);
+		this->type = static_cast<BYTE>(itemId / 1000);
+	}
 	void clear() {
 		this->type = 0x00;		
 		this->lifespan = this->gem = this->stats = this->refine = 0x00;
@@ -410,11 +419,13 @@ struct Item {
 
 struct Combat {
 	class Entity* target;
-	clock_t lastAttackTime;
+	class ZMO* attackAnimation;
+	BYTE nextAttackId;
+	DWORD animationTimePassed;
 
 	Combat() { 
 		this->target = nullptr; 
-		this->lastAttackTime = 0x00;
+		this->animationTimePassed = 0x00;
 	}
 
 	__inline Entity* getTarget() const { return this->target; }
@@ -544,6 +555,50 @@ class NPCData {
 		__inline WORD getDialogId() const { return this->dialogId; }
 		__inline WORD getAIId() const {return this->AIId; }
 		__inline bool getIsNPC() const { return this->isNPC; }
+};
+
+class StatType {
+	private:
+		StatType() {}
+		~StatType() {}
+	public:
+		const static WORD JOB = 0x04;
+		const static WORD UNION_FACTION = 0x05;
+		const static WORD RANKING = 0x06;
+		const static WORD REPUTATION = 0x07;
+		const static WORD FACE_STYLE = 0x08;
+		const static WORD HAIR_STYLE = 0x09;
+		const static WORD STRENGTH = 0x0A;
+		const static WORD DEXTERITY = 0x0B;
+		const static WORD INTELLIGENCE = 0x0C;
+		const static WORD CONCENTRATION = 0x0D;
+		const static WORD CHARM = 0x0E;
+		const static WORD SENSIBILITY = 0x0F;
+		const static WORD CURRENT_HP = 0x10;
+		const static WORD CURRENT_MP = 0x11;
+		const static WORD ATTACK_POWER = 0x12;
+		const static WORD DEFENSE_PHYSICAL = 0x13;
+		const static WORD HIT_RATE = 0x14;
+		const static WORD DEFENSE_MAGICAL = 0x15;
+		const static WORD DODGE_RATE = 0x16;
+		const static WORD MOVEMENT_SPEED = 0x17;
+		const static WORD ATTACK_SPEED = 0x18;
+		const static WORD INVENTORY_CAPACITY = 0x19;
+		const static WORD CRIT_RATE = 0x1A;
+		const static WORD HP_RECOVERY_RATE = 0x1B;
+		const static WORD MP_RECOVERY_RATE = 0x1C;
+		const static WORD MP_CONSUMPTION_RATE = 0x1D;
+		const static WORD EXPERIENCE_RATE = 0x1E;
+		const static WORD LEVEL = 0x1F;
+		const static WORD POINT = 0x20; //????
+		const static WORD TENDENCY = 0x21; //????
+		const static WORD PK_LEVEL = 0x22;
+		const static WORD HEAD_SIZE = 0x23;
+		const static WORD BODY_SIZE = 0x24;
+		const static WORD SKILL_POINTS = 0x25;
+		const static WORD MAX_HP = 0x26;
+		const static WORD MAX_MP = 0x27;
+		const static WORD MONEY = 0x28;
 };
 
 class Telegate {

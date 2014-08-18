@@ -38,6 +38,28 @@ void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId
 	}
 }
 
+bool NPC::getAttackAnimation() { 
+	this->combat.attackAnimation = mainServer->getAttackMotionNPC(this->getTypeId()); 
+	return this->combat.attackAnimation != nullptr; 
+}
+
+WORD NPC::getNextAttackTime() const {
+	if (this->combat.attackAnimation != nullptr) {
+		if (this->combat.nextAttackId < this->combat.attackAnimation->getAttackTimerCount())
+			return this->combat.attackAnimation->getAttackTimer(this->combat.nextAttackId) * this->data->getAttackspeed() / this->getAttackSpeed();
+		return this->combat.attackAnimation->getTotalAnimationTime() + 500; //safe value to make sure nothing else happens during this time.
+	}
+	return 0;
+}
+
+WORD NPC::getTotalAttackAnimationTime() {
+	if (this->combat.attackAnimation != nullptr) {
+		//return this->combat.attackAnimation->getTotalAnimationTime() * this->data->getAttackspeed() / this->getAttackSpeed();
+		return this->combat.attackAnimation->getTotalAnimationTime() * 100 / this->getAttackSpeed();
+	}
+	return 0;
+}
+
 void NPC::updateAttackpower() {
 	if(this->data) {
 		this->stats.attackPower = this->data->getAttackpower();

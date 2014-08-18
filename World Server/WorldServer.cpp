@@ -8,7 +8,8 @@
 
 #include "..\ConfigReader\Config.h"
 
-WorldServer* mainServer;
+WorldServer* mainServer; 
+std::map<DWORD, QuestEntry*> questData;
 
 WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 	this->port = port;
@@ -23,23 +24,23 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 	this->WorldTime.lastCheck = time(NULL);
 	this->WorldTime.currentTime = 0x00;
 
-	this->loadSTBs();
-	this->loadNPCData();
-	this->loadMapData();
-	this->loadAI();
-	this->loadZones();
-	this->loadAttackTimings();
-	
-	float num = 0.0f;
-
 #ifdef __ROSE_USE_VFS__
-	VFS vfs(config->getValueString("GameFolder"));
-
-	Trackable<char> data; vfs.readFile("3DDATA\\STB\\WARP.STB", data);
-	STBFile warpFile(data, data.size());
+	this->vfs = new VFS(config->getValueString("GameFolder"));
+	STBFile warpFile(this->vfs, "3DDATA\\STB\\WARP.STB");
 #else
 	STBFile warpFile((workingPath + std::string("\\3DDATA\\STB\\WARP.STB")).c_str());
 #endif
+
+	this->loadSTBs();
+	this->loadNPCData();
+	this->loadNPCAnimations();
+	this->loadMapData();
+	this->loadAI();
+	this->loadZones();
+	this->loadQuests();
+	this->loadAttackTimings();
+	
+	float num = 0.0f;
 
 	for(unsigned int i=0;i<this->mapData.size();i++) {
 		std::cout << "Loading Map Infos: " << num << "%        \r";
@@ -53,10 +54,16 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 WorldServer::~WorldServer() {
 	this->sqlDataBase.disconnect();
 
+	delete this->vfs;
+	this->vfs = nullptr;
+
 	for (unsigned int i = 1; i <= 14; i++) {
 		delete this->equipmentFile[i];
 		this->equipmentFile[i] = nullptr;
 	}
+
+	delete this->npcAnimationInfos;
+	this->npcAnimationInfos = nullptr;
 
 	delete this->aiFile;
 	this->aiFile = nullptr;
@@ -72,6 +79,14 @@ WorldServer::~WorldServer() {
 
 	delete this->dropFile;
 	this->dropFile = nullptr;
+
+	std::map<const DWORD, QuestEntry*>::iterator questIterator = this->questData.begin();
+	for (; questIterator != this->questData.end(); questIterator++) {
+		std::pair<const DWORD, QuestEntry*> data = *questIterator;
+		delete data.second;
+		data.second = nullptr;
+	}
+	this->questData.clear();
 
 	for(unsigned int i=0;i<this->zoneData.size();i++) {
 		ZON* file = this->zoneData.getValue(i);
@@ -230,66 +245,29 @@ bool WorldServer::checkSpawns(Map* currentMap) {
 bool WorldServer::loadSTBs() {
 
 	std::cout << "Reading all STBs...\r";
-#ifdef __ROSE_USE_VFS__
-	VFS vfs(config->getValueString("GameFolder"));
-	
-	Trackable<char> fileBuf;
-	vfs.readFile("3DDATA\\STB\\FILE_AI.STB", fileBuf);
-	this->aiFile = new AISTB(fileBuf, fileBuf.size());
+#ifdef __ROSE_USE_VFS__	
+	VFSData fileBuf;
+	this->aiFile = new AISTB(this->vfs, "3DDATA\\STB\\FILE_AI.STB");
+	this->npcFile = new NPCSTB(this->vfs, "3DDATA\\STB\\LIST_NPC.STB");
+	this->skillFile = new SkillSTB(this->vfs, "3DDATA\\STB\\LIST_SKILL.STB");
+	this->dropFile = new STBFile(this->vfs, "3DDATA\\STB\\ITEM_DROP.STB");
+	this->zoneFile = new ZoneSTB(this->vfs, "3DDATA\\STB\\LIST_ZONE.STB");
 
-	vfs.readFile("3DDATA\\STB\\LIST_NPC.STB", fileBuf);
-	this->npcFile = new NPCSTB(fileBuf, fileBuf.size());
-	
-	vfs.readFile("3DDATA\\STB\\LIST_SKILL.STB", fileBuf);
-	this->skillFile = new SkillSTB(fileBuf, fileBuf.size());
+	this->equipmentFile[ItemType::HEADGEAR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_CAP.STB");
+	this->equipmentFile[ItemType::ARMOR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_BODY.STB");
+	this->equipmentFile[ItemType::GLOVES] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_ARMS.STB");
+	this->equipmentFile[ItemType::BACK] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_BACK.STB");
+	this->equipmentFile[ItemType::FACE] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_FACEITEM.STB");
+	this->equipmentFile[ItemType::SHOES] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_FOOT.STB");
+	this->equipmentFile[ItemType::JEWELS] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_JEMITEM.STB");
+	this->equipmentFile[ItemType::JEWELRY] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_JEWEL.STB");
+	this->equipmentFile[ItemType::OTHER] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_NATURAL.STB");
+	this->equipmentFile[ItemType::PAT] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_PAT.STB");
+	this->equipmentFile[ItemType::SHIELD] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_SUBWPN.STB");
+	this->equipmentFile[ItemType::CONSUMABLES] = new ConsumeSTB(this->vfs, "3DDATA\\STB\\LIST_USEITEM.STB");
+	this->equipmentFile[ItemType::QUEST] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_QUESTITEM.STB");
+	this->equipmentFile[ItemType::WEAPON] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_WEAPON.STB");
 
-	vfs.readFile("3DDATA\\STB\\ITEM_DROP.STB", fileBuf);
-	this->dropFile = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_ZONE.STB", fileBuf);
-	this->zoneFile = new ZoneSTB(fileBuf, fileBuf.size()); 
-
-	vfs.readFile("3DDATA\\STB\\LIST_CAP.STB", fileBuf);
-	this->equipmentFile[ItemType::HEADGEAR] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_BODY.STB", fileBuf);
-	this->equipmentFile[ItemType::ARMOR] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_ARMS.STB", fileBuf);
-	this->equipmentFile[ItemType::GLOVES] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_BACK.STB", fileBuf);
-	this->equipmentFile[ItemType::BACK] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_FACEITEM.STB", fileBuf);
-	this->equipmentFile[ItemType::FACE] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_FOOT.STB", fileBuf);
-	this->equipmentFile[ItemType::SHOES] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_JEMITEM.STB", fileBuf);
-	this->equipmentFile[ItemType::JEWELS] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_JEWEL.STB", fileBuf);
-	this->equipmentFile[ItemType::JEWELRY] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_NATURAL.STB", fileBuf);
-	this->equipmentFile[ItemType::OTHER] = new STBFile(fileBuf, fileBuf.size());
-	
-	vfs.readFile("3DDATA\\STB\\LIST_PAT.STB", fileBuf);
-	this->equipmentFile[ItemType::PAT] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_SUBWPN.STB", fileBuf);
-	this->equipmentFile[ItemType::SHIELD] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_USEITEM.STB", fileBuf);
-	this->equipmentFile[ItemType::CONSUMABLES] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_QUESTITEM.STB", fileBuf);
-	this->equipmentFile[ItemType::QUEST] = new STBFile(fileBuf, fileBuf.size());
-
-	vfs.readFile("3DDATA\\STB\\LIST_WEAPON.STB", fileBuf);
-	this->equipmentFile[ItemType::WEAPON] = new STBFile(fileBuf, fileBuf.size());
 #else
 	this->aiFile = new AISTB((workingPath + std::string("\\3DDATA\\STB\\FILE_AI.STB")).c_str());
 	this->npcFile = new NPCSTB((workingPath + std::string("\\3DDATA\\STB\\LIST_NPC.STB")).c_str());
@@ -314,12 +292,20 @@ bool WorldServer::loadSTBs() {
 	std::cout << "Finished reading all STBs!\n";
 	return true;
 }
+
 bool WorldServer::loadNPCData() {
 	for (unsigned int i = 0; i < this->npcFile->getRowCount(); i++) {
 		NPCData newData(this->npcFile, i);
 		this->npcData.push_back(newData);
 	}
 	return true;
+}
+
+bool WorldServer::loadNPCAnimations() {
+	this->npcAnimationInfos = new CHR(this->vfs, "3DDATA\\NPC\\LIST_NPC.CHR");
+	if (this->npcAnimationInfos)
+		return true;
+	return false;
 }
 
 bool WorldServer::loadMapData() {
@@ -440,13 +426,12 @@ bool WorldServer::loadTelegates(const WORD currentMapId, STBFile& warpFile, IFO&
 bool WorldServer::loadAI() {
 	//Reserve an array with the size of the AIFile's row count
 	this->aiData.reserve(this->aiFile->getRowCount());
-	VFS vfs(config->getValueString("GameFolder"));
 	for (WORD i = 0; i < this->aiFile->getRowCount(); i++) {
 		//Read all AI-Files and store them in our array.
 #ifdef __ROSE_USE_VFS__
-		Trackable<char> data;
-		vfs.readFile(this->aiFile->getFilePath(i).c_str(), data);
-		AIP aiFile(i, data, data.size());
+		VFSData data;
+		this->vfs->readFile(this->aiFile->getFilePath(i).c_str(), data);
+		AIP aiFile(i, data);
 #else
 		AIP aiFile(i, (workingPath + std::string("\\") + this->aiFile->getFilePath(i)).c_str());
 #endif
@@ -455,29 +440,49 @@ bool WorldServer::loadAI() {
 	return true;
 }
 
+bool WorldServer::loadQuests() {
+#ifdef __ROSE_USE_VFS__
+	STBFile file(this->vfs, "3DDATA\\STB\\LIST_QUESTDATA.STB");
+	for (unsigned int i = 0; i < file.getRowCount(); i++) {
+		STBEntry& entry = file.getRow(i);
+		std::string questPath = entry.getColumn(0x00);
+		if (questPath.find(".qsd") == -1)
+			continue;
+
+		QSD newQSD(i, this->vfs, questPath.c_str());
+
+		std::map<const DWORD, QuestEntry*>& questsToAdd = newQSD.getQuests();
+		std::map<const DWORD, QuestEntry*>::iterator it = questsToAdd.begin();
+		while (it != questsToAdd.end()) {
+			if (it->second->getQuestId() == 205) {
+				int x = 0;
+			}
+			this->questData.insert(*it);
+			it++;
+		}
+	}
+#else
+
+#endif
+	return true;
+}
+
 bool WorldServer::loadAttackTimings() {
 #ifdef __ROSE_USE_VFS__
-	VFS vfs(::config->getValueString("GameFolder"));
+	VFSData data;
 
-	Trackable<char> data;
-
-	vfs.readFile("3DDATA\\STB\\TYPE_MOTION.STB", data);
-	STBFile_Template<STBEntry_INT> typeMotionSTB(data, data.size());
+	STBFile_Template<STBEntry_INT> typeMotionSTB(this->vfs, "3DDATA\\STB\\TYPE_MOTION.STB");
 	STBEntry_INT attackMotion = typeMotionSTB.getRow(0x08);
 
 	std::vector<DWORD> attackMotionEntries;
 	for (unsigned int i = 0; i < attackMotion.getColumnCount(); i++) {
 		attackMotionEntries.push_back(attackMotion.getColumn<DWORD>(i));
 	}
-	vfs.readFile("3DDATA\\STB\\FILE_MOTION.STB", data);
-	STBFile fileMotionSTB(data, data.size());
+	STBFile fileMotionSTB(this->vfs, "3DDATA\\STB\\FILE_MOTION.STB");
 
-	this->attackTimeData.reserve(attackMotionEntries.size());
+	this->playerAttackAnimations.reserve(attackMotionEntries.size());
 	for (unsigned int j = 0; j < attackMotionEntries.size(); j++) {
-		vfs.readFile(fileMotionSTB.getRow(attackMotionEntries.at(j)).getColumn(0x00).c_str(), data);
-		ZMO zmo(data, data.size());
-
-		this->attackTimeData.addValue(zmo.getFrameCount() * 1000 / zmo.getFPS());
+		this->playerAttackAnimations.addValue(ZMO(this->vfs, fileMotionSTB.getRow(attackMotionEntries.at(j)).getColumn(0x00).c_str()));
 	}
 #endif
 	return true;
@@ -608,12 +613,6 @@ const BYTE WorldServer::getWeaponMotion(const DWORD itemId) {
 	return 0x00;
 }
 
-const WORD WorldServer::getAttackTimeData(const BYTE motionId) {
-	if (this->attackTimeData.size() <= motionId)
-		return this->attackTimeData[0x00];
-	return this->attackTimeData[motionId];
-}
-
 STBEntry& WorldServer::getEquipmentEntry(const BYTE itemType, const DWORD itemId) {
 	if(itemType == 0x00 || itemType > ItemType::PAT)
 		throw TraceableExceptionARGS("Invalid ItemType: %i", itemType);
@@ -670,11 +669,16 @@ bool ChatService::sendWhisper(const char* from, Player* to, const char *aMsg, ..
 	return to->sendData(pak);
 }
 
-bool ChatService::sendShout(Entity* entity, const char* msg) {
+bool ChatService::sendShout(Entity* entity, const char* aMsg) {
+	return ChatService::sendShout(entity, aMsg, nullptr);
+}
+
+bool ChatService::sendShout(Entity* entity, const char* aMsg, ...) {
+	ArgConverterA(msg, aMsg);
 	Packet pak(PacketID::World::Response::SHOUT_CHAT);
 	pak.addString(entity->getName().c_str());
 	pak.addByte(0x00);
-	pak.addString( msg );
+	pak.addString( msg.c_str() );
 	pak.addByte(0x00);
 	return entity->sendToMap(pak);
 }
@@ -714,6 +718,12 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 		ChatService::sendWhisper("Server", gm, "Hitrate: %i\n", gm->getHitrate());
 		ChatService::sendWhisper("Server", gm, "AttackSpeed: %i\n", gm->getAttackSpeed());
 		ChatService::sendWhisper("Server", gm, "AttackRange: %f\n", gm->getAttackRange());
+	}
+	else if (WANTED_COMMAND("level")) {
+		BYTE newLevel = static_cast<BYTE>(atoi(curValue.c_str()) & 0xFF);
+		if (newLevel == 0)
+			newLevel = 1;
+		gm->setLevel(newLevel);
 	}
 	else if(WANTED_COMMAND("heal")) {
 		gm->setCurrentHP(gm->getMaxHP());
@@ -768,12 +778,6 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 			if(mainServer->isValidItem(item.type, item.id))
 				new Drop(gm, item, false);
 		}
-	} else if(WANTED_COMMAND("pint")) {
-		::PLAYER_ATTACK_INTERVAL = atol(curValue.c_str());
-		ChatService::sendWhisper("Server", gm, "Player: %i [%ims]", ::PLAYER_ATTACK_INTERVAL, gm->intervalBetweenAttacks());
-	} else if(WANTED_COMMAND("mint")) {
-		::NPC_ATTACK_INTERVAL = atol(curValue.c_str());
-		ChatService::sendWhisper("Server", gm, "Monster: %i");
 	}
 #undef STRCMP
 #undef SPLIT
@@ -785,6 +789,14 @@ NPCData* WorldServer::getNPCData(const AIP* ai) {
 		NPCData* npcData = &this->npcData.at(i);
 		if(npcData->getAIId() == ai->getId())
 			return npcData;
+	}
+	return nullptr;
+}
+
+AIP* WorldServer::getAIData(const DWORD monId) {
+	NPCData* data = this->getNPCData(monId);
+	if (data) {
+		return &this->aiData[data->getAIId()];
 	}
 	return nullptr;
 }
@@ -840,12 +852,14 @@ Skill* WorldServer::getSkill(const WORD skillIdBasic, const BYTE level) {
 
 
 void WorldServer::dumpAISeparated(std::string basicFilePath) {
-	for(unsigned int i=0;i<this->aiData.size();i++) {
-		AIP* aip = &this->aiData.getValue(i);
-		NPCData* npcData = this->getNPCData(aip);
-		if(!npcData)
+	MakeSureDirectoryPathExists(basicFilePath.c_str());
+	for(unsigned int i=0;i<this->npcData.size();i++) {
+		NPCData* npcData = &this->npcData[i];
+		AIP* aip = &this->aiData.getValue(npcData->getAIId());
+		if (aip == nullptr)
 			continue;
-		CMyFile file( (basicFilePath + "\\" + npcData->getName() + ".log").c_str(), "a+");
+		CMyFile file( (basicFilePath + npcData->getName() + ".log").c_str(), "a+");
+		file.clear();
 		if(aip->getCheckInterval() == 0x00)
 			continue;
 		file.putStringWithVarOnly("%s [%i]:\n", aip->getFilePath().c_str(), i);
@@ -875,9 +889,10 @@ void WorldServer::dumpAISeparated(std::string basicFilePath) {
 	}
 }
 
-void WorldServer::dumpTelegates(const char* filePath) {
-	CMyFile file(filePath, "a+");
-	for(unsigned int i=0;i<this->teleGates.size();i++) {
+void WorldServer::dumpTelegates(std::string filePath) {
+	CMyFile file(filePath.c_str(), "a+");
+	file.clear();
+	for (unsigned int i = 0; i<this->teleGates.size(); i++) {
 		Telegate& gate = this->teleGates.getValue(i);
 		if(gate.getSourceMap() == std::numeric_limits<WORD>::max() ||
 			gate.getDestMap() == std::numeric_limits<WORD>::max())
