@@ -390,6 +390,7 @@ bool WorldServer::loadIFOs(Map* curMap, STBFile& warpFile) {
 			NPC *newNpc = new NPC(&npcData, &this->aiData.getValue(npcData.getAIId()), curMap->getId(), npcINFO.getPosition());
 			newNpc->setDirection(npcINFO.getDirection());
 			newNpc->setSector(curMap->getSector(newNpc->getPositionCurrent()));
+			this->globalNPCs.push_back(newNpc);
 		}
 		//Create telegates from the previously read IFO-info
 		this->loadTelegates(curMap->getId(), warpFile, ifo);
