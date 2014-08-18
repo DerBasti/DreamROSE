@@ -19,20 +19,82 @@ struct QuestHeader {
 	const DWORD operationType;
 };
 
+struct QuestTrans;
+
+class PlayerQuest {
+	public:
+		const static BYTE QUEST_VAR_MAX = 10;
+		const static BYTE QUEST_ITEMS_MAX = 5;
+	private:
+		FixedArray<WORD> questVars;
+		FixedArray<Item> questItems;
+		QuestEntry* entry;
+		DWORD passedTime;
+		union {
+			DWORD switchDWORD;
+			BYTE switchBYTE[4];
+		};
+	public:
+		PlayerQuest(QuestEntry* newEntry) {
+			this->entry = newEntry;
+			this->passedTime = 0x00;
+			this->questVars.reserve(PlayerQuest::QUEST_VAR_MAX);
+			this->questItems.reserve(PlayerQuest::QUEST_ITEMS_MAX);
+		}
+		~PlayerQuest() {
+			this->entry = nullptr;
+		}
+		__inline Item getItem(const BYTE slot) const { return this->questItems[slot]; }
+		__inline Item getVar(const BYTE slot) const { return this->questVars[slot]; }
+		__inline QuestEntry* getQuest() const { return this->entry; }
+		__inline void setQuest(QuestEntry* newQuest) { this->entry = newQuest; }
+		__inline bool isEntryFree() const { return (this->getQuest() == nullptr); }
+
+		__inline const DWORD getQuestId() const { return this->entry->getQuestId(); }
+		__inline const DWORD getQuestHash() const { return this->entry->getQuestHash(); }
+		__inline const WORD getQuestVar(const WORD varType) { return this->questVars[varType]; }
+		__inline const void setQuestVar(const WORD varType, const WORD newValue) { this->questVars[varType] = newValue; }
+		__inline const DWORD getPassedTime() const { return this->passedTime; }
+		__inline const DWORD getSwitch() const { return this->switchDWORD; }
+};
+
 class QuestService {
 	private:
-		static bool checkCondition(Entity* entity, const QuestHeader* header);
-		static void applyActions(Entity* entity, const QuestHeader* header);
+		static bool checkCondition(QuestTrans* trans, const QuestHeader* header);
+		static void applyActions(QuestTrans* trans, const QuestHeader* header);
 
-		static bool checkSelectedQuest(Entity* entity, const QuestHeader* header);
-		static bool checkQuestVariables(Entity* entity, const QuestHeader* conditionHeader);
-		static bool checkUserVariables(Entity* entity, const QuestHeader* header);
-		static bool checkItemAmount(Entity* entity, const QuestHeader* header);
-		static bool checkPartyLeaderAndLevel(Entity* entity, const QuestHeader* header);
-		static bool checkDistanceFromPoint(Entity* entity, const QuestHeader* header);
-		static bool checkWorldTime(Entity* entity, const QuestHeader* header);
-		static bool checkRemainingTime(Entity* entity, const QuestHeader* header);
-		static bool checkSkill(Entity* entity, const QuestHeader* header);
+		static bool checkSelectedQuest(QuestTrans* trans, const QuestHeader* header);
+		static bool checkQuestVariables(QuestTrans* trans, const QuestHeader* conditionHeader);
+		static bool checkUserVariables(QuestTrans* trans, const QuestHeader* header);
+		static bool checkItemAmount(QuestTrans* trans, const QuestHeader* header);
+		static bool checkPartyLeaderAndLevel(QuestTrans* trans, const QuestHeader* header);
+		static bool checkDistanceFromPoint(QuestTrans* trans, const QuestHeader* header);
+		static bool checkWorldTime(QuestTrans* trans, const QuestHeader* header);
+		static bool checkRemainingTime(QuestTrans* trans, const QuestHeader* header);
+		static bool checkSkill(QuestTrans* trans, const QuestHeader* header);
+		static bool checkRandomPercentage(QuestTrans* trans, const QuestHeader* header);
+		static bool checkObjectVar(QuestTrans* trans, const QuestHeader* header);
+		static bool checkEventObject(QuestTrans* trans, const QuestHeader* header);
+		static bool checkNPCVar(QuestTrans* trans, const QuestHeader* header);
+		static bool checkSwitch(QuestTrans* trans, const QuestHeader* header);
+		static bool checkPartyMemberCount(QuestTrans* trans, const QuestHeader* header); 
+		static bool checkMapTime(QuestTrans* trans, const QuestHeader* header);
+		static bool checkNPCVarDifferences(QuestTrans* trans, const QuestHeader* header);
+		static bool checkServerTimeMonth(QuestTrans* trans, const QuestHeader* header);
+		static bool checkServerTimeWeekday(QuestTrans* trans, const QuestHeader* header);
+		static bool checkTeamId(QuestTrans* trans, const QuestHeader* header) { return false; } //TODO:
+		static bool checkDistanceFromCenter(QuestTrans* trans, const QuestHeader* header);
+		static bool checkChannelNumber(QuestTrans* trans, const QuestHeader* header) { return true; } //TODO: channel num differentiation?
+		static bool checkIsClanMember(QuestTrans* trans, const QuestHeader* header);
+		static bool checkClanInternalPosition(QuestTrans* trans, const QuestHeader* header);
+		static bool checkClanContribution(QuestTrans* trans, const QuestHeader* header);
+		static bool checkClanLevel(QuestTrans* trans, const QuestHeader* header);
+		static bool checkClanScore(QuestTrans* trans, const QuestHeader* header);
+		static bool checkClanMoney(QuestTrans* trans, const QuestHeader* header);
+		static bool checkClanMemberCount(QuestTrans* trans, const QuestHeader* header);
+		static bool checkClanSkill(QuestTrans* trans, const QuestHeader* header);
+
+		static void rewardNewQuest(QuestTrans* trans, const QuestHeader* header);
 
 		const static BYTE OPERATION_EQUAL = 0x00;
 		const static BYTE OPERATION_BIGGER = 0x01;
@@ -86,6 +148,17 @@ class QuestEntry {
 		__inline const DWORD getQuestId() const { return this->questId; }
 		__inline const QuestEntry* getPreviousQuest() const { return this->previousQuest; }
 		__inline const QuestEntry* getNextQuest() const { return this->nextQuest; }
+};
+
+struct QuestTrans {
+	Entity* questTriggerCauser;
+	Entity* questTarget; //e.g. player or npc
+	PlayerQuest* selectedQuest;
+	QuestTrans(Entity* questCauser, Entity* target = nullptr) {
+		this->questTriggerCauser = questCauser;
+		this->questTarget = target;
+		this->selectedQuest = nullptr;
+	}
 };
 
 class QSD {
@@ -229,7 +302,6 @@ struct QuestCondition012 {
 
 struct QuestCondition013 {
 	const QuestHeader header;
-	const WORD mapId;
 	const DWORD npcId;
 };
 
@@ -307,7 +379,7 @@ struct QuestCondition022 {
 
 struct QuestCondition023 {
 	const QuestHeader header;
-	const BYTE regist;
+	const BYTE isRegistered;
 };
 
 struct QuestCondition024 {

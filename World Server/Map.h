@@ -77,7 +77,6 @@ class Map {
 		FixedArray2D<MapSector*> mapSectors;
 		std::vector<class IFOSpawn*> monsterSpawns;
 		LinkedList<Entity*> entitiesOnMap;
-		std::vector<Position> respawnPoints;
 		void findMinMax(std::vector<std::string>& files, WORD* x, WORD* y);
 		ZON::EventInfo* getRespawn(Position& pos);
 	public:

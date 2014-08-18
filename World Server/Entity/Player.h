@@ -8,8 +8,6 @@
 #include "..\FileTypes\QSD.h"
 #include "Entity.h"
 
-extern long PLAYER_ATTACK_INTERVAL;
-
 class Player : public Entity, public ClientSocket {
 	private:
 		struct _accountInfo {
@@ -93,38 +91,6 @@ class Player : public Entity, public ClientSocket {
 
 		//std::vector<ConsumedItem> consumedItems;
 		Item inventory[Inventory::MAXIMUM];
-
-		class PlayerQuest {
-			public:
-				const static BYTE QUEST_VAR_MAX = 10;
-				const static BYTE QUEST_ITEMS_MAX = 5;
-			private:
-				FixedArray<WORD> questVars;
-				FixedArray<Item> questItems;
-				QuestEntry* entry;
-				DWORD passedTime;
-			public:
-				PlayerQuest(QuestEntry* newEntry) {
-					this->entry = newEntry;
-					this->passedTime = 0x00;
-					this->questVars.reserve(PlayerQuest::QUEST_VAR_MAX);
-					this->questItems.reserve(PlayerQuest::QUEST_ITEMS_MAX);
-				}
-				~PlayerQuest() {
-					this->entry = nullptr;
-				}
-				__inline Item getItem(const BYTE slot) const { return this->questItems[slot]; }
-				__inline Item getVar(const BYTE slot) const { return this->questVars[slot]; }
-				__inline QuestEntry* getQuest() const { return this->entry; }
-				__inline void setQuest(QuestEntry* newQuest) { this->entry = newQuest; }
-				__inline bool isEntryFree() const { return (this->getQuest() == nullptr); }
-
-				__inline const DWORD getQuestId() const { return this->entry->getQuestId(); }
-				__inline const DWORD getQuestHash() const { return this->entry->getQuestHash(); }
-				__inline const WORD getQuestVar(const WORD varType) { return this->questVars[varType]; }
-				__inline const void setQuestVar(const WORD varType, const WORD newValue) { this->questVars[varType] = newValue; }
-				__inline const DWORD getPassedTime() const { return this->passedTime; }
-		};
 
 		struct questInfo {
 			const static BYTE JOURNEY_MAX = 10;
@@ -219,6 +185,7 @@ class Player : public Entity, public ClientSocket {
 
 		bool searchAndSelectQuest(const DWORD questHash);
 		__inline PlayerQuest* getSelectedQuest() const { return this->quest.selected; }
+		PlayerQuest* getQuestByID(const WORD questId);
 		const WORD getQuestVariable(WORD varType, const WORD varId);
 
 		WORD checkClothesForStats(const WORD statAmount, ...);
@@ -266,6 +233,8 @@ class Player : public Entity, public ClientSocket {
 		
 		__inline WORD getSensibility() const { return this->attributes.getSensibility(); }
 		__inline WORD getSensibilityTotal() { return this->attributes.getSensibilityTotal(); }
+
+		__inline Skill* getSkill(const BYTE skillSlot) { return this->skills[skillSlot]; }
 
 		bool equipItem(const Item& item);
 		Item getItemFromInventory(const WORD itemSlot); 

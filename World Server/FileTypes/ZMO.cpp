@@ -31,7 +31,7 @@ template<class FileType> void ZMO::init(FileType& file) {
 	this->framesPerSecond = static_cast<DWORD>(file.read<DWORD>());
 	this->totalFrameCount = static_cast<DWORD>(file.read<DWORD>());
 
-	this->totalAnimationTime = static_cast<WORD>(static_cast<float>(this->totalFrameCount) / static_cast<float>(this->framesPerSecond) * 1000);
+	this->totalAnimationTime = static_cast<WORD>(static_cast<float>(this->totalFrameCount-1) / static_cast<float>(this->framesPerSecond) * 1000);
 
 	//last 4 bytes are the ZMO-version type (e.g. 3ZMO)
 	//The previous 10 bytes: an offset or anything of the sorts seems to be hiddin in there.
@@ -39,7 +39,7 @@ template<class FileType> void ZMO::init(FileType& file) {
 
 	for (unsigned int i = 0; i < this->totalFrameCount; i++) {
 		WORD currentType = file.read<WORD>();
-		if (currentType == 21) { //Dunno what this means, but it seems to be a valid indicator, just like the following 2-frame following "21"
+		if (currentType == MOTION_MELEE_ATTACK || currentType == MOTION_RANGED_ATTACK) { //Dunno what this means, but it seems to be a valid indicator, just like the following 2-frame following "21"
 			float percentage = static_cast<float>(i) / static_cast<float>(this->totalFrameCount);
 			this->attackTimers.push_back(static_cast<WORD>(percentage * this->totalAnimationTime));
 		}

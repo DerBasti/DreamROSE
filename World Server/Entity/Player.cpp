@@ -236,6 +236,16 @@ const WORD Player::getQuestVariable(WORD varType, const WORD varId) {
 	return 0x00;
 }
 
+Player::PlayerQuest* Player::getQuestByID(const WORD questId) {
+	for (unsigned int i = 0; i < this->quest.journey.size(); i++) {
+		PlayerQuest* quest = this->quest.journey[i];
+		if (!quest || quest->getQuestId() != questId)
+			continue;
+		return quest;
+	}
+	return nullptr;
+}
+
 Item Player::getItemFromInventory(const WORD itemSlot) {
 	if (itemSlot == 0 || itemSlot >= Inventory::MAXIMUM)
 		return Item();

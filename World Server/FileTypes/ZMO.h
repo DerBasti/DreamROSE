@@ -13,6 +13,8 @@
 
 class ZMO {
 	public:
+		const static WORD MOTION_MELEE_ATTACK = 21;
+		const static WORD MOTION_RANGED_ATTACK = 22;
 	private:
 		std::string filePath;
 		DWORD framesPerSecond;

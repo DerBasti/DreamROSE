@@ -43,6 +43,7 @@ class WorldServer : public ServerSocket {
 
 		std::pair<WORD, Entity*> clientIDs[0x10000];
 		std::vector<NPCData> npcData;
+		std::vector<NPC*> globalNPCs;
 		std::map<const DWORD, QuestEntry*> questData;
 		FixedArray<Skill*> skillData;
 		FixedArray<class ZON*> zoneData;
@@ -114,6 +115,7 @@ class WorldServer : public ServerSocket {
 		__inline int getEconomyVariable(BYTE varIdx) { return this->economyVar[varIdx]; }
 		__inline NPCData* getNPCData(const DWORD& id) { return &this->npcData.at(id); }
 		NPCData* getNPCData(const AIP* ai);
+		NPC* getNPCGlobal(const WORD npcId);
 		AIP* getAIData(const DWORD monId);
 		__inline bool isValidNPCType(const DWORD id) { return this->npcData.at(id).getLevel() > 0; }
 

@@ -57,7 +57,7 @@ WorldServer::~WorldServer() {
 	delete this->vfs;
 	this->vfs = nullptr;
 
-	for (unsigned int i = 1; i <= 14; i++) {
+	for (unsigned int i = ItemType::FACE; i <= ItemType::PAT; i++) {
 		delete this->equipmentFile[i];
 		this->equipmentFile[i] = nullptr;
 	}
@@ -141,9 +141,8 @@ void WorldServer::runMap(Map* curMap) {
 				entityNode = entityNode->getNextNode();
 				if(!entityNode)
 					break;
-			} else {
-				updateNextNode = true;
-			}
+			} 
+			updateNextNode = true;
 			Entity* curEntity = entityNode->getValue();
 			if (!curEntity || !curEntity->isIngame() || curEntity->getEntityType() == Entity::TYPE_DROP) {
 				continue;
@@ -158,6 +157,12 @@ void WorldServer::runMap(Map* curMap) {
 					curEntity->attackRoutine();
 				}
 			}
+			if ((newSector = curEntity->checkForNewSector()) != nullptr) {
+				entityNode = curEntity->setSector(newSector);
+				curEntity->checkVisuality();
+				if (entityNode) //in case we have a valid succeeding node
+					updateNextNode = false;
+			}
 			switch (curEntity->getEntityType()) {
 				case Entity::TYPE_PLAYER:
 					curPlayer = dynamic_cast<Player*>(curEntity);
@@ -165,12 +170,6 @@ void WorldServer::runMap(Map* curMap) {
 					//If so, change the visuality vector
 					/*bool newSector = */
 					curPlayer->checkRegeneration();
- 					if( (newSector = curEntity->checkForNewSector()) != nullptr) {
-						entityNode = curEntity->setSector(newSector);
-						curEntity->checkVisuality();
-						if(entityNode) //in case we have a valid succeeding node
-							updateNextNode = false;
-					}
 				break;
 				case Entity::TYPE_NPC:
 				case Entity::TYPE_MONSTER:
@@ -514,6 +513,14 @@ void WorldServer::convertTo(NPC* npc, WORD npcDataId) {
 	
 }
 
+NPC* WorldServer::getNPCGlobal(const WORD npcId) {
+	for (unsigned int i = 0;i<this->globalNPCs.size(); i++) {
+		NPC* npc = this->globalNPCs[i];
+		if (npc->getTypeId() == npcId)
+			return npc;
+	}
+	return nullptr;
+}
 
 bool WorldServer::isValidItem(const BYTE itemType, const WORD itemId) {
 	if(itemType == 0 || itemType > ItemType::PAT || itemId >= this->equipmentFile[itemType]->getRowCount())
