@@ -11,6 +11,10 @@
 #include "VFS.h"
 #endif
 
+#ifdef __ZMO_OUTPUT__
+#define __ROSE_ZMO_OUTPUT__
+#endif
+
 class ZMO {
 	public:
 		const static WORD MOTION_MELEE_ATTACK = 21;

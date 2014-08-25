@@ -31,8 +31,7 @@ class Player : public Entity, public ClientSocket {
 #undef ATTRIB_EX
 
 			Attributes() {
-				this->concentration = this->dexterity = this->intelligence = this->strength = 0x0F;
-				this->charm = this->sensibility = 0x0A;
+				this->resetStats();
 
 				this->charmEx = this->concentrationEx = this->dexterityEx = 
 				this->intelligenceEx = this->sensibilityEx = this->strengthEx = 0x00;
@@ -62,6 +61,10 @@ class Player : public Entity, public ClientSocket {
 			__inline WORD getSensibilityEx() const { return this->sensibilityEx; }
 			__inline WORD getSensibilityTotal() { return (this->sensibility + this->sensibilityEx); }
 
+			void resetStats() {
+				this->concentration = this->dexterity = this->intelligence = this->strength = 0x0F;
+				this->charm = this->sensibility = 0x0A;
+			}
 		} attributes;
 		struct CharInfo {
 			DWORD id;
@@ -97,6 +100,11 @@ class Player : public Entity, public ClientSocket {
 
 			PlayerQuest* selected;
 			FixedArray<PlayerQuest*> journey;
+
+			union {
+				BYTE flag[0x40];
+				DWORD dwFlag[0x10];
+			};
 
 			struct questVars {
 				const static BYTE EPISODE_MAX = 5;
@@ -146,6 +154,7 @@ class Player : public Entity, public ClientSocket {
 		bool pakShoutChat();
 		bool pakTelegate();
 		bool pakEquipmentChange();
+		bool pakQuestAction();
 		bool pakPickUpDrop();
 		bool pakDropFromInventory();
 		bool pakBuyFromNPC();
@@ -155,8 +164,9 @@ class Player : public Entity, public ClientSocket {
 		void removeEntityVisually(Entity* entity);
 		bool setPositionVisually(const Position& pos);
 
-		const BYTE findSlot( const Item& item );
+		const BYTE getFreeInventorySlot(const Item& item);
 		const CharInfo::VisualTraits& getVisualTraits() const { return this->charInfo.visualTraits; }
+
 	public:
 		Player(SOCKET sock, ServerSocket* server);
 		~Player();
@@ -170,6 +180,7 @@ class Player : public Entity, public ClientSocket {
 		virtual void setPositionDest(const Position& newPos);
 		
 		DWORD getSpecialStatType(const WORD statType);
+		bool changeAbility(const WORD abilityType, const DWORD amount, const BYTE operation);
 
 		void updateAttackpower();
 		void updateAttackSpeed();
@@ -181,17 +192,33 @@ class Player : public Entity, public ClientSocket {
 		void updateCritrate();
 		void updateMovementSpeed();
 		void updateIntervalBetweenAttacks();
+		bool updateZulies(const QWORD newAmount);
+		__inline QWORD getZulies() const { return this->inventory[0x00].amount; }
 		void checkRegeneration();
 
-		bool searchAndSelectQuest(const DWORD questHash);
+		bool searchAndSelectQuest(const DWORD questId);
 		__inline PlayerQuest* getSelectedQuest() const { return this->quest.selected; }
 		PlayerQuest* getQuestByID(const WORD questId);
+		PlayerQuest* getEmptyQuestSlot();
 		const WORD getQuestVariable(WORD varType, const WORD varId);
+		void setQuestVariable(WORD varType, const WORD varId, const WORD value);
+		__inline const DWORD getQuestSwitch(const WORD value) { return (this->quest.flag[value >> 0x03] & (1 << (value & 0x07))); }
+		void setQuestSwitch(const WORD switchNum, BYTE operation) {
+			if (operation == 0x00)
+				this->quest.flag[switchNum >> 0x03] &= ~(1 << (switchNum & 0x07));
+			else if (operation == 0x01)
+				this->quest.flag[switchNum >> 0x03] |= (1 << (switchNum & 0x07));
+			else if (operation == 0x02) {
+				if (this->getQuestSwitch(switchNum))
+					return this->setQuestSwitch(switchNum, 0x00);
+				else
+					return this->setQuestSwitch(switchNum, 0x01);
+			}
+		}
+		__inline void clearQuestSwitchGroup(const WORD switchGroup) { this->quest.flag[switchGroup] = 0x00; }
 
 		WORD checkClothesForStats(const WORD statAmount, ...);
 		WORD checkSkillsForStats(const WORD basicAmount, const WORD statAmount, ...);
-
-		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
 
 		bool isAllied( class NPC* npc ) { return true; }
 		bool isAllied( class Monster* mon ) { return false; }
@@ -234,8 +261,14 @@ class Player : public Entity, public ClientSocket {
 		__inline WORD getSensibility() const { return this->attributes.getSensibility(); }
 		__inline WORD getSensibilityTotal() { return this->attributes.getSensibilityTotal(); }
 
-		__inline Skill* getSkill(const BYTE skillSlot) { return this->skills[skillSlot]; }
+		void resetAttributes();
+		void resetSkills();
 
+		__inline Skill* getSkill(const BYTE skillSlot) { return this->skills[skillSlot]; }
+		bool changeSkill(const WORD totalId);
+
+		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
+		bool addItemToInventory(const Item& item);
 		bool equipItem(const Item& item);
 		Item getItemFromInventory(const WORD itemSlot); 
 		Item getQuestItem(const DWORD itemId);

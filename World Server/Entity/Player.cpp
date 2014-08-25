@@ -38,7 +38,7 @@ Player::Player(SOCKET sock, ServerSocket* server){
 		if (i < Player::questInfo::questVars::PLANET_MAX)
 			this->quest.var.planet.addValue(0x00);
 
-		this->quest.journey.addValue(new PlayerQuest(nullptr));
+		this->quest.journey.addValue(new PlayerQuest(0x00));
 	}
 }
 
@@ -76,7 +76,7 @@ bool Player::setPositionVisually(const Position& newPos) {
 	return this->sendToVisible(pak);
 }
 
-const BYTE Player::findSlot( const Item& item ) {
+const BYTE Player::getFreeInventorySlot(const Item& item) {
 	BYTE inventoryTab = 0x00;
 	switch(item.type) {
 		case ItemType::CONSUMABLES:
@@ -196,15 +196,16 @@ bool Player::pakUpdateLifeStats() {
 	return this->sendData(pak);
 }
 
-bool Player::searchAndSelectQuest(const DWORD questHash) {
+bool Player::searchAndSelectQuest(const DWORD questId) {
+	this->quest.selected = nullptr;
 	for (unsigned int i = 0; i < this->quest.journey.size(); i++) {
 		PlayerQuest* entry = this->quest.journey[i];
-		if (entry && entry->getQuestHash() == questHash) {
+		if (entry && entry->getQuestId() == questId) {
 			this->quest.selected = this->quest.journey[i];
-			return true;
+			break;
 		}
 	}
-	return false;
+	return this->quest.selected != nullptr;
 }
 
 const WORD Player::getQuestVariable(WORD varType, const WORD varId) {
@@ -236,7 +237,35 @@ const WORD Player::getQuestVariable(WORD varType, const WORD varId) {
 	return 0x00;
 }
 
-Player::PlayerQuest* Player::getQuestByID(const WORD questId) {
+void Player::setQuestVariable(WORD varType, const WORD varId, const WORD value) {
+	varType >>= 8;
+	try {
+		switch (varType) {
+		case 0x00:
+			if (this->quest.selected)
+				this->quest.selected->setQuestVar(varId, value);
+		case 0x01:
+			this->quest.var.switches[varId] = value;
+		case 0x02: //Time?
+			return;
+		case 0x03:
+			this->quest.var.episode[varId] = value;
+		case 0x04:
+			this->quest.var.job[varId] = value;
+		case 0x05:
+			this->quest.var.planet[varId] = value;
+		case 0x06:
+			this->quest.var.fraction[varId] = value;
+		default:
+			throw TraceableExceptionARGS("varType %i is illegal!", varType);
+		}
+	}
+	catch (std::exception& ex) {
+		std::cout << ex.what() << "\n";
+	}
+}
+
+PlayerQuest* Player::getQuestByID(const WORD questId) {
 	for (unsigned int i = 0; i < this->quest.journey.size(); i++) {
 		PlayerQuest* quest = this->quest.journey[i];
 		if (!quest || quest->getQuestId() != questId)
@@ -246,10 +275,33 @@ Player::PlayerQuest* Player::getQuestByID(const WORD questId) {
 	return nullptr;
 }
 
+PlayerQuest* Player::getEmptyQuestSlot() {
+	for (unsigned int i = 0; i < this->quest.journey.size(); i++) {
+		PlayerQuest* quest = this->quest.journey[i];
+		if (quest->isEntryFree())
+			return quest;
+	}
+	return nullptr;
+}
+
 Item Player::getItemFromInventory(const WORD itemSlot) {
 	if (itemSlot == 0 || itemSlot >= Inventory::MAXIMUM)
 		return Item();
 	return this->inventory[itemSlot];
+}
+
+bool Player::addItemToInventory(const Item& item) {
+	BYTE itemSlot = this->getFreeInventorySlot(item);
+	if (itemSlot != std::numeric_limits<BYTE>::max()) {
+		if (this->inventory[itemSlot].isValid()) {
+			this->inventory[itemSlot].amount += item.amount;
+		}
+		else {
+			this->inventory[itemSlot] = item;
+		}
+		return true;
+	}
+	return false;
 }
 
 Item Player::getQuestItem(const DWORD itemId) {
@@ -289,13 +341,14 @@ DWORD Player::getSpecialStatType(const WORD statType) {
 		case StatType::MP_RECOVERY_RATE:
 			return 0;
 		case StatType::PK_LEVEL:
-		case StatType::POINT:
 		case StatType::RANKING:
 		case StatType::REPUTATION:
 		case StatType::TENDENCY:
 			return 0;
 		case StatType::SENSIBILITY:
 			return this->getSensibilityTotal();
+		case StatType::STAT_POINT:
+			return this->charInfo.statPoints;
 		case StatType::SKILL_POINTS:
 			return this->charInfo.skillPoints;
 		case StatType::STRENGTH:
@@ -304,6 +357,85 @@ DWORD Player::getSpecialStatType(const WORD statType) {
 			return 0;
 	}
 	return 0;
+}
+
+bool Player::changeAbility(const WORD abilityType, const DWORD amount, const BYTE operation) {
+	WORD packetID = PacketID::World::Response::CHANGE_ABILITY;
+	DWORD result = 0x00;
+	switch (abilityType) {
+		case StatType::CHARM:
+			this->attributes.charm = QuestService::resultOperation(this->attributes.charm, static_cast<const WORD>(amount), operation);
+			result = this->attributes.charm;
+		break;
+		case StatType::CONCENTRATION:
+			this->attributes.concentration = QuestService::resultOperation(this->attributes.concentration, static_cast<const WORD>(amount), operation);
+			result = this->attributes.concentration;
+		break;
+		case StatType::DEXTERITY:
+			this->attributes.dexterity = QuestService::resultOperation(this->attributes.dexterity, static_cast<const WORD>(amount), operation);
+			result = this->attributes.dexterity;
+		break;
+		case StatType::FACE_STYLE:
+			this->charInfo.visualTraits.faceStyle = QuestService::resultOperation(this->charInfo.visualTraits.faceStyle, static_cast<const WORD>(amount), operation);
+			result = this->charInfo.visualTraits.faceStyle;
+		break;
+		case StatType::HAIR_STYLE:
+			this->charInfo.visualTraits.hairStyle = QuestService::resultOperation(this->charInfo.visualTraits.hairStyle, static_cast<const WORD>(amount), operation);
+			result = this->charInfo.visualTraits.hairStyle;
+		break;
+		case StatType::HEAD_SIZE:
+		case StatType::HP_RECOVERY_RATE:
+			return false;
+		case StatType::INTELLIGENCE:
+			this->attributes.intelligence = QuestService::resultOperation(this->attributes.intelligence, static_cast<const WORD>(amount), operation);
+			result = this->attributes.intelligence;
+		break;
+		case StatType::JOB:
+			this->charInfo.job = QuestService::resultOperation(this->charInfo.job, static_cast<const WORD>(amount), operation);
+			result = this->charInfo.job;
+		break;
+		case StatType::MONEY:
+			//this->inventory[0x00].amount = QuestService::resultOperation(this->inventory[0x00].amount, static_cast<const DWORD>(amount), operation);
+			this->inventory[0x00].amount = operation == 0x06 ? this->inventory[0x00].amount + amount : this->inventory[0x00].amount - amount;
+			packetID = PacketID::World::Response::UPDATE_ZULIES;
+		break;
+		case StatType::MP_CONSUMPTION_RATE:
+		case StatType::MP_RECOVERY_RATE:
+		case StatType::PK_LEVEL:
+		case StatType::RANKING:
+		case StatType::REPUTATION:
+		case StatType::TENDENCY:
+			return false;
+		case StatType::SENSIBILITY:
+			this->attributes.sensibility = QuestService::resultOperation(this->attributes.sensibility, static_cast<const WORD>(amount), operation);
+			result = this->attributes.sensibility;
+		break;
+		case StatType::STAT_POINT:
+			this->charInfo.statPoints = QuestService::resultOperation(this->charInfo.statPoints, static_cast<const WORD>(amount), operation);
+			result = this->charInfo.statPoints;
+			packetID = PacketID::World::Response::CHANGE_STATPOINTS;
+		break;
+		case StatType::SKILL_POINTS:
+			this->charInfo.skillPoints = QuestService::resultOperation(this->charInfo.skillPoints, static_cast<const WORD>(amount), operation);
+			result = this->charInfo.skillPoints;
+		break;
+		case StatType::STRENGTH:
+			this->attributes.strength = QuestService::resultOperation(this->attributes.strength, static_cast<const WORD>(amount), operation);
+			result = this->attributes.strength;
+		break;
+		case StatType::UNION_FACTION:
+			return false;
+	}
+	Packet pak(packetID);
+	if (packetID != PacketID::World::Response::UPDATE_ZULIES ) {
+		pak.addWord(abilityType);
+		pak.addDWord(amount);
+	}
+	else {
+		pak.addQWord(this->inventory[0x00].amount);
+		pak.addByte(0x00);
+	}
+	return this->sendData(pak);
 }
 
 //TODO: ADD TO STAT CALCULATION
@@ -757,6 +889,52 @@ float Player::getAttackRange() {
 	return std::max(100.0f, weapon.getColumn<float>(EquipmentSTB::ATTACK_RANGE));
 }
 
+void Player::resetAttributes() { 
+	this->attributes.resetStats(); 
+	this->charInfo.statPoints = 0;
+	for (unsigned int i = 1; i < this->getLevel(); i++) {
+		this->charInfo.statPoints += (i * 10 / 8) + 10;
+	}
+}
+
+void Player::resetSkills() {
+	for (unsigned int i = PlayerSkill::ACTIVE_BEGIN; i < PlayerSkill::PASSIVE_BEGIN + PlayerSkill::PAGE_SIZE; i++) {
+		this->skills[i] = nullptr;
+	}
+	this->charInfo.skillPoints = 0;
+	for (unsigned int i = 1; i < this->getLevel(); i++){
+		if (i == 10 || i == 14)
+			this->charInfo.skillPoints += 2;
+		else if (i == 18)
+			this->charInfo.skillPoints += 3;
+		else if (i == 22)
+			this->charInfo.skillPoints += 4;
+		else if (i == 22 && ((i - 22) % 4) == 0)
+			this->charInfo.skillPoints += 5;
+		else if (i >= 100 && (i % 2) == 0)
+			this->charInfo.skillPoints += 5;
+	}
+}
+
+bool Player::changeSkill(const WORD totalId) {
+	Skill* wantedSkill = mainServer->getSkill(totalId);
+	WORD skillPageStart = Skill::getPage(wantedSkill);
+	WORD lastSkill = (skillPageStart + PlayerSkill::PAGE_SIZE);
+	for (unsigned int i = skillPageStart; i < lastSkill; i++) {
+		if (this->skills[i] && this->skills[i]->getIdBasic() == wantedSkill->getIdBasic()) {
+			this->skills[i] = wantedSkill;
+			return true;
+		}
+	}
+	for (unsigned int i = skillPageStart; i < lastSkill; i++) {
+		if (!this->skills[i]) {
+			this->skills[i] = wantedSkill;
+			return true;
+		}
+	}
+	return false;
+}
+
 DWORD Player::getExperienceForLevelup() {
 	DWORD result = 0x00;
 	if(this->getLevel() <= 15) {
@@ -937,39 +1115,73 @@ bool Player::pakInventory() {
 bool Player::pakQuestData() {
 	Packet pak(PacketID::World::Response::QUEST_DATA);
 	
-	for (unsigned int i = 0; i < 5; i++) //EPISODE
-		pak.addWord(0x00);
+	for (unsigned int i = 0; i < this->quest.var.episode.capacity(); i++)
+		pak.addWord(this->quest.var.episode[i]);
 
-	for (unsigned int i = 0; i < 3; i++) //JOB
-		pak.addWord(0x00);
+	for (unsigned int i = 0; i < this->quest.var.job.capacity(); i++) //JOB
+		pak.addWord(this->quest.var.job[i]);
 
-	for (unsigned int i = 0; i < 7; i++) //PLANET
-		pak.addWord(0x00);
+	for (unsigned int i = 0; i < this->quest.var.planet.capacity(); i++) //PLANET
+		pak.addWord(this->quest.var.planet[i]);
 
-	for (unsigned int i = 0; i < 10; i++) //UNION
-		pak.addWord(0x00);
+	for (unsigned int i = 0; i < this->quest.var.fraction.capacity(); i++) //UNION
+		pak.addWord(this->quest.var.fraction[i]);
 
-	for (unsigned int i = 0; i < 10; i++) {
-		pak.addWord(0x00); //QuestID
-		pak.addDWord(0x00); //QuestTime
+	for (unsigned int i = 0; i < this->quest.journey.capacity(); i++) {
+		pak.addWord(this->quest.journey[i]->getQuestId()); //QuestID
+		pak.addDWord(this->quest.journey[i]->getPassedTime()); //QuestTime
 
 		for (unsigned int j = 0; j < 10; j++) 
-			pak.addWord(0x00); //VARS
+			pak.addWord(this->quest.journey[i]->getVar(j)); //VARS
 		
-		pak.addDWord(0x00); //SWITCHES
+		pak.addDWord(this->quest.journey[i]->getSubSwitch()); //SWITCHES
 		for (unsigned int j = 0; j < 6; j++) {
-			pak.addWord(0x00); //ITEM HEAD
-			pak.addDWord(0x00); //ITEM DATA
+			pak.addWord(mainServer->buildItemHead(this->quest.journey[i]->getItem(j))); //ITEM HEAD
+			pak.addDWord(mainServer->buildItemData(this->quest.journey[i]->getItem(j))); //ITEM DATA
 		}
 	}
-	for (unsigned int i = 0; i < 0x40; i++)
-		pak.addByte(0x00);
+	for (unsigned int i = 0; i < 0x10; i++)
+		pak.addDWord(this->quest.dwFlag[i]);
 
 	for (unsigned int i = 0; i < 30; i++) {
 		pak.addWord(0x00); //ITEM HEAD
 		pak.addDWord(0x00);
 	}
 	
+	return this->sendData(pak);
+}
+
+bool Player::pakQuestAction() {
+	BYTE action = this->packet.getByte(0x00);
+	BYTE questPart = this->packet.getByte(0x01);
+	DWORD questHash = this->packet.getDWord(0x02);
+
+	bool result = false;
+	switch (action) {
+		case 0x01:
+			try {
+				throw TraceableExceptionARGS("QuestAction(): REQUEST_ADD - questPart %i, questHash = %i", questPart, questHash);
+			}
+			catch (std::exception& ex) {
+				std::cout << ex.what() << "\n";
+			}
+		break;
+		case 0x02:
+			if (this->searchAndSelectQuest(questHash)) {
+				this->getSelectedQuest()->reset();
+				result = true;
+			}
+			action = (result == true ? QuestReply::DELETE_OKAY : QuestReply::DELETE_FAILED);
+		break;
+		case 0x03:
+			result = QuestService::runQuest(this, questHash);
+			action = (result == true ? QuestReply::TRIGGER_OKAY : QuestReply::TRIGGER_FAILED);
+		break;
+	}
+	Packet pak(PacketID::World::Response::QUEST);
+	pak.addByte(action);
+	pak.addByte(questPart);
+	pak.addDWord(questHash);
 	return this->sendData(pak);
 }
 
@@ -1120,6 +1332,15 @@ bool Player::equipItem(const Item& item) {
 	return this->pakUpdateInventoryVisually(1, &slotId); 
 }
 
+bool Player::updateZulies(const QWORD newAmount) {
+	this->inventory[0x00].amount = static_cast<DWORD>(newAmount);
+
+	Packet pak(PacketID::World::Response::UPDATE_ZULIES);
+	pak.addQWord(this->inventory[0x00].amount);
+	pak.addByte(0x00);
+	return this->sendData(pak);
+}
+
 bool Player::pakPing() {
 	Packet pak(PacketID::World::Response::PING);
 	pak.addByte(0x00);
@@ -1170,10 +1391,9 @@ bool Player::pakAssignID(){
 	this->updateStats();
 	mainServer->assignClientID(this);
 
-	Packet pak(PacketID::World::Response::UNKNOWN);
-	pak.addWord(0x22);
-	pak.addWord(0x02);
-	pak.addWord(0x00);
+	Packet pak(PacketID::World::Response::CHANGE_ABILITY);
+	pak.addWord(StatType::PK_LEVEL);
+	pak.addDWord(0x02);
 	if(!this->sendData(pak))
 		return false;
 
@@ -1520,7 +1740,7 @@ bool Player::pakEquipmentChange() {
 	BYTE sourceSlot = static_cast<BYTE>(this->packet.getWord(0x00));
 	BYTE destSlot = static_cast<BYTE>(this->packet.getWord(0x02));
 	if(destSlot == 0x00) {
-		destSlot = this->findSlot( this->inventory[sourceSlot] );
+		destSlot = this->getFreeInventorySlot( this->inventory[sourceSlot] );
 	}
 	if(destSlot == std::numeric_limits<BYTE>::max())
 		return true;
@@ -1576,7 +1796,7 @@ bool Player::pakPickUpDrop() {
 	//In case we're the owner, find a fitting inventory slot
 	WORD inventorySlotId = 0x00;
 	if(!drop->isZulyDrop()) {
-		inventorySlotId = this->findSlot( drop->getItem() );
+		inventorySlotId = this->getFreeInventorySlot( drop->getItem() );
 
 		//In case we don't have a free (suiting) slot, tell the client
 		if(inventorySlotId == std::numeric_limits<BYTE>::max()) {
@@ -1694,6 +1914,9 @@ bool Player::handlePacket() {
 
 		case PacketID::World::Request::PICK_DROP:
 			return this->pakPickUpDrop();
+
+		case PacketID::World::Response::QUEST:
+			return this->pakQuestAction();
 
 		case PacketID::World::Request::SET_EMOTION:
 			return this->pakSetEmotion();

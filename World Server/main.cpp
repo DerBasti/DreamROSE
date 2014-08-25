@@ -16,7 +16,8 @@ int main() {
 	*/
 	MYSQL mySQL;
 	WorldServer server(29200, &mySQL);
-	server.loadEncryption();
+	server.dumpQuest((::workingPath + "\\QUEST_DUMP\\").c_str(), false );
+	/*server.loadEncryption();
 	
 	if (config->getValueBool("DumpAI")) {
 		std::cout << "Dumping AI...\r";
@@ -29,5 +30,6 @@ int main() {
 		std::cout << "Dumping Telegates finished!\n";
 	}
 	server.start();
+	*/
 	return 0x00;
 }

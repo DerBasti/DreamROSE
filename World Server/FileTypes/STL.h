@@ -292,6 +292,7 @@ class STLEntry {
 
 class STLFile {
 	private:
+		std::string filePath;
 		std::vector<STLEntry> entries;
 
 		void copyPrimaryLanguage(STLFileMULTI& file) {
@@ -310,10 +311,13 @@ class STLFile {
 		}
 	public:
 #ifdef __ROSE_USE_VFS__
-		STLFile(VFSData& data) {
+		STLFile(VFS* pVFS, const char* filePath) {
+			this->filePath = filePath;
+			VFSData data; pVFS->readFile(filePath, data);
 			STLFileMULTI multiFile(data);
 #else
 		STLFile(const char* filePath) {
+			this->filePath = std::string(filePath);
 			STLFileMULTI multiFile(filePath);
 #endif
 			this->copyPrimaryLanguage(multiFile);

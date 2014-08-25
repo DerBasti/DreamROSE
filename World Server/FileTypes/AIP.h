@@ -226,7 +226,7 @@ class AIService {
 		static void actionAttackDesignatedTarget(class NPC* npc, AITransfer* trans);
 		static void actionRunAway(class NPC* npc, const struct AIACTION_16* act);
 
-		static void actionDropItem( const struct AIACTION_17* act);
+		static void actionDropItem(class NPC* npc, const struct AIACTION_17* act);
 		static void actionCallFewFamilyMembersForAttack(class NPC* npc, const struct AIACTION_18* act);
 		static void actionSpawnPetAtPosition(class NPC* npc, const struct AIACTION_20* act, AITransfer *trans);
 		static void actionKillNPC(class NPC* npc);
@@ -257,8 +257,8 @@ class AIService {
 		static WORD getAbilityType(BYTE abilityType, class Entity* entity);
 		static const char* getAbilityTypeName(BYTE abilityType);
 		static const char* operationName(BYTE operation);
-		template<class _Ty1, class _Ty2> static bool checkOperation(_Ty1& first, _Ty2& second, BYTE operation);
-		template<class _Ty> static _Ty resultOperation(_Ty& first, _Ty& second, BYTE operation);
+		template<class _Ty1, class _Ty2> static bool checkOperation(_Ty1& first, const _Ty2& second, const BYTE operation);
+		template<class _Ty> static _Ty resultOperation(_Ty& first, const _Ty& second, const BYTE operation);
 		static bool run(class NPC* npcWithAI, const BYTE blockType, class Entity* target = nullptr, const DWORD damageDealt = 0x00);
 
 		static bool checkConditions( const std::vector<Trackable<char>>& ai, class NPC* monster, AITransfer* trans );

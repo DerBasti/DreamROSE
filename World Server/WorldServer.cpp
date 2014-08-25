@@ -62,6 +62,9 @@ WorldServer::~WorldServer() {
 		this->equipmentFile[i] = nullptr;
 	}
 
+	delete this->questFile;
+	this->questFile = nullptr;
+
 	delete this->npcAnimationInfos;
 	this->npcAnimationInfos = nullptr;
 
@@ -251,6 +254,7 @@ bool WorldServer::loadSTBs() {
 	this->skillFile = new SkillSTB(this->vfs, "3DDATA\\STB\\LIST_SKILL.STB");
 	this->dropFile = new STBFile(this->vfs, "3DDATA\\STB\\ITEM_DROP.STB");
 	this->zoneFile = new ZoneSTB(this->vfs, "3DDATA\\STB\\LIST_ZONE.STB");
+	this->questFile = new STBFile(this->vfs, "3DDATA\\STB\\LIST_QUEST.STB", false);
 
 	this->equipmentFile[ItemType::HEADGEAR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_CAP.STB");
 	this->equipmentFile[ItemType::ARMOR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_BODY.STB");
@@ -449,14 +453,17 @@ bool WorldServer::loadQuests() {
 		if (questPath.find(".qsd") == -1)
 			continue;
 
-		QSD newQSD(i, this->vfs, questPath.c_str());
+#ifdef __ROSE_DEBUG__
+		QSD* newQSD = new QSD(i, this->vfs, questPath.c_str());
+		this->qsdFiles.push_back(newQSD);
+		std::map<const DWORD, QuestEntry*>& questsToAdd = newQSD->getQuests();
+#else
+		QSD newQSD(this->vfs, questPath.c_str());
 
 		std::map<const DWORD, QuestEntry*>& questsToAdd = newQSD.getQuests();
+#endif //__ROSE_DEBUG__
 		std::map<const DWORD, QuestEntry*>::iterator it = questsToAdd.begin();
 		while (it != questsToAdd.end()) {
-			if (it->second->getQuestId() == 205) {
-				int x = 0;
-			}
 			this->questData.insert(*it);
 			it++;
 		}
@@ -507,6 +514,23 @@ WORD WorldServer::assignClientID(Entity* newEntity) {
 void WorldServer::freeClientId(Entity* toDelete) {
 	this->clientIDs[toDelete->getClientId()].second = nullptr;
 	toDelete->setClientId(0x00);
+}
+
+bool WorldServer::sendToAll(Packet& pak) {
+	bool success = true;
+	for (unsigned int i = 0; i < this->mapData.size(); i++) {
+		Map* currentMap = this->mapData[i];
+		for (unsigned int j = 0; j < currentMap->getSectorCount(); j++) {
+			MapSector* sector = currentMap->getSector(j);
+			LinkedList<Entity*>::Node* eNode = sector->getFirstPlayer();
+			while (eNode) {
+				Player* player = dynamic_cast<Player*>(eNode->getValue());
+				success &= player->sendData(pak);
+				eNode = sector->getNextPlayer(eNode);
+			}
+		}
+	}
+	return success;
 }
 
 
@@ -630,6 +654,23 @@ STBEntry& WorldServer::getEquipmentEntry(const BYTE itemType, const DWORD itemId
 	return eqFile->getRow(itemId);
 }
 
+QuestEntry* WorldServer::getQuestById(const DWORD questId) {
+	std::map<const DWORD, QuestEntry*>::iterator i = this->questData.begin();
+	while (i != this->questData.end()) {
+		QuestEntry* entry = (*i).second;
+#ifdef __ROSE_DEBUG__
+		DWORD currentQuestId = entry->getQuestId();
+		if(currentQuestId == questId) {
+#else
+		if (entry->getQuestId() == questId) {
+#endif
+			return entry;
+		}
+		i++;
+	}
+	return nullptr;
+}
+
 bool ChatService::sendDebugMessage(Player* receiver, const char* msg, ...) {
 	ArgConverterA(aMsg, msg);
 	Packet pak(PacketID::World::Response::LOCAL_CHAT);
@@ -691,6 +732,13 @@ bool ChatService::sendShout(Entity* entity, const char* aMsg, ...) {
 	return entity->sendToMap(pak);
 }
 
+bool ChatService::sendAnnouncement(Entity* entity, const char* aMsg, ...) {
+	ArgConverterA(msg, aMsg);
+	Packet pak(PacketID::World::Response::ANNOUNCEMENT);
+	pak.addString(msg.c_str());
+	pak.addByte(0x00);
+	return mainServer->sendToAll(pak);
+}
 
 void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 	std::string msg = std::string(chatCommand.getString(0x03)); //ClientID + char '/'
@@ -856,6 +904,50 @@ Skill* WorldServer::getSkill(const WORD skillIdBasic, const BYTE level) {
 	if (skill->getLevel() == 0x00)
 		return skill;
 	return this->getSkill(skillIdBasic + level - 1);
+}
+
+void WorldServer::dumpQuest(const char* totalFilePath, bool asHashFalse_Or_asQuestNameTrue) {
+	MakeSureDirectoryPathExists(totalFilePath);
+	char fileBuf[0x180] = { 0x00 };
+	char questHash[0x10] = { 0x00 };
+
+	auto it = this->questData.begin();
+	while (it != this->questData.end()) {
+		QuestEntry* quest = (*it).second;
+		if (!quest)
+			continue;
+		if (!asHashFalse_Or_asQuestNameTrue)
+			sprintf(fileBuf, "%s0x%x.log", totalFilePath, quest->getQuestHash());
+		else
+			sprintf(fileBuf, "%s%s.log", totalFilePath, quest->getQuestName().c_str());
+
+		CMyFile file(fileBuf, "a+");
+		file.clear();
+
+		if (quest->getNextQuest()) {
+			file.putStringWithVarOnly("[CHECK NEXT QUEST_TRIGGER %s [0x%x]]\n", quest->getNextQuest()->getQuestName().c_str(), quest->getNextQuest()->getQuestHash());
+		}
+		file.putString("=========================================\n");
+		const FixedArray<Trackable<char>>& conditions = quest->getConditions();
+		std::string curString = "";
+		for (unsigned int j = 0; j < conditions.size(); j++) {
+			const Trackable<char>& data = conditions[j];
+			curString = QuestService::conditionToString(data.getData());
+
+			file.putString(curString);
+		}
+		file.putString("=========================================\n");
+		const FixedArray<Trackable<char>>& actions = quest->getActions();
+		for (unsigned int j = 0; j < actions.size(); j++) {
+			const Trackable<char>& data = actions[j];
+			curString = QuestService::actionToString(data.getData());
+
+			file.putString(curString);
+		}
+		file.putString("=========================================");
+		file.close();
+		it++;
+	}
 }
 
 

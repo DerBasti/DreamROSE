@@ -132,6 +132,8 @@ class CMyFile
 			fseek(this->handle, pos, SEEK_SET);
 		}
 
+		__inline const DWORD getPosition() const { return ftell(this->handle); }
+
 		const DWORD getTotalSize() {
 			DWORD curPos = ftell(this->handle);
 			fseek(this->handle, 0, SEEK_END);
@@ -211,6 +213,7 @@ class CMyBufferedReader {
 		}
 		__inline void skip(const DWORD bytesToSkip) { this->offset += bytesToSkip; }
 		__inline void setPosition(const DWORD newPos) { this->offset = newPos; }
+		__inline const DWORD getPosition() const { return this->offset; }
 		DWORD getTotalSize() { return this->totalSize; }
 };
 

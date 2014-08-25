@@ -26,6 +26,9 @@ class WorldServer : public ServerSocket {
 		AISTB *aiFile;
 		SkillSTB *skillFile;
 		STBFile *statusFile;
+#ifdef __ROSE_DEBUG__
+		std::vector<QSD*> qsdFiles;
+#endif
 		STBFile *questFile;
 		STBFile *equipmentFile[15]; //0 = NOT VALID
 		STBFile *craftingFile;
@@ -94,6 +97,7 @@ class WorldServer : public ServerSocket {
 		__inline ClientSocket* createClient(SOCKET sock) {
 			return new Player(sock, this);
 		}
+		bool sendToAll(Packet& pak);
 		bool loadSTBs();
 		bool loadMapData();
 		WORD assignClientID(Entity*);
@@ -126,6 +130,7 @@ class WorldServer : public ServerSocket {
 		QuestEntry* getQuest(const DWORD questHash) {
 			return this->questData[questHash];
 		}
+		QuestEntry* getQuestById(const DWORD questId);
 
 		__inline time_t getWorldTime() const { return this->WorldTime.currentTime; }
 		DWORD getMapTime(const WORD mapId) {
@@ -165,9 +170,12 @@ class WorldServer : public ServerSocket {
 		__inline void dumpSectors(const WORD mapId, const char* filePath) {
 			return this->mapData[mapId]->dumpSectors(filePath);
 		}
+
+		void dumpQuest(const char* totalFilePath, bool asHashFalse_Or_asQuestNameTrue);
+
 		void dumpAICombined(const char* totalFilePath);
-		
 		void dumpAISeparated(std::string filePath);
+
 		void dumpTelegates(std::string filePath);
 };
 

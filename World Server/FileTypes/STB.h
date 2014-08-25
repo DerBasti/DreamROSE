@@ -31,11 +31,9 @@ class STBEntry {
 				this->columns.push_back(std::string(tmpField));
 			}
 		}
-#ifdef __ROSE_APPLY_STL__
 		void changeName(std::string& newName) {
 			this->columns.at(0x00) = newName;
 		}
-#endif
 		__inline virtual const DWORD operator[](const size_t colId) {
 			return this->getColumnAsInt(colId);
 		}
@@ -67,11 +65,9 @@ class STBEntry_INT {
 				this->columns.push_back(atol(tmpField));
 			}
 		}
-	#ifdef __ROSE_APPLY_STL__
 		void changeName(std::string& newName) {
 			//do nothing
 		}
-	#endif
 		__inline virtual const DWORD operator[](const size_t colId) {
 			return this->getColumn(colId);
 		}
@@ -122,22 +118,19 @@ template<class _STBEntry = ::STBEntry> class STBFile_Template {
 			this->storeData<FileType>(file);
 		}
 #ifdef __ROSE_USE_VFS__
-		void read(VFS* pVFS) {
+		void read(VFS* pVFS, bool applySTL = true) {
 			VFSData vfsData; pVFS->readFile(this->filePath.c_str(), vfsData);
 			CMyBufferedReader reader(vfsData.data, vfsData.data.size());
 			this->construction<CMyBufferedReader>(reader);
 
-#ifdef __ROSE_APPLY_STL__
-			std::string stlPath = vfsData.filePath;
-			stlPath = stlPath.substr(0, stlPath.find_last_of(".")) + std::string("_S.STL");
-			pVFS->readFile(stlPath.c_str(), vfsData);
-			if (vfsData.data.size() > 0) {
-				STLFile stlFile(vfsData);
+			if (applySTL) {
+				std::string stlPath = vfsData.filePath;
+				stlPath = stlPath.substr(0, stlPath.find_last_of(".")) + std::string("_S.STL");
+				STLFile stlFile(pVFS, stlPath.c_str());
 				for (unsigned int i = 0; i < stlFile.size(); i++) {
 					this->entries.at(stlFile.getEntryId(i)).changeName(stlFile.getEntryName(i));
 				}
 			}
-#endif //__ROSE_APPLY_STL__
 
 #else
 		void init(const char* filePath) {
@@ -152,9 +145,9 @@ template<class _STBEntry = ::STBEntry> class STBFile_Template {
 		}
 	public:
 #ifdef __ROSE_USE_VFS__
-		STBFile_Template(VFS* pVFS, std::string pathInVFS) {
+		STBFile_Template(VFS* pVFS, std::string pathInVFS, bool applySTL = true) {
 			this->filePath = pathInVFS;
-			this->read(pVFS);
+			this->read(pVFS, applySTL);
 
 #else //__ROSE_USE_VFS__
 		STBFile_Template(const char* filePath) {
@@ -191,6 +184,7 @@ class NPCSTB : public STBFile {
 		const static WORD DROPCHANCE_COLUMN = 0x14;
 		const static WORD ATTACKRANGE_COLUMN = 0x1A;
 		const static WORD AGGRO_COLUMN = 0x1B;
+		const static WORD QUEST_STRING_COLUMN = 0x29;
 #ifdef __ROSE_USE_VFS__
 		NPCSTB(VFS* pVFS, std::string pathInVFS) {
 			this->filePath = pathInVFS;
@@ -200,7 +194,7 @@ class NPCSTB : public STBFile {
 			this->read(filePath);
 #endif
 		}
-		__inline std::string getName(const WORD row) {
+		__inline const std::string& getName(const WORD row) {
 			return this->entries.at(row).getColumn(NPCSTB::NAME_COLUMN);
 		}
 		__inline WORD getWalkSpeed(const WORD row) {
@@ -253,6 +247,9 @@ class NPCSTB : public STBFile {
 		}
 		__inline bool isNPCEntry(const WORD row) {
 			return (this->entries.at(row).getColumn<WORD>(NPCSTB::AGGRO_COLUMN) == 999);
+		}
+		__inline const std::string& getQuestName(const WORD row) {
+			return this->entries.at(row).getColumn(NPCSTB::QUEST_STRING_COLUMN);
 		}
 };
 class ZoneSTB : public STBFile {
@@ -320,6 +317,24 @@ class EquipmentSTB {
 		const static WORD ATTACK_POWER_MAGICAL = 0x25;
 };
 
+//TODO: FILL BLANKS
+class SkillType {
+	private:
+		SkillType() {}
+		~SkillType() {}
+	public:
+		const static BYTE BASIC = 1;
+		const static BYTE CRAFTING = 2;
+		const static BYTE PHYSICAL_DAMAGE = 3;
+		const static BYTE POWER_UP_ONE = 4;
+		const static BYTE POWER_UP_TWO = 5;
+		const static BYTE MAGIC_DAMAGE_SINGLE = 5;
+		const static BYTE MAGIC_DAMAGE_AOE = 5;
+		const static BYTE RECOVERY_ACTION = 11;
+		const static BYTE PASSIVE = 15;
+		const static BYTE EMOTION = 16;
+};
+
 class SkillEntry : public STBEntry {
 	public:
 		const static BYTE CONDITIONS_MAX_NUM = 0x02;
@@ -372,6 +387,19 @@ class SkillEntry : public STBEntry {
 		const static BYTE COLUMN_REQUIRED_CONDITION_TYPE_LAST = 0x30;
 		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST = 0x2E;
 		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_LAST = 0x31;
+
+		static BYTE getPage(SkillEntry* entry) {
+			switch (entry->getType()) {
+				case SkillType::BASIC:
+				case SkillType::EMOTION:
+				case SkillType::RECOVERY_ACTION:
+					return 0x00;
+				break;
+				case SkillType::PASSIVE:
+					return 0x02;
+			}
+			return 0x01;
+		}
 
 		SkillEntry() {
 		}

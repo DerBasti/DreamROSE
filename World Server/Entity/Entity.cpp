@@ -98,7 +98,7 @@ bool Entity::movementRoutine() {
 			else {
 				//In case we keep attacking, make sure the cycle gets 'reset'.
 				if ((clock() - this->combat.animationTimePassed) > this->getTotalAttackAnimationTime()) {
-					this->combat.animationTimePassed = clock() - ((clock() - this->combat.animationTimePassed) - this->getTotalAttackAnimationTime()) - 2;
+					this->combat.animationTimePassed = clock() - ((clock() - this->combat.animationTimePassed) - this->getTotalAttackAnimationTime());
 					this->combat.nextAttackId = 0;
 				}
 			}

@@ -126,27 +126,12 @@ class Skill {
 };
 */
 
-//TODO: FILL BLANKS
-class SkillType {
-	private:
-		SkillType() {}
-		~SkillType() {}
-	public:
-		const static BYTE BASIC = 1;
-		const static BYTE CRAFTING = 2;
-		const static BYTE PHYSICAL_DAMAGE = 3;
-		const static BYTE POWER_UP_ONE = 4;
-		const static BYTE POWER_UP_TWO = 5;
-		const static BYTE MAGIC_DAMAGE_SINGLE = 5;
-		const static BYTE MAGIC_DAMAGE_AOE = 5;
-		const static BYTE PASSIVE = 15;
-};
-
 class PlayerSkill {
 	private:
 		PlayerSkill() {}
 		~PlayerSkill() {}
 	public:
+		const static BYTE PAGE_SIZE = 30;
 		const static BYTE BASIC_BEGIN = 0;
 		const static BYTE ACTIVE_BEGIN = 30;
 		const static BYTE PASSIVE_BEGIN = 60;
@@ -284,6 +269,15 @@ struct Position {
 		float yDist = (this->y - _y);
 
 		return static_cast<float>(sqrt((xDist * xDist) + (yDist * yDist)));
+	}
+
+	Position calcNewPositionWithinRadius(const float radius) {
+		//Get a random value and divide it by the diameter. In order to get a relation to the center, subtract it by the actual radius
+#define RADIUS_CALCULATION ((rand() / static_cast<const DWORD>(radius)) * 2) - radius
+		float preComma[2] = { RADIUS_CALCULATION, RADIUS_CALCULATION };
+		float afterComma[2] = { static_cast<float>(rand() / static_cast<float>(RAND_MAX)), static_cast<float>(rand() / static_cast<float>(RAND_MAX)) };
+#undef RADIUS_CALCULATION
+		return Position(preComma[0] + afterComma[0], preComma[1] + afterComma[1]);
 	}
 
 	__inline Position copy() {
@@ -483,6 +477,8 @@ class Inventory {
 		}
 };
 
+extern const DWORD makeQuestHash(const char *data);
+
 class NPCData {
 	private:
 		WORD id;
@@ -504,6 +500,7 @@ class NPCData {
 		WORD dropTableId;
 		float attackRange;
 		WORD dialogId;
+		DWORD questHash;
 		bool isNPC;
 	public:
 		NPCData() {
@@ -532,6 +529,7 @@ class NPCData {
 			this->isNPC = stb->isNPCEntry(rowId);
 			this->moneyPercentage = stb->getMoneyChance(rowId);
 			this->dropTableId = stb->getDroptableId(rowId);
+			this->questHash = ::makeQuestHash(stb->getQuestName(rowId).c_str());
 			this->dialogId = 0x00;
 		}
 		__inline WORD getTypeId() const { return this->id; }
@@ -555,6 +553,7 @@ class NPCData {
 		__inline WORD getDialogId() const { return this->dialogId; }
 		__inline WORD getAIId() const {return this->AIId; }
 		__inline bool getIsNPC() const { return this->isNPC; }
+		__inline const DWORD getQuestHash() const { return this->questHash; }
 };
 
 class StatType {
@@ -590,7 +589,7 @@ class StatType {
 		const static WORD MP_CONSUMPTION_RATE = 0x1D;
 		const static WORD EXPERIENCE_RATE = 0x1E;
 		const static WORD LEVEL = 0x1F;
-		const static WORD POINT = 0x20; //????
+		const static WORD STAT_POINT = 0x20; //????
 		const static WORD TENDENCY = 0x21; //????
 		const static WORD PK_LEVEL = 0x22;
 		const static WORD HEAD_SIZE = 0x23;

@@ -207,6 +207,11 @@ class Entity {
 		__inline virtual bool isAllied( class NPC* npc ) { return true; }
 		__inline virtual bool isAllied( class Monster* mon ) { return true; }
 		__inline virtual bool isAllied( class Player* player ) { return true; }
+
+		__inline virtual bool isPlayer() const { return this->getEntityType() == Entity::TYPE_PLAYER; }
+		__inline virtual bool isNPC() const { return this->getEntityType() == Entity::TYPE_NPC; }
+		__inline virtual bool isDrop() const { return this->getEntityType() == Entity::TYPE_DROP; }
+		__inline virtual bool isMonster() const { return this->getEntityType() == Entity::TYPE_MONSTER; }
 	
 		__inline virtual DWORD getBuffStatus(const BYTE type) {	return this->status.buffs.getVisuality(type); }
 		__inline virtual WORD getBuffAmount(const BYTE type) {	return this->status.buffs.getStatusAmount(type); }

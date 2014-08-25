@@ -19,11 +19,14 @@ class Drop : public Entity {
 	private:
 		Entity* owner;
 		Item item;
-		void construct(Entity* dropGiver, bool isPublicDomain);
+		void construct(Entity* dropGiver, const Position& pos, bool isPublicDomain);
 			
 	public:
+		//e.g. drop from client
 		Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain);
 		Drop(Entity* dropGiver, const Item& itemToDrop, bool isPublicDomain);
+		Drop(Entity* dropGiver, const Position& pos, DWORD zulyAmount, bool isPublicDomain);
+		Drop(Entity* dropGiver, const Position& pos, const Item& itemToDrop, bool isPublicDomain);
 		~Drop();
 
 		__inline bool isZulyDrop() const { return this->item.type == ItemType::MONEY; }

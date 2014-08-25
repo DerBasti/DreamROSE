@@ -102,9 +102,9 @@ void Monster::onDeath() {
 		}
 	}
 	if(toDrop.type == ItemType::MONEY) { 
-		new Drop(dropOwner,toDrop.amount, false);
+		new Drop(dropOwner, this->getPositionCurrent(), toDrop.amount, dropOwner != nullptr);
 	} else {
-		new Drop(dropOwner,toDrop, false);
+		new Drop(dropOwner, this->getPositionCurrent(), toDrop, dropOwner != nullptr);
 	}
 
 	AIService::run(this, AIP::ON_SELF_DEATH, this->getTarget(), totalAmountOfDamage);

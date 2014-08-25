@@ -126,14 +126,17 @@ class PacketID {
 						~Response() {}
 					public:
 						const static WORD PING = 0x700;
+						const static WORD ANNOUNCEMENT = 0x702;
 						const static WORD EXIT = 0x707;
 						const static WORD IDENFITY = 0x70C;
 						const static WORD PLAYER_INFOS = 0x715;
 						const static WORD PLAYER_INVENTORY = 0x716;
 						const static WORD UPDATE_INVENTORY = 0x718;
-						const static WORD RETURN_TO_CHARSERVER = 0x71C;
 						const static WORD QUEST_DATA = 0x71B;
-						const static WORD UNKNOWN = 0x721;
+						const static WORD RETURN_TO_CHARSERVER = 0x71C;
+						const static WORD UPDATE_ZULIES = 0x71E;
+						const static WORD CHANGE_STATPOINTS = 0x720;
+						const static WORD CHANGE_ABILITY = 0x721;
 						const static WORD QUEST = 0x730;
 						const static WORD ASSIGN_ID = 0x753;
 						const static WORD RESPAWN_AFTER_DEATH = 0x755;

@@ -45,9 +45,11 @@ bool NPC::getAttackAnimation() {
 
 WORD NPC::getNextAttackTime() const {
 	if (this->combat.attackAnimation != nullptr) {
-		if (this->combat.nextAttackId < this->combat.attackAnimation->getAttackTimerCount())
-			return this->combat.attackAnimation->getAttackTimer(this->combat.nextAttackId) * this->data->getAttackspeed() / this->getAttackSpeed();
-		return this->combat.attackAnimation->getTotalAnimationTime() + 500; //safe value to make sure nothing else happens during this time.
+		WORD nextTime = this->combat.attackAnimation->getTotalAnimationTime() + 500; //safe value to make sure nothing else happens during this time.
+		if (this->combat.nextAttackId < this->combat.attackAnimation->getAttackTimerCount()) {
+			nextTime = this->combat.attackAnimation->getAttackTimer(this->combat.nextAttackId) * this->data->getAttackspeed() / this->getAttackSpeed();
+		}
+		return nextTime;
 	}
 	return 0;
 }
@@ -55,7 +57,12 @@ WORD NPC::getNextAttackTime() const {
 WORD NPC::getTotalAttackAnimationTime() {
 	if (this->combat.attackAnimation != nullptr) {
 		//return this->combat.attackAnimation->getTotalAnimationTime() * this->data->getAttackspeed() / this->getAttackSpeed();
+#ifdef __ROSE_DEBUG__
+		WORD animationTime = this->combat.attackAnimation->getTotalAnimationTime() * 100 / this->getAttackSpeed();
+		return animationTime;
+#else
 		return this->combat.attackAnimation->getTotalAnimationTime() * 100 / this->getAttackSpeed();
+#endif //__ROSE_DEBUG__
 	}
 	return 0;
 }
@@ -134,7 +141,12 @@ bool NPC::onDamageReceived(Entity* enemy, const WORD damage) {
 
 float NPC::getAttackRange() {
 	if(this->data) {
+#ifdef __ROSE_DEBUG__
+		float attackRange = this->data->getAttackRange();
+		return attackRange;
+#else
 		return this->data->getAttackRange();
+#endif
 	}
 	return 100.0f; //1m
 }

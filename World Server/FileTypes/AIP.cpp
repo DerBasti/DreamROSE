@@ -163,7 +163,7 @@ const char* AIService::operationName(BYTE operation) {
 	return "UNKNOWN";
 }
 
-template<class _Ty1, class _Ty2> bool AIService::checkOperation(_Ty1& first, _Ty2& second, BYTE operation) {
+template<class _Ty1, class _Ty2> bool AIService::checkOperation(_Ty1& first, const _Ty2& second, const BYTE operation) {
 	switch(operation) {
 		case AIService::OPERATION_EQUAL:
 			return (first == second);
@@ -181,7 +181,7 @@ template<class _Ty1, class _Ty2> bool AIService::checkOperation(_Ty1& first, _Ty
 	return false;
 }
 
-template<class _Ty> static _Ty AIService::resultOperation(_Ty& first, _Ty& second, BYTE operation) {
+template<class _Ty> static _Ty AIService::resultOperation(_Ty& first, const _Ty& second, const BYTE operation) {
 	switch(operation) {
 		case AIService::OPERATION_ADDITION:
 			return _Ty(first + second);
@@ -534,7 +534,7 @@ bool AIService::conditionIsNPCNearby(NPC *npc, const AICOND_17* ai) {
 		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
 		for(;eNode;eNode = eNode->getNextNode()) {
 			Entity* curEntity = eNode->getValue();
-			if(!curEntity || curEntity->getEntityType() == Entity::TYPE_PLAYER) {
+			if(!curEntity || curEntity->isPlayer()) {
 				continue;
 			}
 			NPC* npc = dynamic_cast<NPC*>(curEntity);
@@ -575,10 +575,7 @@ bool AIService::conditionHasNoOwner(NPC* npc, const AICOND_21* ai) {
 }
 
 bool AIService::conditionHasOwner(NPC* npc, const AICOND_22* ai) {
-	Monster* mon = dynamic_cast<Monster*>(npc);
-	if(!mon || mon->getOwner() == nullptr)
-		return false;
-	return true;
+	return !AIService::conditionHasNoOwner(npc, nullptr);
 }
 
  bool AIService::conditionWorldTime(const AICOND_23* ai) {
@@ -743,7 +740,7 @@ void AIService::executeActions( const std::vector<Trackable<char>>& ai, NPC* npc
 				AIService::actionRunAway(npc, reinterpret_cast<const AIACTION_16*>(aip));
 			break;
 			case BasicAIP::__AI_ACTION_17__:
-				AIService::actionDropItem( reinterpret_cast<const AIACTION_17*>(aip));
+				AIService::actionDropItem(npc, reinterpret_cast<const AIACTION_17*>(aip));
 			break;
 			case BasicAIP::__AI_ACTION_18__:
 				AIService::actionCallFewFamilyMembersForAttack(npc, reinterpret_cast<const AIACTION_18*>(aip));
@@ -989,14 +986,14 @@ void AIService::actionRunAway(NPC* npc, const AIACTION_16* act) {
 	npc->setPositionDest(newPos);
 }
 
-void AIService::actionDropItem(const AIACTION_17* act) {
+void AIService::actionDropItem(NPC* npc, const AIACTION_17* act) {
 	short dropItem = act->items[ rand() % 5 ];
 	
 	Item item;
 	item.type = dropItem / 1000;
 	item.id = dropItem % 1000;
 
-	new Drop(nullptr, item, true);
+	new Drop(npc, npc->getPositionCurrent().calcNewPositionWithinRadius(500), item, true);
 }
 
 void AIService::actionCallFewFamilyMembersForAttack(NPC* npc, const AIACTION_18* act) {
@@ -1029,13 +1026,15 @@ void AIService::actionCallFewFamilyMembersForAttack(NPC* npc, const AIACTION_18*
 void AIService::actionSpawnPetAtPosition(NPC* npc, const AIACTION_20* act, AITransfer *trans) {
 	switch(act->positionType) {
 		case AIACTION_20::CURRENT_POSITION:
-
+			new Monster(mainServer->getNPCData(act->getMonsterId()), mainServer->getAIData(act->getMonsterId()), npc->getMapId(), npc->getPositionCurrent().calcNewPositionWithinRadius(static_cast<float>(act->distance)));
 		break;
 		case AIACTION_20::DESIGNATED_TARGET_POSITION:
-
+			if (trans->designatedTarget)
+				new Monster(mainServer->getNPCData(act->getMonsterId()), mainServer->getAIData(act->getMonsterId()), npc->getMapId(), trans->designatedTarget->getPositionCurrent().calcNewPositionWithinRadius(static_cast<float>(act->distance)));
 		break;
 		case AIACTION_20::TARGET_POSITION:
-
+			if (npc->getTarget())
+				new Monster(mainServer->getNPCData(act->getMonsterId()), mainServer->getAIData(act->getMonsterId()), npc->getMapId(), npc->getTarget()->getPositionCurrent().calcNewPositionWithinRadius(static_cast<float>(act->distance)));
 		break;
 	}
 }
@@ -1069,7 +1068,7 @@ void AIService::actionChangeNPCVar(NPC* npc, const AIACTION_25* act) {
 void AIService::actionSayMessage(NPC* npc, const AIACTION_28* act) {
 	switch(act->messageType) {
 		case AIACTION_28::LOCAL_CHAT:
-
+			//ChatService::sendMessage(npc, act->getMessageId());
 		break;
 		case AIACTION_28::SHOUT_CHAT:
 
@@ -1088,12 +1087,12 @@ void AIService::actionMoveToOwner(NPC *npc, const AIACTION_29* act) {
 	Entity* owner = mon->getOwner();
 	float dist = mon->getPositionCurrent().distanceTo( owner->getPositionCurrent() );
 	
-	mon->setPositionDest( Position(owner->getCurrentX() - (0.2f * dist), owner->getCurrentY() - (0.2f * dist)) );
+	mon->setPositionDest( owner->getPositionCurrent().calcNewPositionWithinRadius(dist * 0.2f) );
 	mon->setStance(Stance::RUNNING);
 }
 
 void AIService::actionSetQuestTrigger(NPC *npc, const AIACTION_30* act) {
-	const DWORD hash = QuestService::makeQuestHash(act->triggerName);
+	const DWORD hash = ::makeQuestHash(act->triggerName);
 	try { throw TraceableExceptionARGS("NPC %s RUNS QUESTTRIGGER %i", npc->getName().c_str(), hash); }
 	catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 	QuestService::runQuest(npc, hash);
@@ -1101,7 +1100,8 @@ void AIService::actionSetQuestTrigger(NPC *npc, const AIACTION_30* act) {
 
 void AIService::actionAttackOwnersTarget(NPC* npc) {
 	Monster* mon = dynamic_cast<Monster*>(npc);
-	if(!mon) return;
+	if(!mon) 
+		return;
 
 	Entity *owner = mon->getOwner();
 	if(owner && owner->getTarget() != nullptr && !owner->isAllied(owner->getTarget())) {

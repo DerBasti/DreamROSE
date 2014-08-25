@@ -13,7 +13,7 @@ extern std::string workingPath;
 
 class ServerSocket : public BaseSocket {
 	private:
-		int maxFd;
+		SOCKET maxFd;
 		struct sockaddr_in ain;
 		struct sockaddr_in sain;
 		bool mainLoop();
