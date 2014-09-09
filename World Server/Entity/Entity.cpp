@@ -18,7 +18,7 @@ Entity::~Entity() {
 	if(this->getSector())
 		this->getSector()->removeEntity(this);
 	this->entityInfo.ingame = false;
-	mainServer->freeClientId(this);
+	mainServer->getMap(this->getMapId())->freeClientId(this);
 }
 
 void Entity::setPositionCurrent(const Position& newPos) { 
@@ -33,8 +33,8 @@ void Entity::setPositionDest(const Position& newPos) {
 void Entity::setTarget(Entity* target) { 
 	if(target && target->getCurrentHP()>0) {
 		Packet pak( PacketID::World::Response::INIT_BASIC_ATTACK);
-		pak.addWord( this->getClientId() );
-		pak.addWord( target->getClientId() );
+		pak.addWord(this->getLocalId());
+		pak.addWord(target->getLocalId());
 		pak.addWord ( this->getMovementSpeed() );
 		pak.addFloat( target->getCurrentX() );
 		pak.addFloat( target->getCurrentY() );
@@ -174,7 +174,7 @@ bool Entity::attackRoutine() {
 bool Entity::attackEnemy() { 
 	Entity *enemy = this->getTarget();
 	if (!enemy) {
-		std::cout << "attackEnemy() was called by " << this->getName().c_str() << "(" << this->getClientId() << ") without a target!\n";
+		std::cout << "attackEnemy() was called by " << this->getName().c_str() << "(" << this->getLocalId() << ") without a target!\n";
 		return false;
 	}
 	WORD damage = 0x00;
@@ -217,8 +217,8 @@ bool Entity::addDamage(Entity* enemy, const WORD damage, WORD& flag) {
 		this->stats.curHP -= damage;
 	}
 	Packet pak(PacketID::World::Response::BASIC_ATTACK);
-	pak.addWord(enemy->getClientId());
-	pak.addWord(this->getClientId());
+	pak.addWord(enemy->getLocalId());
+	pak.addWord(this->getLocalId());
 	pak.addWord((damage & 0x7FF) | flag);
 	return this->sendToVisible(pak);
 }

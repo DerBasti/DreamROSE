@@ -7,140 +7,6 @@
 #include "Buffs.h"
 #include <algorithm>
 
-/*
-class Skill {
-	private:
-		WORD id;
-		BYTE level; //Col2
-		BYTE pointsRequiredPerLevelUp; //Col3
-		BYTE type;//Col4
-		DWORD initRange; //Col6
-		BYTE targetType; //Col7
-		DWORD aoeRange; //col8
-		WORD attackPower; //col9
-		bool doesHarm; // Col10
-		DWORD status[2]; //Col11/12
-		BYTE successRate; //Col13 -- 0 = 100%
-		WORD duration; //Col14
-
-		BYTE costType[2]; //Col16/18
-		WORD costAmount[2]; //Col17/19
-		WORD coolDown; //Col20
-	
-		struct buffValue {
-			WORD type; //Col 21/24/11
-			WORD flatValue; //Col22/25/9
-			WORD percentValue; //Col23/26/"0"
-
-			buffValue() { type = flatValue = percentValue = 0x00; }
-		} buffs[3];	
-
-		WORD weaponType[5]; //Col30-34
-		WORD classType[4]; //Col35-38
-
-		struct reqSkill {
-			WORD id;
-			BYTE level;
-		} requiredSkill[3]; //Col39/40; 41/42; 43/44
-	
-	
-		struct reqConditions {
-			WORD type; //Col45;47
-			WORD amount; //Col46;48
-		} requirements[2];
-
-	public:
-		const static BYTE REQUIREMENTS_MAX_NUM = 0x02;
-		const static BYTE WEAPONTYPE_MAX_MUM = 0x05;
-
-		const static BYTE BASIC_BEGIN = 0;
-		const static BYTE ACTIVE_BEGIN = 30;
-		const static BYTE PASSIVE_BEGIN = 60;
-		const static BYTE PREMIUM_BEGIN = 90;
-		const static BYTE PLAYER_MAX_SKILLS = 120;
-		Skill(SkillSTB* stb, const WORD rowId) {
-			this->aoeRange = stb->getAOERange(rowId);
-			this->attackPower = stb->getAttackpower(rowId);
-			
-			for(BYTE i=0;i<SkillSTB::BUFF_MAX_NUM;i++) {
-				this->buffs[i].flatValue = stb->getBuffValueFlat(rowId, i);
-				this->buffs[i].percentValue = stb->getBuffValuePercentage(rowId, i);
-				this->buffs[i].type = stb->getBuffType(rowId, i);
-			}
-			
-			for(BYTE i=0;i<SkillSTB::CLASS_MAX_NUM;i++)
-				this->classType[i] = stb->getClassType(rowId, i);
-			
-			this->coolDown = stb->getCooldown(rowId);
-			
-			for(BYTE i=0;i<SkillSTB::COSTS_MAX_NUM;i++) {
-				this->costAmount[i] = stb->getCostAmount(rowId, i);
-				this->costType[i] = stb->getCostType(rowId, i);
-			}
-			this->doesHarm = stb->getDoesHarm(rowId);
-			this->duration = stb->getDuration(rowId);
-			this->id = rowId - this->level + 1;
-			this->initRange = stb->getInitRange(rowId);
-			this->level = stb->getLevel(rowId);
-			this->pointsRequiredPerLevelUp = stb->getRequiredPointsPerLevelup(rowId);
-			for(BYTE i=0;i<SkillSTB::REQUIRED_SKILL_MAX_NUM;i++) {
-				this->requiredSkill[i].id = stb->getRequiredSkillID(rowId, i);
-				this->requiredSkill[i].level = stb->getRequiredSkillLevel(rowId, i);
-			}
-			for(BYTE i=0;i<SkillSTB::CONDITIONS_MAX_NUM;i++) {
-				this->requirements[i].amount = stb->getRequiredConditionAmount(rowId, i);
-				this->requirements[i].type = stb->getRequiredConditionType(rowId, i);
-			}
-		}
-
-		__inline const WORD getId() const { return this->id + (this->level>0 ? this->level-1 : 0); }
-		__inline const WORD getBasicId() const { return this->id; }
-		__inline const BYTE getLevel() const { return this->level; }
-		__inline const BYTE getPointsRequiredPerLevelUp() const { return this->pointsRequiredPerLevelUp; }
-		__inline const BYTE getType() const { return this->type; }
-		__inline const DWORD getInitRange() const { return this->initRange; }
-		__inline const BYTE getTargetType() const { return this->targetType; }
-		__inline const DWORD getAoeRange() const { return this->aoeRange; }
-		__inline const WORD getAttackPower() const { return this->attackPower; }
-		__inline const bool getDoesHarm() const { return this->doesHarm; }
-		__inline const DWORD getStatus(const BYTE statusOutOfTwo) const { return this->status[statusOutOfTwo % 2]; }
-		__inline const BYTE getSuccessRate() const { return this->successRate; }
-		__inline const WORD getDuration() const { return this->duration; }
-		__inline const BYTE getCostType(const BYTE typeOutOfTwo) const { return this->costType[typeOutOfTwo % 2]; }
-		__inline const WORD getCostAmount(const BYTE typeOutOfTwo) const { return this->costAmount[typeOutOfTwo % 2]; }
-		__inline const WORD getCoolDown() const { return this->coolDown; }
-
-		__inline const WORD getBuffType(const BYTE typeOutOfThree) const { return this->buffs[typeOutOfThree % 3].type; }
-		__inline const WORD getBuffAmountFlat(const BYTE typeOutOfThree) const { return this->buffs[typeOutOfThree % 3].flatValue; }
-		__inline const WORD getBuffAmountPercentage(const BYTE typeOutOfThree) const { return this->buffs[typeOutOfThree % 3].percentValue; }
-
-		__inline const WORD getWeaponType(const BYTE typeOutOfFive) const { return this->weaponType[typeOutOfFive % 5]; }
-		__inline const WORD getClassType(const BYTE typeOutOfFour) const { return this->classType[typeOutOfFour % 4]; }
-
-		__inline const WORD getRequiredSkillBasicId(const BYTE typeOutOfThree) const { return this->requiredSkill[typeOutOfThree % 3].id; }
-		__inline const BYTE getRequiredSkillLevel(const BYTE typeOutOfThree) const { return this->requiredSkill[typeOutOfThree % 3].level; }
-		__inline const WORD getRequiredSkillId(const BYTE typeOutOfThree) const { return this->requiredSkill[typeOutOfThree % 3].id + (this->requiredSkill[typeOutOfThree % 3].level>0 ? this->requiredSkill[typeOutOfThree % 3].level - 1 : 0); }
-	
-		__inline const WORD getRequirementType(const BYTE typeOutOfTwo) const { return this->requirements[typeOutOfTwo % 2].type; }
-		__inline const WORD getRequirementAmount(const BYTE typeOutOfTwo) const { return this->requirements[typeOutOfTwo % 2].amount; }
-};
-*/
-
-class PlayerSkill {
-	private:
-		PlayerSkill() {}
-		~PlayerSkill() {}
-	public:
-		const static BYTE PAGE_SIZE = 30;
-		const static BYTE BASIC_BEGIN = 0;
-		const static BYTE ACTIVE_BEGIN = 30;
-		const static BYTE PASSIVE_BEGIN = 60;
-		const static BYTE PREMIUM_BEGIN = 90;
-		const static BYTE PLAYER_MAX_SKILLS = 120;
-};
-
-typedef SkillEntry Skill;
-
 struct Stats {
 	WORD curHP;
 	WORD curMP;
@@ -373,6 +239,83 @@ class JobType {
 		const static WORD ARTISAN = 422;
 };
 
+class OperationService {
+	private:
+		OperationService() { }
+		~OperationService() { }
+	public:
+		template<class _Ty1, class _Ty2> static bool checkOperation(_Ty1& first, const _Ty2& second, const BYTE operation) {
+			switch (operation) {
+				case OperationService::OPERATION_EQUAL:
+						return (first == second);
+				case OperationService::OPERATION_BIGGER:
+						return (first > second);
+				case OperationService::OPERATION_BIGGER_EQUAL:
+						return (first >= second);
+				case OperationService::OPERATION_SMALLER:
+						return (first < second);
+				case OperationService::OPERATION_SMALLER_EQUAL:
+						return (first <= second);
+				case OperationService::OPERATION_NOT_EQUAL:
+						return (first != second);
+			}
+			return false;
+		}
+		template<class _Ty> static _Ty resultOperation(_Ty first, const _Ty& second, const BYTE operation) {
+			switch (operation) {
+				case OperationService::OPERATION_ADDITION:
+						return _Ty(first + second);
+				case OperationService::OPERATION_SUBTRACTION:
+						return _Ty(first - second);
+				case OperationService::OPERATION_MULTIPLICATION:
+						return _Ty(first * second);
+				case OperationService::OPERATION_INCREMENT:
+						return _Ty(first + 1);
+				case OperationService::OPERATION_RETURN_RHS:
+						return _Ty(second);
+			}
+			return _Ty(0);
+		}
+		static const char* operationName(BYTE operation) {
+			switch (operation) {
+				case OperationService::OPERATION_EQUAL:
+					return "==";
+				case OperationService::OPERATION_BIGGER:
+					return ">";
+				case OperationService::OPERATION_BIGGER_EQUAL:
+					return ">=";
+				case OperationService::OPERATION_SMALLER:
+					return  "<";
+				case OperationService::OPERATION_SMALLER_EQUAL:
+					return "<=";
+				case OperationService::OPERATION_NOT_EQUAL:
+					return "!=";
+				case OperationService::OPERATION_ADDITION:
+					return "+";
+				case OperationService::OPERATION_SUBTRACTION:
+					return "-";
+				case OperationService::OPERATION_MULTIPLICATION:
+					return "*";
+				case OperationService::OPERATION_INCREMENT:
+					return "this++";
+				case OperationService::OPERATION_RETURN_RHS:
+					return "this = rhs";
+			}
+			return "UNKNOWN";
+		}
+		const static BYTE OPERATION_EQUAL = 0x00;
+		const static BYTE OPERATION_BIGGER = 0x01;
+		const static BYTE OPERATION_BIGGER_EQUAL = 0x02;
+		const static BYTE OPERATION_SMALLER = 0x03;
+		const static BYTE OPERATION_SMALLER_EQUAL = 0x04;
+		const static BYTE OPERATION_RETURN_RHS = 0x05;
+		const static BYTE OPERATION_ADDITION = 0x06;
+		const static BYTE OPERATION_SUBTRACTION = 0x07;
+		const static BYTE OPERATION_MULTIPLICATION = 0x08;
+		const static BYTE OPERATION_INCREMENT = 0x09;
+		const static BYTE OPERATION_NOT_EQUAL = 0x0A;
+};
+
 struct Item {
 	BYTE type;
 	WORD id;
@@ -389,17 +332,20 @@ struct Item {
 		this->clear();
 	}
 	Item(const DWORD itemId) {
+		this->clear();
 		this->id = static_cast<WORD>(itemId % 1000);
 		this->type = static_cast<BYTE>(itemId / 1000);
+		this->amount = 0x01;
 	}
 	void clear() {
 		this->type = 0x00;		
-		this->lifespan = this->gem = this->stats = this->refine = 0x00;
+		this->gem = this->stats = this->refine = 0x00;
 		this->id = 0x00;
 		this->isAppraised = true;
 		this->isSocketed = false;
 		this->amount = 0x00;
-		this->durability = 0x00;
+		this->durability = 0x30;
+		this->lifespan = 1000;
 	}
 	bool isValid() {
 		if((this->type > 0 && this->type < ItemType::PAT) || this->type == ItemType::MONEY) {
@@ -408,73 +354,57 @@ struct Item {
 		}
 		return false;
 	}
+	const DWORD getPakVisuality() const {
+		DWORD basicResult = (this->id | this->refine * 0x10000);
+		if (this->gem == 0) {
+			return basicResult;
+		}
+		return ((0xd0000) + ((this->gem - 320) * 0x400) | basicResult);
+	}
+	const WORD getPakHeader() const {
+		if (this->amount == 0x00)
+			return 0;
+		WORD result = static_cast<WORD>((this->id << 5) & 0xFFE0);
+		return static_cast<WORD>(result | (this->type & 0x1F));
+	}
+	const DWORD getPakData() const {
+		if ((this->type >= ItemType::CONSUMABLES && this->type <= ItemType::QUEST) || this->type == ItemType::MONEY || this->amount == 0) {
+			return this->amount;
+		}
+
+		//0101 1111 1001 0000
+		DWORD refinePart = (this->refine >> 4) << 28;
+		DWORD appraisePart = this->isAppraised << 27;
+		DWORD socketPart = this->isSocketed << 26;
+		DWORD lifeSpanPart = this->lifespan << 16;
+		DWORD durabilityPart = this->durability << 9;
+		DWORD stats = this->stats;
+		DWORD gem = this->gem;
+		if (gem != 0x00)
+			stats = 0x00;
+
+		return (refinePart | appraisePart | socketPart | lifeSpanPart | durabilityPart | stats | gem);
+	}
 };
 
 
 struct Combat {
 	class Entity* target;
 	class ZMO* attackAnimation;
+
+	//SkillEntry* = Skill* (typedef of it)
+	class SkillEntry* skill;
 	BYTE nextAttackId;
 	DWORD animationTimePassed;
 
 	Combat() { 
 		this->target = nullptr; 
 		this->animationTimePassed = 0x00;
+		this->skill = nullptr;
 	}
 
 	__inline Entity* getTarget() const { return this->target; }
 	__inline void setTarget( Entity* newTarget ) { this->target = newTarget; }
-};
-
-class Inventory {
-	private:
-		Inventory();
-		~Inventory();
-	public:
-		const static WORD FACE = 1;
-		const static WORD HEADGEAR = 2;
-		const static WORD ARMOR = 3;
-		const static WORD GLOVES = 6;
-		const static WORD SHOES = 4;
-		const static WORD BACK = 5;
-		const static WORD WEAPON = 7;
-		const static WORD SHIELD = 8;
-
-		const static WORD TAB_SIZE = 30;
-
-		const static WORD ARROWS = 132;
-		const static WORD BULLETS = 133;
-		const static WORD CANNONSHELLS = 134;
-		const static WORD CART_FRAME = 135;
-		const static WORD CART_ENGINE = 136;
-		const static WORD CART_WHEELS = 137;
-		const static WORD CART_WEAPON = 138;
-		const static WORD CART_ABILITY = 139;
-		const static WORD MAXIMUM = 140;
-
-		const static BYTE fromItemType(const BYTE itemType) {
-			switch(itemType) {
-				case ItemType::HEADGEAR:
-					return Inventory::HEADGEAR;
-				case ItemType::FACE:
-					return Inventory::FACE;
-				case ItemType::ARMOR:
-					return Inventory::ARMOR;
-				case ItemType::GLOVES:
-					return Inventory::GLOVES;
-				case ItemType::SHOES:
-					return Inventory::SHOES;
-				case ItemType::BACK:
-					return Inventory::BACK;
-				case ItemType::WEAPON:
-					return Inventory::WEAPON;
-				case ItemType::SHIELD:
-					return Inventory::SHIELD;
-				case ItemType::MONEY:
-					return 0x00; //TEST
-			}
-			return Inventory::MAXIMUM - 1;
-		}
 };
 
 extern const DWORD makeQuestHash(const char *data);

@@ -76,6 +76,9 @@ Map::Map() {
 	this->dayCycle.length = 0x01;
 	this->mapPath = std::string("");
 	this->sectorSize = IFO::CUSTOMIZED_SECTOR_SIZE;
+
+	for (unsigned int i = 0; i<0x10000; i++)
+		this->clientIDs[i] = nullptr;
 }
 
 Map::Map(const Map& rhs) {
@@ -87,6 +90,26 @@ const Map& Map::operator=(const Map& rhs) {
 	this->dayCycle.length = rhs.dayCycle.length;
 	this->mapPath = rhs.mapPath;
 	return (*this);
+}
+WORD Map::assignClientID(Entity* newEntity) {
+	if (!newEntity)
+		return 0;
+
+	//ClientID 0 = invalid state.
+	for (unsigned int i = 1; i<0x10000; i++) {
+		Entity*& entity = this->clientIDs[i];
+		if (!entity) {
+			this->clientIDs[i] = newEntity;
+			newEntity->setLocalId(i);
+			return i;
+		}
+	}
+	return 0;
+}
+
+void Map::freeClientId(Entity* toDelete) {
+	this->clientIDs[toDelete->getLocalId()] = nullptr;
+	toDelete->setLocalId(0x00);
 }
 
 
@@ -182,6 +205,17 @@ ZON::EventInfo* Map::getRespawn(Position& pos) {
 		}
 	}
 	return bestRespawn;
+}
+
+const Position Map::getRespawnPoint(const char* spawnName) {
+	ZON* zon = mainServer->getZON(this->getId());
+
+	ZON::EventInfo* respawn = nullptr;
+	for (unsigned int i = 0; i < zon->getEventInfoAmount(); i++) {
+		if (_stricmp(zon->getEventInfo(i).name.c_str(), spawnName) == 0)
+			return Position(zon->getEventInfo(i).x, zon->getEventInfo(i).y);
+	}
+	return Position(0.0f, 0.0f);
 }
 
 const WORD Map::getRespawnPointId(Position& pos) {

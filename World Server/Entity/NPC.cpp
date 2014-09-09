@@ -17,7 +17,7 @@ void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId
 	this->setPositionCurrent(pos);
 	this->setPositionDest(pos);
 
-	mainServer->assignClientID(this);
+	mainServer->getMap(mapId)->assignClientID(this);
 
 	this->lastAICheck = 0x00;
 
@@ -36,6 +36,18 @@ void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId
 		this->checkVisuality();
 		AIService::run(this, AIP::ON_SPAWN);
 	}
+}
+
+bool NPC::convertTo(const WORD newType) {
+	this->ai = mainServer->getAIData(newType);
+	this->data = mainServer->getNPCData(newType);
+
+	this->updateStats();
+
+	Packet pak(PacketID::World::Response::CONVERT_MONSTER);
+	pak.addWord(this->getLocalId());
+	pak.addWord(newType);
+	return this->sendToVisible(pak);
 }
 
 bool NPC::getAttackAnimation() { 
@@ -128,12 +140,12 @@ void NPC::updateMovementSpeed() {
 bool NPC::onDamageReceived(Entity* enemy, const WORD damage) {
 	AIService::run(this, AIP::ON_DAMAGED, enemy, damage);
 
-	if (this->damageDealers.containsKey(enemy->getClientId())) {
-		WORD id = enemy->getClientId();
+	if (this->damageDealers.containsKey(enemy->getLocalId())) {
+		WORD id = enemy->getLocalId();
 		this->damageDealers.getValueByKey(id) += damage;
 	}
 	else {
-		this->damageDealers.add(enemy->getClientId(), damage);
+		this->damageDealers.add(enemy->getLocalId(), damage);
 	}
 
 	return true;
@@ -155,8 +167,8 @@ bool NPC::setPositionVisually(const Position& pos) {
 	Entity* target = this->combat.getTarget();
 
 	Packet pak(PacketID::World::Response::MOVEMENT_MONSTER);
-	pak.addWord(this->getClientId());
-	pak.addWord(target != nullptr ? target->getClientId() : 0x00);
+	pak.addWord(this->getLocalId());
+	pak.addWord(target != nullptr ? target->getLocalId() : 0x00);
 	pak.addWord(this->getMovementSpeed());
 	pak.addFloat(static_cast<float>(pos.x));
 	pak.addFloat(static_cast<float>(pos.y));

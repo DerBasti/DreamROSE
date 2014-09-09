@@ -44,6 +44,7 @@ class NPC : public Entity {
 		virtual void updateHitrate();
 		virtual void updateDodgerate();
 		virtual void updateMovementSpeed();
+		virtual bool convertTo(const WORD newType);
 
 		__inline virtual Position getSpawnPosition() const { return this->position.source; }
 

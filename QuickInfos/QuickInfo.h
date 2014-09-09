@@ -1185,6 +1185,8 @@ class SortedList : private _KeyAlloc, _ValAlloc {
 				this->_keyAllocator.construct(&this->compareInfo._firstItem[i], *(rhs.compareInfo._firstItem + i));
 				this->_valAllocator.construct(&this->valueInfo._firstItem[i], *(rhs.valueInfo._firstItem + i));
 			}
+			this->_usedSize = rhs._usedSize;
+			this->_capacity = rhs._capacity;
 		}
 
 		SortedList& operator=(const SortedList<_KeyType, _ValType>& rhs) {
@@ -1433,8 +1435,8 @@ class UniqueSortedList {
 			this->container.clear();
 		}
 		~UniqueSortedList() {
-			this->container.clear();
 		}
+
 		size_t size() const { return this->container.size(); }
 		size_t capacity() const { return this->container.capacity(); }
 

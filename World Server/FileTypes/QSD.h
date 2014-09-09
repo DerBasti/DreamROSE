@@ -79,11 +79,13 @@ class PlayerQuest {
 		WORD questId;
 		DWORD passedTime;
 		union {
-			DWORD subSwitch;
-			BYTE subSwitchBYTE[4];
+			DWORD lever;
+			BYTE leverBYTE[4];
 		};
+		BYTE slotId;
 	public:
-		PlayerQuest(const WORD questId) {
+		PlayerQuest(const BYTE slotId) {
+			this->slotId = slotId;
 			this->questId = 0x00;
 			this->passedTime = 0x00;
 			this->questVars.reserve(PlayerQuest::QUEST_VAR_MAX);
@@ -136,6 +138,9 @@ class PlayerQuest {
 				}
 			}
 		}
+
+		//To make things easier
+		__inline const BYTE getSlotId() const { return this->slotId; }
 		__inline Item getItem(const BYTE slot) const { return this->questItems[slot]; }
 		__inline WORD getVar(const BYTE slot) const { return this->questVars[slot]; }
 		__inline const WORD getQuestId() const { return this->questId; }
@@ -145,7 +150,11 @@ class PlayerQuest {
 		__inline const WORD getQuestVar(const WORD varType) { return this->questVars[varType]; }
 		__inline const void setQuestVar(const WORD varType, const WORD newValue) { this->questVars[varType] = newValue; }
 		__inline const DWORD getPassedTime() const { return this->passedTime; }
-		__inline const DWORD getSubSwitch() const { return this->subSwitch; }
+		__inline void setPassedTime(const DWORD newTime) { this->passedTime = newTime; }
+
+		__inline const DWORD getSwitch(const WORD switchBit) { return (this->leverBYTE[switchBit>>3] & (1 << (switchBit & 0x07))); }
+		__inline const DWORD getAllSwitches() const { return this->lever; }
+		void setSwitch(const WORD switchNum, const DWORD value);
 };
 
 class QuestReply {
@@ -153,6 +162,8 @@ class QuestReply {
 		QuestReply() {}
 		~QuestReply() {}
 	public:
+		const static BYTE ADD_OKAY = 0x01;
+		const static BYTE ADD_FAILED = 0x02;
 		const static BYTE DELETE_OKAY = 0x03;
 		const static BYTE DELETE_FAILED = 0x04;
 		const static BYTE TRIGGER_OKAY = 0x05;
@@ -196,6 +207,10 @@ class QuestService {
 		static bool checkClanMoney(QuestTrans* trans, const AbstractQuestInfo* header);
 		static bool checkClanMemberCount(QuestTrans* trans, const AbstractQuestInfo* header);
 		static bool checkClanSkill(QuestTrans* trans, const AbstractQuestInfo* header);
+		static bool checkUNKNOWN(QuestTrans* trans, const AbstractQuestInfo* header);
+
+		typedef bool(*CONDITION_FUNCTION_PTR)(QuestTrans* trans, const AbstractQuestInfo* header);
+		static const CONDITION_FUNCTION_PTR conditions[50];
 
 		static bool rewardNewQuest(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 		static bool rewardQuestItem(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
@@ -220,31 +235,22 @@ class QuestService {
 		static bool rewardClanScoreChange(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 		static bool rewardClanSkillChange(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 		static bool rewardWarpNearbyClanMember(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
-		static bool rewardUnknown29(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
+		static bool rewardScriptTrigger(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 		static bool rewardSkillReset(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 		static bool rewardSingleQuestVar(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 		static bool rewardItem(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 		static bool rewardUnknown33(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun) { return true; /* ? */ };
 		static bool rewardNPCVisuality(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
+		static bool rewardUNKNOWN(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun);
 
-		const static BYTE OPERATION_EQUAL = 0x00;
-		const static BYTE OPERATION_BIGGER = 0x01;
-		const static BYTE OPERATION_BIGGER_EQUAL = 0x02;
-		const static BYTE OPERATION_SMALLER = 0x03;
-		const static BYTE OPERATION_SMALLER_EQUAL = 0x04;
-		const static BYTE OPERATION_RETURN_RHS = 0x05;
-		const static BYTE OPERATION_ADDITION = 0x06;
-		const static BYTE OPERATION_SUBTRACTION = 0x07;
-		const static BYTE OPERATION_MULTIPLICATION = 0x08;
-		const static BYTE OPERATION_DIVISION = 0x09;
-		const static BYTE OPERATION_NOT_EQUAL = 0x0A;
+		typedef bool (*REWARD_FUNCTION_PTR)(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryout);
+		static const REWARD_FUNCTION_PTR rewards[50];
 
 		static DWORD currentQuestId;
 	public:
-		static bool runQuest(Entity* entity, const DWORD questHash, bool isTryoutRun = false);
 
-		template<class _Ty1, class _Ty2> static bool checkOperation(_Ty1& first, const _Ty2& second, const BYTE operation);
-		template<class _Ty> static _Ty resultOperation(_Ty first, const _Ty& second, const BYTE operation);
+		static const DWORD runQuest(Entity* entity, const DWORD questHash);
+
 		template<class _Ty> static _Ty rewardOperation(Entity* entity, const _Ty& basicValue, const BYTE operation);
 
 		static const char* getAbilityTypeName(BYTE abilityType);
@@ -254,6 +260,10 @@ class QuestService {
 };
 
 struct QuestTrans {
+	//A work-around for the problem that a quest may be established before it gets selected during a tryout-run.
+	//Nothing ever happens during this phase, yet the QSD relies on the aforementioned creation. In order to fix this issue,
+	//this flag will signal whether this step (virtually) occured or not.
+	bool wasPreviouslyEstablishingQuest;
 	DWORD questHash;
 	Entity* questTriggerCauser;
 	Entity* questTarget; //e.g. player or npc
@@ -263,6 +273,7 @@ struct QuestTrans {
 		this->questTriggerCauser = questCauser;
 		this->questTarget = target;
 		this->selectedQuest = nullptr;
+		this->wasPreviouslyEstablishingQuest = false;
 	}
 };
 
@@ -290,10 +301,17 @@ class QSD {
 
 
 struct QuestCheckVar {
-	DWORD checkType;
-	WORD varNum;
-	WORD varType;
+	union {
+		DWORD notUsed_CHECKTYPE;
+		struct {
+			WORD varNum;
+			WORD varType;
+		};
+	};
+	//union {
+	//	DWORD notUsed_AMOUNT;
 	WORD amount;
+	//};
 	BYTE operation;
 };
 
@@ -310,20 +328,7 @@ struct QuestCheckItem {
 	BYTE operation;
 };
 
-struct QuestSetVar {
-	union {
-		DWORD type;
-		struct {
-			WORD varNum;
-			WORD varType;
-		};
-	};
-	union {
-		DWORD dwValue;
-		WORD value;
-	};
-	BYTE operation;
-};
+typedef QuestCheckVar QuestSetVar;
 
 struct QuestCondition000 {
 	QuestHeaderInfo header;
@@ -399,7 +404,7 @@ struct QuestCondition011 {
 	QuestHeaderInfo header;
 	BYTE who; //0 = NPC, 1 = Player?
 	union {
-		WORD wVarNum;
+		WORD notUsed_VARNUM;
 		BYTE varNum;
 	};
 	DWORD amount;
@@ -417,7 +422,7 @@ struct QuestCondition012 {
 struct QuestCondition013 {
 	QuestHeaderInfo header;
 	union {
-		DWORD dwNpcId;
+		DWORD notUsed_NPCID;
 		WORD npcId;
 	};
 };
@@ -444,11 +449,11 @@ struct QuestCondition016 {
 
 struct QuestNPCVar {
 	union {
-		DWORD dwNpcId;
+		DWORD notUsed_NPCID;
 		WORD npcId;
 	};
 	union {
-		WORD wVarType;
+		WORD notUsed_VARTYPE;
 		BYTE varType;
 	};
 };
@@ -538,7 +543,7 @@ typedef QuestCondition009 QuestCondition030;
 struct QuestReward000 {
 	QuestHeaderInfo header;
 	union {
-		DWORD dwQuestId; //BASIC
+		DWORD notUsed_QUESTID; //BASIC
 		WORD questId;
 	};
 	BYTE operation;
@@ -586,7 +591,7 @@ struct QuestReward006 {
 struct QuestReward007 {
 	QuestHeaderInfo header;
 	union {
-		DWORD dwMapId;
+		DWORD notUsed_MAPID;
 		WORD mapId;
 	};
 	DWORD x;
@@ -602,7 +607,7 @@ struct QuestReward008 {
 	BYTE targetType;
 
 	union {
-		DWORD dwMapId;
+		DWORD notUsed_MAPID;
 		WORD mapId;
 	};
 	DWORD x;
@@ -626,11 +631,11 @@ struct QuestReward011 {
 	QuestHeaderInfo header;
 	BYTE isTargetSelected;
 	union {
-		WORD wVarType;
+		WORD notUsed_VARTYPE;
 		BYTE varType;
 	};
 	union {
-		DWORD dwValue;
+		DWORD notUsed_VALUE;
 		WORD value;
 	};
 	BYTE operation;
@@ -657,7 +662,7 @@ struct QuestReward014 {
 	QuestHeaderInfo header;
 	BYTE operation;
 	union {
-		DWORD dwSkillId;
+		DWORD notUsed_SKILLID;
 		WORD skillId;
 	};
 };

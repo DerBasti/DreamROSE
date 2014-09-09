@@ -25,7 +25,7 @@ class WorldServer : public ServerSocket {
 		NPCSTB *npcFile;
 		AISTB *aiFile;
 		SkillSTB *skillFile;
-		STBFile *statusFile;
+		StatusSTB *statusFile;
 #ifdef __ROSE_DEBUG__
 		std::vector<QSD*> qsdFiles;
 #endif
@@ -44,7 +44,6 @@ class WorldServer : public ServerSocket {
 		bool loadQuests();
 		bool loadAttackTimings();
 
-		std::pair<WORD, Entity*> clientIDs[0x10000];
 		std::vector<NPCData> npcData;
 		std::vector<NPC*> globalNPCs;
 		std::map<const DWORD, QuestEntry*> questData;
@@ -100,8 +99,6 @@ class WorldServer : public ServerSocket {
 		bool sendToAll(Packet& pak);
 		bool loadSTBs();
 		bool loadMapData();
-		WORD assignClientID(Entity*);
-		void freeClientId(Entity*);
 
 		bool isValidItem(const BYTE itemType, const WORD itemId);
 
@@ -111,8 +108,6 @@ class WorldServer : public ServerSocket {
 			 return this->mapData.getValue(mapId);
 		}
 		void changeToMap(Entity* entity, const WORD newMapId);
-
-		void convertTo(NPC* npc, WORD npcDataId);
 		
 		bool checkSpawns(Map* mapData);
 		__inline int getWorldVariable(BYTE varIdx) { return this->worldVar[varIdx]; }
@@ -125,6 +120,10 @@ class WorldServer : public ServerSocket {
 
 		Skill* getSkill(const WORD skillId);
 		Skill* getSkill(const WORD skillIdBasic, const BYTE level);
+
+		__inline const STBEntry* getConsumable(const Item& item) { return this->getConsumable(item.id); }
+		__inline const STBEntry* getConsumable(const WORD itemId) { return &this->equipmentFile[ItemType::CONSUMABLES]->getRow(itemId); }
+		__inline const STBEntry* getStatus(const BYTE statusType) { return &this->statusFile->getRow(statusType); }
 
 		//TODO
 		QuestEntry* getQuest(const DWORD questHash) {
@@ -146,10 +145,6 @@ class WorldServer : public ServerSocket {
 			throw TraceableExceptionARGS("Wanted gateId(%i) > MAX_GATES(%i)", gateId, this->teleGates.size());
 		}
 
-		DWORD buildItemVisually(const Item& item);
-		WORD buildItemHead(const Item& item);
-		DWORD buildItemData(const Item& item);
-
 		STBEntry& getEquipmentEntry(const BYTE itemType, const DWORD itemId);
 		const WORD getQuality(const BYTE itemType, const DWORD itemId);
 		const WORD getSubType(const BYTE itemType, const DWORD itemId);
@@ -165,7 +160,7 @@ class WorldServer : public ServerSocket {
 
 		__inline class ZON* getZON(const BYTE mapId) const { return this->zoneData[mapId]; }
 		__inline ZoneSTB* getZoneSTB() const { return this->zoneFile; }
-		__inline Entity* getEntity(const WORD clientId) const { return this->clientIDs[clientId].second; }
+		__inline Entity* getEntity(const WORD map, const WORD localId) const { return this->getMap(map)->getEntity(localId); }
 
 		__inline void dumpSectors(const WORD mapId, const char* filePath) {
 			return this->mapData[mapId]->dumpSectors(filePath);

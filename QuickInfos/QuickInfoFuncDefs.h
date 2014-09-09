@@ -111,6 +111,8 @@ namespace QuickInfo {
 					break;\
 					case 's':\
 						cTmp = va_arg(ap, char*);\
+						if (!cTmp) \
+							cTmp = va_arg(ap, const char*);\
 						dTmp = 0x00;\
 						while (dTmp < strlen(cTmp)) {\
 							result += cTmp[dTmp];\

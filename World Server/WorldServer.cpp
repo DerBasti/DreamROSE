@@ -16,9 +16,6 @@ WorldServer::WorldServer(WORD port, MYSQL* mysql) {
 	this->sqlDataBase.init(__DATABASE_HOST__, __DATABASE_USERNAME__, __DATABASE_PASSWORD__, __DATABASE_DBNAME__, __DATABASE_PORT__, mysql);
 	mainServer = this;
 
-	for(unsigned int i=0;i<0x10000;i++)
-		this->clientIDs[i] = std::pair<WORD, Entity*>(i, nullptr);
-
 	this->ipString = config->getValueString("WorldIp");
 	
 	this->WorldTime.lastCheck = time(NULL);
@@ -61,6 +58,9 @@ WorldServer::~WorldServer() {
 		delete this->equipmentFile[i];
 		this->equipmentFile[i] = nullptr;
 	}
+
+	delete this->statusFile;
+	this->statusFile = nullptr;
 
 	delete this->questFile;
 	this->questFile = nullptr;
@@ -122,9 +122,14 @@ void WorldServer::checkWorldTime() {
 void WorldServer::changeToMap(Entity* entity, const WORD newMapId) {
 	if(!entity || newMapId >= this->mapData.size())
 		return;
+	Map* oldMap = this->getMap(entity->getMapId());
+	oldMap->freeClientId(entity);
+
 	//Assign the new mapId and the nearest sector on the new map
 	entity->setMapId(newMapId);
-	entity->setSector(this->getMap(entity->getMapId())->getSector(entity->getPositionCurrent()));
+	Map* newMap = this->getMap(entity->getMapId());
+	entity->setSector(newMap->getSector(entity->getPositionCurrent()));
+	newMap->assignClientID(entity);
 }
 
 void WorldServer::runMap(Map* curMap) {
@@ -255,6 +260,7 @@ bool WorldServer::loadSTBs() {
 	this->dropFile = new STBFile(this->vfs, "3DDATA\\STB\\ITEM_DROP.STB");
 	this->zoneFile = new ZoneSTB(this->vfs, "3DDATA\\STB\\LIST_ZONE.STB");
 	this->questFile = new STBFile(this->vfs, "3DDATA\\STB\\LIST_QUEST.STB", false);
+	this->statusFile = new StatusSTB(this->vfs, "3DDATA\\STB\\LIST_STATUS.STB");
 
 	this->equipmentFile[ItemType::HEADGEAR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_CAP.STB");
 	this->equipmentFile[ItemType::ARMOR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_BODY.STB");
@@ -405,7 +411,7 @@ bool WorldServer::loadIFOs(Map* curMap, STBFile& warpFile) {
 bool WorldServer::loadTelegates(const WORD currentMapId, STBFile& warpFile, IFO& ifoFile) {
 	for (unsigned int i = 0; i < ifoFile.getTelegateAmount(); i++) {
 		IFOTelegate& gate = ifoFile.getTelegate(i);
-		std::string& gateName = warpFile.getRow(gate.getUnknown()).getColumn(0x02);
+		const std::string& gateName = warpFile.getRow(gate.getUnknown()).getColumn(0x02);
 
 		WORD destMapId = warpFile.getRow(gate.getUnknown()).getColumn<WORD>(0x01);
 		ZON* zone = this->zoneData.getValue(destMapId);
@@ -495,27 +501,6 @@ bool WorldServer::loadAttackTimings() {
 	return true;
 }
 
-WORD WorldServer::assignClientID(Entity* newEntity) {
-	if(!newEntity)																																																																																																																																
-		return 0;
-
-	//ClientID 0 = invalid state.
-	for(unsigned int i=1;i<0x10000;i++) {
-		Entity*& entity = this->clientIDs[i].second;
-		if(!entity) {
-			this->clientIDs[i].second = newEntity;
-			newEntity->setClientId(i);
-			return i;
-		}
-	}
-	return 0;
-}
-
-void WorldServer::freeClientId(Entity* toDelete) {
-	this->clientIDs[toDelete->getClientId()].second = nullptr;
-	toDelete->setClientId(0x00);
-}
-
 bool WorldServer::sendToAll(Packet& pak) {
 	bool success = true;
 	for (unsigned int i = 0; i < this->mapData.size(); i++) {
@@ -531,11 +516,6 @@ bool WorldServer::sendToAll(Packet& pak) {
 		}
 	}
 	return success;
-}
-
-
-void WorldServer::convertTo(NPC* npc, WORD npcDataId) {
-	
 }
 
 NPC* WorldServer::getNPCGlobal(const WORD npcId) {
@@ -554,40 +534,6 @@ bool WorldServer::isValidItem(const BYTE itemType, const WORD itemId) {
 	//I don't know what that column means, but it is a legit indicator
 	//("Reversed" via STB<->STL entry comparison)
 	return (this->equipmentFile[itemType]->getRow(itemId).getColumnAsInt(0x09) > 0);
-}
-
-DWORD WorldServer::buildItemVisually(const Item& item) {
-	DWORD basicResult = (item.id | item.refine * 0x10000);
-	if (item.gem == 0) {
-		return basicResult;
-	}
-	return ((0xd0000) + ((item.gem - 320) * 0x400) | basicResult);
-}
-
-WORD WorldServer::buildItemHead(const Item& item) {
-	if (item.amount == 0x00)
-		return 0;
-	WORD result = static_cast<WORD>((item.id << 5) & 0xFFE0);
-	return static_cast<WORD>(result | (item.type & 0x1F));
-}
-
-DWORD WorldServer::buildItemData(const Item& item) {
-	if ((item.type >= ItemType::CONSUMABLES && item.type <= ItemType::QUEST) || item.type == ItemType::MONEY || item.amount == 0) {
-		return item.amount;
-	}
-
-	//0101 1111 1001 0000
-	DWORD refinePart = (item.refine >> 4) << 28;
-	DWORD appraisePart = item.isAppraised << 27;
-	DWORD socketPart = item.isSocketed << 26;
-	DWORD lifeSpanPart = item.lifespan << 16;
-	DWORD durabilityPart = item.durability << 9;
-	DWORD stats = item.stats;
-	DWORD gem = item.gem;
-	if (gem != 0x00)
-		stats = 0x00;
-
-	return (refinePart | appraisePart | socketPart | lifeSpanPart | durabilityPart | stats | gem);
 }
 
 const WORD WorldServer::getQuality(const BYTE itemType, const DWORD itemId) {
@@ -674,7 +620,7 @@ QuestEntry* WorldServer::getQuestById(const DWORD questId) {
 bool ChatService::sendDebugMessage(Player* receiver, const char* msg, ...) {
 	ArgConverterA(aMsg, msg);
 	Packet pak(PacketID::World::Response::LOCAL_CHAT);
-	pak.addWord(receiver->getClientId());
+	pak.addWord(receiver->getLocalId());
 	pak.addString("[DEBUG] ");
 	pak.addString(aMsg.c_str());
 	pak.addByte(0x00);
@@ -683,7 +629,7 @@ bool ChatService::sendDebugMessage(Player* receiver, const char* msg, ...) {
 
 bool ChatService::sendMessage(Entity* sender, const char* msg) {
 	Packet pak(PacketID::World::Response::LOCAL_CHAT);
-	pak.addWord(sender->getClientId());
+	pak.addWord(sender->getLocalId());
 	pak.addString(msg);
 	pak.addByte(0x00);
 	if (msg[0] == '/') {
@@ -802,9 +748,16 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 						item.refine = 0;
 
 						//In case the wanted item is valid (should always apply)
-						if(mainServer->isValidItem(k, m))
+						if (mainServer->isValidItem(k, m)) {
 							gm->equipItem(item);
 
+							Packet pak(PacketID::World::Response::REWARD_ITEM);
+							pak.addByte(0x01); //Amount of rewarded items
+							pak.addByte(Inventory::fromItemType(item.type));
+							pak.addWord(item.getPakHeader());
+							pak.addDWord(item.getPakData());
+							gm->sendData(pak);
+						}
 						return;
 					}
 				}
@@ -891,19 +844,20 @@ void WorldServer::dumpAICombined(const char* filePath) {
 }
 
 Skill* WorldServer::getSkill(const WORD skillId) {
-	if (skillId >= this->skillFile->getRowCount())
-		return nullptr;
-	return &this->skillFile->getRow(skillId);
+	if (skillId > 0x00 && skillId < this->skillFile->getRowCount())
+		return &this->skillFile->getRow(skillId);
+	return nullptr;
 }
 
 Skill* WorldServer::getSkill(const WORD skillIdBasic, const BYTE level) {
-	if (skillIdBasic >= this->skillFile->getRowCount() || (skillIdBasic + level) >= this->skillFile->getRowCount())
-		return nullptr;
-
-	Skill* skill = &this->skillFile->getRow(skillIdBasic);
-	if (skill->getLevel() == 0x00)
-		return skill;
-	return this->getSkill(skillIdBasic + level - 1);
+	WORD totalId = (skillIdBasic + level);
+	if (skillIdBasic > 0x00 && totalId < this->skillFile->getRowCount()) {
+		Skill* skill = &this->skillFile->getRow(skillIdBasic);
+		if (skill->getLevel() == 0x00)
+			return skill;
+		return this->getSkill(skillIdBasic + level - 1);
+	}
+	return nullptr;
 }
 
 void WorldServer::dumpQuest(const char* totalFilePath, bool asHashFalse_Or_asQuestNameTrue) {
@@ -924,9 +878,7 @@ void WorldServer::dumpQuest(const char* totalFilePath, bool asHashFalse_Or_asQue
 		CMyFile file(fileBuf, "a+");
 		file.clear();
 
-		if (quest->getNextQuest()) {
-			file.putStringWithVarOnly("[CHECK NEXT QUEST_TRIGGER %s [0x%x]]\n", quest->getNextQuest()->getQuestName().c_str(), quest->getNextQuest()->getQuestHash());
-		}
+		file.putStringWithVarOnly("Basic Infos - QuestName: %s, QuestHash: %i\n", quest->getQuestName().c_str(), quest->getQuestHash());
 		file.putString("=========================================\n");
 		const FixedArray<Trackable<char>>& conditions = quest->getConditions();
 		std::string curString = "";
@@ -945,6 +897,9 @@ void WorldServer::dumpQuest(const char* totalFilePath, bool asHashFalse_Or_asQue
 			file.putString(curString);
 		}
 		file.putString("=========================================");
+		if (quest->getNextQuest()) {
+			file.putStringWithVarOnly("[CHECK NEXT QUEST_TRIGGER %s [0x%x]]\n", quest->getNextQuest()->getQuestName().c_str(), quest->getNextQuest()->getQuestHash());
+		}
 		file.close();
 		it++;
 	}

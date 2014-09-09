@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include "D:\Programmieren\QuickInfos\Trackable.hpp"
+#include "..\Structures.h"
 #include "..\..\Common\Definitions.h"
 
 #ifdef __ROSE_USE_VFS__
@@ -141,9 +142,11 @@ struct AITransfer {
 	class Entity* designatedTarget;
 	class Entity* nearestEntity;
 	class Entity* lastFound;
+	BYTE blockType;
 
 	AITransfer() {
 		this->designatedTarget = nearestEntity = lastFound = nullptr;
+		this->blockType = 0x00;
 	}
 };
 
@@ -158,19 +161,6 @@ class AIService {
 		const static BYTE ABILITY_MAGIC_DEFENSE = 0x03;
 		const static BYTE ABILITY_GET_HP = 0x04;
 		const static BYTE ABILITY_CHARM = 0x05;
-
-		const static BYTE OPERATION_EQUAL = 0x00;
-		const static BYTE OPERATION_BIGGER = 0x01;
-		const static BYTE OPERATION_BIGGER_EQUAL = 0x02;
-		const static BYTE OPERATION_SMALLER = 0x03;
-		const static BYTE OPERATION_SMALLER_EQUAL = 0x04;
-		const static BYTE OPERATION_RETURN_RHS = 0x05;
-		const static BYTE OPERATION_ADDITION = 0x06;
-		const static BYTE OPERATION_SUBTRACTION = 0x07;
-		const static BYTE OPERATION_MULTIPLICATION = 0x08;
-		const static BYTE OPERATION_DIVISION = 0x09;
-		const static BYTE OPERATION_NOT_EQUAL = 0x0A;
-
 		
 #pragma region Condition Execution
 		static bool conditionFightOrDelay();
@@ -246,7 +236,7 @@ class AIService {
 		static void actionMoveToOwner(class NPC *npc, const struct AIACTION_29* act);
 
 		//TODO: implement questing
-		static void actionSetQuestTrigger(class NPC* npc, const struct AIACTION_30* act);
+		static void actionSetQuestTrigger(class NPC* npc, const struct AIACTION_30* act, AITransfer* trans);
 
 		static void actionAttackOwnersTarget(class NPC* npc);
 		static void actionSetMapAsPVPArea(class NPC* npc, const struct AIACTION_32* act);
@@ -256,9 +246,6 @@ class AIService {
 	public:
 		static WORD getAbilityType(BYTE abilityType, class Entity* entity);
 		static const char* getAbilityTypeName(BYTE abilityType);
-		static const char* operationName(BYTE operation);
-		template<class _Ty1, class _Ty2> static bool checkOperation(_Ty1& first, const _Ty2& second, const BYTE operation);
-		template<class _Ty> static _Ty resultOperation(_Ty& first, const _Ty& second, const BYTE operation);
 		static bool run(class NPC* npcWithAI, const BYTE blockType, class Entity* target = nullptr, const DWORD damageDealt = 0x00);
 
 		static bool checkConditions( const std::vector<Trackable<char>>& ai, class NPC* monster, AITransfer* trans );
@@ -678,7 +665,7 @@ struct AICOND_14 {
 			sprintf(buf,"Check Variables (0x0E)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->variableIdx; }
@@ -710,7 +697,7 @@ struct AICOND_15 {
 			sprintf(buf,"Check Variables (0x0F)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->variableIdx; }
@@ -743,7 +730,7 @@ struct AICOND_16 {
 			sprintf(buf,"Check Variables (0x10)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->variableIdx; }
@@ -791,7 +778,7 @@ struct AICOND_18 {
 			char buf[0x80] = {0x00};
 			sprintf(buf,"Check Distance to Owner (0x12)\n%s=====\n%sDistance: %f\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -847,7 +834,7 @@ struct AICOND_20 {
 			sprintf(buf,"Check AbilityValue (0x14)\n%s=====\n%sAbility Name: %s\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", AIService::getAbilityTypeName(this->getAbilityType()),
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getAbilityType() const { return this->abilityType; }
@@ -1025,7 +1012,7 @@ struct AICOND_27 {
 				indent ? "\t\t\t" : "", this->needsAlly(),
 				indent ? "\t\t\t" : "", this->getLevelDiff(0x00), this->getLevelDiff(0x01),
 				indent ? "\t\t\t" : "", this->getAmount(), 
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
@@ -1059,7 +1046,7 @@ struct AICOND_28 {
 			sprintf(buf,"Check AI-Variables (0x1C)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVarIndex(),
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVarIndex() const { return this->varIdx; }
@@ -1371,7 +1358,7 @@ struct AIACTION_06 {
 			char buf[0x100] = {0x00};
 			sprintf(buf, "Find and attack target (0x06)\n%s=====\n%sMaxDist: %f\n%sAbilityType: %s\n%sNeedsLess: %i\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getAbilityType()),
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getAbilityType()),
 				indent ? "\t\t\t" : "", this->needsLessAbility() );
 			return std::string(buf);
 		}
@@ -1812,7 +1799,7 @@ struct AIACTION_25 {
 			sprintf(buf, "Set NPC Variable (0x19)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(), 
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 };
@@ -1843,7 +1830,7 @@ struct AIACTION_26 {
 			sprintf(buf, "Set World Variable (0x1A)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(),
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 };
@@ -1874,7 +1861,7 @@ struct AIACTION_27 {
 			sprintf(buf, "Set Economy Variable (0x1B)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(), 
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 };
@@ -2059,7 +2046,7 @@ struct AIACTION_35 {
 			sprintf(buf, "Set AI Variable (?)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariableIndex(), 
 				indent ? "\t\t\t" : "", this->getValue(),
-				indent ? "\t\t\t" : "", AIService::operationName(this->getOperationType()));
+				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
 		__inline BYTE getVariableIndex() const { return this->varIdx; }

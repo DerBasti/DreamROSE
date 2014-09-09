@@ -139,7 +139,12 @@ bool CharClient::pakCreateCharacter() {
 		"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
 		"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"))
 		return false;
+	if (!mainServer->sqlInsert("INSERT INTO character_quest_flags(charId, questFlags, episodeFlags, jobFlags, planetFlags, fractionFlags) VALUES(%i, '%s', '%s', '%s', '%s', '%s'",
+		newChar.id, "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+		"0,0,0,0,0", "0,0,0", "0,0,0,0,0,0,0", "0,0,0,0,0,0,0,0,0,0"))
+		return false;
 	pak.addWord(0x00);
+
 
 	this->characters.addValue(newChar);
 	return this->sendData(pak);

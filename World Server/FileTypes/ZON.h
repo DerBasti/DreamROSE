@@ -68,7 +68,7 @@ class ZON {
 		}
 		__inline const size_t getEventInfoAmount() const { return this->eventInfos.size(); }
 		__inline EventInfo& getEventInfo(const size_t pos) { return this->eventInfos.at(pos); }
-		__inline EventInfo findEventInfo(std::string& name) {
+		__inline EventInfo findEventInfo(const std::string& name) {
 			for (unsigned int i = 0; i < this->eventInfos.size(); i++) {
 				if (_stricmp(this->eventInfos.at(i).name.c_str(), name.c_str()) == 0)
 					return this->eventInfos.at(i);

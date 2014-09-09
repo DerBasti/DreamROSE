@@ -79,6 +79,8 @@ class Map {
 		LinkedList<Entity*> entitiesOnMap;
 		void findMinMax(std::vector<std::string>& files, WORD* x, WORD* y);
 		ZON::EventInfo* getRespawn(Position& pos);
+
+		Entity* clientIDs[0x10000];
 	public:
 		const static DWORD MIN_DAYCYCLE = 0x64;
 		const static BYTE MAX_MAPS = 0xFF;
@@ -91,6 +93,10 @@ class Map {
 		Map();
 		Map(const Map& rhs);
 		const Map& operator=(const Map& rhs);
+
+		WORD assignClientID(Entity*);
+		void freeClientId(Entity*);
+		Entity* getEntity(const WORD localId) { return this->clientIDs[localId]; }
 		
 		void createSectors(std::vector<std::string>& ifoFiles);
 		void dumpSectors(const char* filePath);
@@ -119,7 +125,8 @@ class Map {
 		__inline const DWORD getSectorCount() const { 
 			return this->mapSectors.capacity(); 
 		}
-		
+
+		const Position getRespawnPoint(const char* spawnName);
 		const Position getRespawnPoint(Position& pos);
 		const Position getRespawnPoint(const size_t pos);
 		const WORD getRespawnPointId(Position& pos);

@@ -44,7 +44,7 @@ void Monster::onDeath() {
 	for(unsigned int i=0;i<this->damageDealers.size();i++) {
 		double expPercent = this->damageDealers.getValue(i) / static_cast<double>(highestDmg);
 
-		Entity* dealer = mainServer->getEntity(this->damageDealers.getKey(i));
+		Entity* dealer = mainServer->getEntity(this->getMapId(), this->damageDealers.getKey(i));
 		try {
 			switch(dealer->getEntityType()) {
 				case Entity::TYPE_MONSTER:
@@ -65,7 +65,7 @@ void Monster::onDeath() {
 		}
 	}
 	//Now we get to the drop
-	Entity* dropOwner = mainServer->getEntity(highestDealer);
+	Entity* dropOwner = mainServer->getEntity(this->getMapId(), highestDealer);
 	BYTE levelDiff = 0x00;
 	if(this->getLevel() < dropOwner->getLevel())
 		levelDiff = 0x00;
@@ -106,7 +106,15 @@ void Monster::onDeath() {
 	} else {
 		new Drop(dropOwner, this->getPositionCurrent(), toDrop, dropOwner != nullptr);
 	}
-
+	if (dropOwner->isPlayer()) {
+		dynamic_cast<Player*>(dropOwner)->sendQuestTriggerViaMonster(this->getTypeId());
+	}
+	/*
+	const DWORD resultHash = QuestService::runQuest(dropOwner, this->data->getQuestHash());
+	if (dropOwner->isPlayer() && resultHash > 0) {
+		dynamic_cast<Player*>(dropOwner)->sendQuestTriggerViaMonster(this->getTypeId());
+	}
+	*/
 	AIService::run(this, AIP::ON_SELF_DEATH, this->getTarget(), totalAmountOfDamage);
 	this->setTarget(nullptr);
 }

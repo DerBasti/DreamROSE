@@ -10,6 +10,7 @@
 #include <iostream>
 
 #include "STL.h"
+#include "..\Structures.h"
 
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
@@ -34,16 +35,16 @@ class STBEntry {
 		void changeName(std::string& newName) {
 			this->columns.at(0x00) = newName;
 		}
-		__inline virtual const DWORD operator[](const size_t colId) {
+		__inline virtual const DWORD operator[](const size_t colId) const {
 			return this->getColumnAsInt(colId);
 		}
-		__inline std::string& getColumn(const size_t colId) {
+		__inline const std::string& getColumn(const size_t colId) const {
 			return this->columns.at(colId);
 		}
-		__inline const DWORD getColumnAsInt(const DWORD colId) {
+		__inline const DWORD getColumnAsInt(const DWORD colId) const {
 			return static_cast<DWORD>(atol(this->columns.at(colId).c_str()));
 		}
-		template<class _Ty> __inline const _Ty getColumn(const DWORD colId) {
+		template<class _Ty> __inline const _Ty getColumn(const DWORD colId) const {
 			return (std::is_arithmetic<_Ty>::value == true ? static_cast<_Ty>(this->getColumnAsInt(colId)) : _Ty(0x00));
 		}
 
@@ -335,6 +336,38 @@ class SkillType {
 		const static BYTE EMOTION = 16;
 };
 
+
+class PlayerSkill {
+	private:
+		PlayerSkill() {}
+		~PlayerSkill() {}
+	public:
+		const static BYTE PAGE_SIZE = 30;
+		const static BYTE BASIC_BEGIN = 0;
+		const static BYTE ACTIVE_BEGIN = 30;
+		const static BYTE PASSIVE_BEGIN = 60;
+		const static BYTE PREMIUM_BEGIN = 90;
+		const static BYTE PLAYER_MAX_SKILLS = 120;
+
+		const static BYTE LEARN_FAILED = 0x00;
+		const static BYTE LEARN_SUCCESS = 0x01;
+		const static BYTE LEARN_FALSE_JOB = 0x02;
+		const static BYTE LEARN_REQUIRED_SKILL = 0x03;
+		const static BYTE LEARN_NEEDS_ABILITY = 0x04; //e.g. Level
+		const static BYTE LEARN_NO_SLOTS_LEFT = 0x05;
+		const static BYTE LEARN_INVALID_SKILL = 0x06;
+		const static BYTE LEARN_NEEDS_SKILLPOINTS = 0x07;
+		const static BYTE LEARN_DELETE = 0x08;
+
+		const static BYTE UPGRADE_SUCCESS = 0x00;
+		const static BYTE UPGRADE_FAILED = 0x01;
+		const static BYTE UPGRADE_NEEDS_SKILLPOINTS = 0x02;
+		const static BYTE UPGRADE_NEEDS_ABILITY = 0x03;
+		const static BYTE UPGRADE_FALSE_JOB = 0x04;
+		const static BYTE UPGRADE_REQUIRED_SKILL = 0x05;
+		const static BYTE UPGRADE_NEEDS_ZULIES = 0x06;
+};
+
 class SkillEntry : public STBEntry {
 	public:
 		const static BYTE CONDITIONS_MAX_NUM = 0x02;
@@ -347,7 +380,7 @@ class SkillEntry : public STBEntry {
 		const static BYTE COLUMN_BASIC_ID = 0x01;
 		const static BYTE COLUMN_LEVEL = 0x02;
 		const static BYTE COLUMN_REQUIRED_POINTS_PER_LEVELUP = 0x03;
-		const static BYTE COLUMN_SKILLTYPE = 0x04;
+		const static BYTE COLUMN_SKILLTYPE = 0x05;
 		const static BYTE COLUMN_INITRANGE = 0x06;
 		const static BYTE COLUMN_TARGETTYPE = 0x07;
 		const static BYTE COLUMN_AOERANGE = 0x08;
@@ -388,6 +421,8 @@ class SkillEntry : public STBEntry {
 		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST = 0x2E;
 		const static BYTE COLUMN_REQUIRED_CONDITION_AMOUNT_LAST = 0x31;
 
+		const static BYTE COLUMN_REQUIRED_ZULIES = 0x55;
+
 		static BYTE getPage(SkillEntry* entry) {
 			switch (entry->getType()) {
 				case SkillType::BASIC:
@@ -396,15 +431,15 @@ class SkillEntry : public STBEntry {
 					return 0x00;
 				break;
 				case SkillType::PASSIVE:
-					return 0x02;
+					return 0x02 * PlayerSkill::PAGE_SIZE;
 			}
-			return 0x01;
+			return PlayerSkill::PAGE_SIZE;
 		}
 
 		SkillEntry() {
 		}
 
-		__inline WORD getIdBasic() { return this->getColumn<WORD>(SkillEntry::COLUMN_BASIC_ID); }
+		__inline WORD getIdBasic() const { return this->getColumn<WORD>(SkillEntry::COLUMN_BASIC_ID); }
 		WORD getId() { 
 			BYTE level = this->getLevel();
 			WORD basicId = this->getColumn<WORD>(SkillEntry::COLUMN_BASIC_ID);
@@ -412,53 +447,70 @@ class SkillEntry : public STBEntry {
 				return basicId;
 			return basicId + level - 1;
 		}
-		__inline BYTE getLevel() { return this->getColumn<BYTE>(SkillEntry::COLUMN_LEVEL); }
-		__inline BYTE getRequiredPointsPerLevelup() { return this->getColumn<BYTE>(SkillEntry::COLUMN_REQUIRED_POINTS_PER_LEVELUP); }
-		__inline BYTE getType() { return this->getColumn<BYTE>(SkillEntry::COLUMN_SKILLTYPE); }
-		__inline DWORD getInitRange() { return this->getColumn<DWORD>(SkillEntry::COLUMN_INITRANGE); }
-		__inline BYTE getTargetType() { return this->getColumn<BYTE>(SkillEntry::COLUMN_TARGETTYPE); }
-		__inline DWORD getAOERange() {
+		__inline BYTE getLevel() const { 
+			return this->getColumn<BYTE>(SkillEntry::COLUMN_LEVEL); 
+		}
+
+		__inline BYTE getRequiredPointsPerLevelup() const { 
+			return this->getColumn<BYTE>(SkillEntry::COLUMN_REQUIRED_POINTS_PER_LEVELUP); 
+		}
+
+		__inline BYTE getType() const { 
+			return this->getColumn<BYTE>(SkillEntry::COLUMN_SKILLTYPE); 
+		}
+
+		__inline DWORD getInitRange() const { 
+			return this->getColumn<DWORD>(SkillEntry::COLUMN_INITRANGE); 
+		}
+
+		__inline BYTE getTargetType() const { 
+			return this->getColumn<BYTE>(SkillEntry::COLUMN_TARGETTYPE); 
+		}
+
+		__inline DWORD getAOERange() const {
 			return this->getColumn<DWORD>(SkillEntry::COLUMN_AOERANGE);
 		}
-		__inline WORD getAttackpower() {
+
+		__inline WORD getAttackpower() const {
 			return this->getColumn<WORD>(SkillEntry::COLUMN_ATTACKPOWER);
 		}
-		__inline bool getDoesHarm() {
+
+		__inline bool getDoesHarm() const {
 			DWORD res = this->getColumn<DWORD>(SkillEntry::COLUMN_DOESHARM);
 			return (res > 0);
 		}
-		__inline BYTE getStatus(const WORD rowId, bool firstStatusEQFalse_SecondStatusEQTrue) {
+		__inline BYTE getStatus(const WORD rowId, bool firstStatusEQFalse_SecondStatusEQTrue) const {
 			BYTE colId = static_cast<BYTE>(firstStatusEQFalse_SecondStatusEQTrue) | SkillEntry::COLUMN_STATUS_FIRST;
 			return this->getColumn<BYTE>(colId);
 		}
-		__inline BYTE getSuccessrate() {
+		__inline BYTE getSuccessrate() const {
 			return this->getColumn<BYTE>(SkillEntry::COLUMN_SUCCESSRATE);
 		}
-		__inline WORD getDuration() {
+		__inline WORD getDuration() const {
 			return this->getColumn<WORD>(SkillEntry::COLUMN_DURATION);
 		}
 		__inline BYTE getCostType(BYTE firstTypeFalse_secondTypeTrue) {
 			BYTE colId = (firstTypeFalse_secondTypeTrue % 2) | SkillEntry::COLUMN_COST_TYPE_FIRST;
 			return this->getColumn<BYTE>(colId);
 		}
-		__inline WORD getCostAmount(BYTE firstTypeFalse_secondTypeTrue) {
+		__inline WORD getCostAmount(BYTE firstTypeFalse_secondTypeTrue) const {
 			BYTE colId = (firstTypeFalse_secondTypeTrue % 2) | COLUMN_COST_AMOUNT_FIRST;
 			return this->getColumn<WORD>(colId);
 		}
-		__inline WORD getCooldown() {
+		__inline WORD getCooldown() const {
 			return this->getColumn<WORD>(SkillEntry::COLUMN_COOLDOWN);;
 		}
-		WORD getBuffType(BYTE wantedTypeOutOfThree) {
+		WORD getBuffType(BYTE wantedTypeOutOfThree) const {
 			wantedTypeOutOfThree %= SkillEntry::BUFF_MAX_NUM; //3 MAX
 			wantedTypeOutOfThree += SkillEntry::COLUMN_BUFF_TYPE_FIRST;
 			return this->getColumn<WORD>(wantedTypeOutOfThree);
 		}
-		WORD getBuffValueFlat(BYTE wantedTypeOutOfThree) {
+		WORD getBuffValueFlat(BYTE wantedTypeOutOfThree) const {
 			wantedTypeOutOfThree %= SkillEntry::BUFF_MAX_NUM;
 			wantedTypeOutOfThree += SkillEntry::COLUMN_BUFF_FLATVALUE_FIRST;
 			return this->getColumn<WORD>(wantedTypeOutOfThree);
 		}
-		WORD getBuffValuePercentage(BYTE wantedTypeOutOfThree) {
+		WORD getBuffValuePercentage(BYTE wantedTypeOutOfThree) const {
 			wantedTypeOutOfThree %= SkillEntry::BUFF_MAX_NUM;
 			BYTE colId = 0x00;
 			switch (wantedTypeOutOfThree) {
@@ -472,38 +524,48 @@ class SkillEntry : public STBEntry {
 			return static_cast<WORD>(0x00);
 		}
 
-		WORD getWeaponType(BYTE weaponTypeOutOfFive) {
+		WORD getWeaponType(BYTE weaponTypeOutOfFive) const {
 			weaponTypeOutOfFive %= (SkillEntry::COLUMN_WEAPONS_END - SkillEntry::COLUMN_WEAPONS_BEGIN);
 			weaponTypeOutOfFive += SkillEntry::COLUMN_WEAPONS_BEGIN;
 			return this->getColumn<WORD>(weaponTypeOutOfFive);
 		}
-		WORD getClassType(BYTE classTypeOutOfFour) {
+		WORD getClassType(BYTE classTypeOutOfFour) const {
 			classTypeOutOfFour %= (SkillEntry::COLUMN_CLASS_END - SkillEntry::COLUMN_CLASS_BEGIN);
-			classTypeOutOfFour += COLUMN_CLASS_BEGIN;
+			classTypeOutOfFour += SkillEntry::COLUMN_CLASS_BEGIN;
 			return this->getColumn<WORD>(classTypeOutOfFour);
 		}
 
-		WORD getRequiredSkillID(BYTE idOutOfThree) {
-			idOutOfThree %= REQUIRED_SKILL_MAX;
-			idOutOfThree = (idOutOfThree * 2) + COLUMN_REQUIRED_SKILL_ID_FIRST;
+		WORD getRequiredSkillID(BYTE idOutOfThree) const {
+			return (this->getRequiredSkillBasicID(idOutOfThree) + this->getRequiredSkillLevel(idOutOfThree));
+		}
+
+		WORD getRequiredSkillBasicID(BYTE idOutOfThree) const {
+			idOutOfThree %= SkillEntry::REQUIRED_SKILL_MAX;
+			idOutOfThree = (idOutOfThree * 2) + SkillEntry::COLUMN_REQUIRED_SKILL_ID_FIRST;
 			return this->getColumn<WORD>(idOutOfThree);
 		}
 
-		BYTE getRequiredSkillLevel(BYTE levelOutOfThree) {
-			levelOutOfThree %= REQUIRED_SKILL_MAX;
-			levelOutOfThree = (levelOutOfThree * 2) + COLUMN_REQUIRED_SKILL_LEVEL_FIRST;
+		BYTE getRequiredSkillLevel(BYTE levelOutOfThree) const {
+			levelOutOfThree %= SkillEntry::REQUIRED_SKILL_MAX;
+			levelOutOfThree = (levelOutOfThree * 2) + SkillEntry::COLUMN_REQUIRED_SKILL_LEVEL_FIRST;
 			return this->getColumn<BYTE>(levelOutOfThree);
 		}
-		__inline BYTE getRequiredConditionType(BYTE typeOutOfTwo) {
+		__inline BYTE getRequiredConditionType(BYTE typeOutOfTwo) const {
 			typeOutOfTwo = (typeOutOfTwo % SkillEntry::CONDITIONS_MAX_NUM) * 2;
-			return this->getColumn<BYTE>(typeOutOfTwo + COLUMN_REQUIRED_CONDITION_TYPE_FIRST);
+			return this->getColumn<BYTE>(typeOutOfTwo + SkillEntry::COLUMN_REQUIRED_CONDITION_TYPE_FIRST);
 		}
 
-		__inline WORD getRequiredConditionAmount(BYTE amountOutOfTwo) {
+		__inline WORD getRequiredConditionAmount(BYTE amountOutOfTwo) const {
 			amountOutOfTwo = (amountOutOfTwo % SkillEntry::CONDITIONS_MAX_NUM) * 2;
-			return this->getColumn<WORD>(amountOutOfTwo + COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST);
+			return this->getColumn<WORD>(amountOutOfTwo + SkillEntry::COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST);
+		}
+
+		__inline DWORD getRequiredZulies() const {
+			return this->getColumn<DWORD>(SkillEntry::COLUMN_REQUIRED_ZULIES) * 100;
 		}
 };
+
+typedef SkillEntry Skill;
 
 class SkillSTB : public STBFile_Template<SkillEntry> {
 	public:
@@ -667,23 +729,43 @@ class SkillSTB : public STBFile_Template<SkillEntry> {
 };
 
 class ConsumeSTB : public STBFile {
-public:
-	const static WORD STAT_TYPE_NEEDED = 0x11;
-	const static WORD STAT_VALUE_NEEDED = 0x12;
+	public:
+		const static WORD EXECUTION_TYPE = 0x07;
+		const static WORD STAT_TYPE_NEEDED = 0x11;
+		const static WORD STAT_VALUE_NEEDED = 0x12;
 
-	const static WORD STAT_TYPE_ADD = 0x13;
-	const static WORD STAT_VALUE_ADD = 0x14;
-	const static WORD STATUS_STB_REFERENCE = 0x18;
-#ifdef __ROSE_USE_VFS__
-	ConsumeSTB(VFS* pVFS, std::string pathInVFS) {
-		this->filePath = pathInVFS;
-		this->read(pVFS);
+		const static WORD STAT_TYPE_ADD = 0x13;
+		const static WORD STAT_VALUE_ADD = 0x14;
+		const static WORD STATUS_STB_REFERENCE = 0x18;
+	#ifdef __ROSE_USE_VFS__
+		ConsumeSTB(VFS* pVFS, std::string pathInVFS) {
+			this->filePath = pathInVFS;
+			this->read(pVFS);
 
-#else
-	ConsumeSTB(const char* filePath) {
-		this->read(filePath);
-#endif
-	}
+	#else
+		ConsumeSTB(const char* filePath) {
+			this->read(filePath);
+	#endif
+		}
+};
+
+class StatusSTB : public STBFile {
+	public:
+		const static WORD COLUMN_IS_STATUS_STACKABLE = 0x02;
+		const static WORD COLUMN_BUFF_OR_DEBUFF = 0x03;
+		const static WORD COLUMN_VALUE_INCREASE_FIRST = 0x06;
+		const static WORD COLUMN_VALUE_INCREASE_SECOND = 0x08;
+
+	#ifdef __ROSE_USE_VFS__
+		StatusSTB(VFS* pVFS, std::string pathInVFS) {
+			this->filePath = pathInVFS;
+			this->read(pVFS);
+
+	#else
+		StatusSTB(const char* filePath) {
+			this->read(filePath);
+	#endif
+		}
 };
 
 class AISTB : public STBFile {

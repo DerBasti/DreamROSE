@@ -135,68 +135,6 @@ WORD AIService::getAbilityType( BYTE abilityType, Entity* entity ) {
 	return 0;
 }
 
-const char* AIService::operationName(BYTE operation) {
-	switch(operation) {
-		case AIService::OPERATION_EQUAL:
-			return "==";
-		case AIService::OPERATION_BIGGER:
-			return ">";
-		case AIService::OPERATION_BIGGER_EQUAL:
-			return ">=";
-		case AIService::OPERATION_SMALLER:
-			return  "<";
-		case AIService::OPERATION_SMALLER_EQUAL:
-			return "<=";
-		case AIService::OPERATION_NOT_EQUAL:
-			return "!=";
-		case AIService::OPERATION_ADDITION:
-			return "+";
-		case AIService::OPERATION_SUBTRACTION:
-			return "-";
-		case AIService::OPERATION_MULTIPLICATION:
-			return "*";
-		case AIService::OPERATION_DIVISION:
-			return "/";
-		case AIService::OPERATION_RETURN_RHS:
-			return "this = rhs";
-	}
-	return "UNKNOWN";
-}
-
-template<class _Ty1, class _Ty2> bool AIService::checkOperation(_Ty1& first, const _Ty2& second, const BYTE operation) {
-	switch(operation) {
-		case AIService::OPERATION_EQUAL:
-			return (first == second);
-		case AIService::OPERATION_BIGGER:
-			return (first > second);
-		case AIService::OPERATION_BIGGER_EQUAL:
-			return (first >= second);
-		case AIService::OPERATION_SMALLER:
-			return (first < second);
-		case AIService::OPERATION_SMALLER_EQUAL:
-			return (first <= second);
-		case AIService::OPERATION_NOT_EQUAL:
-			return (first != second);
-	}
-	return false;
-}
-
-template<class _Ty> static _Ty AIService::resultOperation(_Ty& first, const _Ty& second, const BYTE operation) {
-	switch(operation) {
-		case AIService::OPERATION_ADDITION:
-			return _Ty(first + second);
-		case AIService::OPERATION_SUBTRACTION:
-			return _Ty(first - second);
-		case AIService::OPERATION_MULTIPLICATION:
-			return _Ty(first * second);
-		case AIService::OPERATION_DIVISION:
-			return _Ty(first / second);
-		case AIService::OPERATION_RETURN_RHS:
-			return _Ty(second);
-	}
-	return _Ty(0);
-}
-
 bool AIService::run(NPC* npc, const BYTE blockId, Entity* target, const DWORD dmgDealt) {
 	WORD timeDiff = static_cast<WORD>(time(nullptr) - npc->getTimeAICheck());
 	if(npc->getAI() == nullptr) {
@@ -221,7 +159,7 @@ bool AIService::run(NPC* npc, const BYTE blockId, Entity* target, const DWORD dm
 	for(unsigned int i=0;i<block.size();i++) {
 		const AIP::Record& curRecord = block.at(i);
 
-		AITransfer trans; trans.designatedTarget = target;
+		AITransfer trans; trans.designatedTarget = target; trans.blockType = blockId;
 		const std::vector<Trackable<char>>& conditions = curRecord.getConditions();
 		if(AIService::checkConditions(conditions, npc, &trans)) {
 			const std::vector<Trackable<char>>& actions = curRecord.getActions();
@@ -411,7 +349,7 @@ bool AIService::conditionDistanceToTarget( NPC* npc, const AICOND_04* cond ) {
 
 	float distance = npc->getPositionCurrent().distanceTo(npc->getTarget()->getPositionCurrent());
 	float condDist = cond->getDistance();
-	if (AIService::checkOperation(distance, condDist, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL))
+	if (OperationService::checkOperation(distance, condDist, cond->moreOrLess ? OperationService::OPERATION_SMALLER_EQUAL : OperationService::OPERATION_BIGGER_EQUAL))
 		return true;
 	return false;
 }
@@ -421,14 +359,14 @@ bool AIService::conditionCheckAbilityDifference(NPC* npc, const AICOND_05* cond)
 		return false;
 
 	WORD abilityValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
-	if(AIService::checkOperation(abilityValue, cond->difference, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL))
+	if (OperationService::checkOperation(abilityValue, cond->difference, cond->moreOrLess ? OperationService::OPERATION_SMALLER_EQUAL : OperationService::OPERATION_BIGGER_EQUAL))
 		return true;
 	return false;
 }
 
 bool AIService::conditionCheckPercentHP(NPC* npc, const AICOND_06* cond) {
 	BYTE percentHP = npc->getPercentHP();
-	return AIService::checkOperation(percentHP, cond->hp, cond->needsLessHP() ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL);
+	return OperationService::checkOperation(percentHP, cond->hp, cond->needsLessHP() ? OperationService::OPERATION_SMALLER_EQUAL : OperationService::OPERATION_BIGGER_EQUAL);
 }
 
 bool AIService::conditionRandomPercentageMet(const AICOND_07* cond) {
@@ -473,7 +411,7 @@ bool AIService::conditionCompareAbilities(NPC *npc, const AICOND_10* cond, AITra
 	WORD npcTargetValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
 
 	WORD transTargetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
-	return AIService::checkOperation(npcTargetValue, transTargetValue, cond->moreOrLess ? AIService::OPERATION_SMALLER : AIService::OPERATION_BIGGER);
+	return OperationService::checkOperation(npcTargetValue, transTargetValue, cond->moreOrLess ? OperationService::OPERATION_SMALLER : OperationService::OPERATION_BIGGER);
 }
 
 bool AIService::conditionIsStatSufficient(NPC* npc, const AICOND_11* cond, AITransfer* trans) {
@@ -481,7 +419,7 @@ bool AIService::conditionIsStatSufficient(NPC* npc, const AICOND_11* cond, AITra
 		return false;
 
 	WORD targetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
-	return AIService::checkOperation(targetValue, cond->value, cond->moreOrLess ? AIService::OPERATION_SMALLER_EQUAL : AIService::OPERATION_BIGGER_EQUAL);
+	return OperationService::checkOperation(targetValue, cond->value, cond->moreOrLess ? OperationService::OPERATION_SMALLER_EQUAL : OperationService::OPERATION_BIGGER_EQUAL);
 }
 
 bool AIService::conditionHasDaytimeArrived(NPC* npc, const AICOND_12* cond) {
@@ -514,17 +452,17 @@ bool AIService::conditionHasBuff(NPC* npc, const AICOND_13* cond) {
 
 bool AIService::conditionIsObjectVarValid(NPC* npc, const AICOND_14* cond) {
 	int value = npc->getObjVar(cond->variableIdx);
-	return AIService::checkOperation(value, cond->value, cond->operation);
+	return OperationService::checkOperation(value, cond->value, cond->operation);
 }
 
 bool AIService::conditionIsWorldVarValid(const AICOND_15* cond) {
 	int value = mainServer->getWorldVariable(cond->variableIdx);
-	return AIService::checkOperation(value, cond->value, cond->operation);
+	return OperationService::checkOperation(value, cond->value, cond->operation);
 }
 
 bool AIService::conditionIsEconomyVarValid(const AICOND_16* cond) {
 	int value = mainServer->getEconomyVariable(cond->variableIdx);
-	return AIService::checkOperation(value, cond->value, cond->operation);
+	return OperationService::checkOperation(value, cond->value, cond->operation);
 }
 
 bool AIService::conditionIsNPCNearby(NPC *npc, const AICOND_17* ai) {
@@ -552,7 +490,7 @@ bool AIService::conditionCheckDistanceToOwner(NPC* npc, const AICOND_18* cond) {
 
 	DWORD dist = static_cast<DWORD>(mon->getPositionCurrent().distanceTo(mon->getPositionCurrent()));
 	float condDist = cond->getDistance();
-	return AIService::checkOperation(dist, condDist, cond->operation);
+	return OperationService::checkOperation(dist, condDist, cond->operation);
 }
 
 bool AIService::conditionCheckZoneTime(NPC* npc, const AICOND_19* cond) {
@@ -564,7 +502,7 @@ bool AIService::conditionCheckZoneTime(NPC* npc, const AICOND_19* cond) {
 
 bool AIService::conditionAreOwnStatsSufficient(NPC* npc, const AICOND_20* cond) {
 	WORD value = AIService::getAbilityType(cond->abilityType, npc);
-	return AIService::checkOperation(value, cond->value, cond->operation);
+	return OperationService::checkOperation(value, cond->value, cond->operation);
 }
 
 bool AIService::conditionHasNoOwner(NPC* npc, const AICOND_21* ai) {
@@ -632,7 +570,7 @@ bool AIService::conditionLevelDiffToSurrounding(NPC* npc, const AICOND_27* ai, A
 			if (dynamic_cast<Entity*>(npc)->isAllied(entity) &&
 				ai->getLevelDiff(0) >= currentLevelDiff && ai->getLevelDiff(1) <= currentLevelDiff) {
 				foundAmount++;
-				if (AIService::checkOperation(foundAmount, ai->amount, ai->operation)) {
+				if (OperationService::checkOperation(foundAmount, ai->amount, ai->operation)) {
 					trans->lastFound = entity;
 					return true;
 				}
@@ -644,7 +582,7 @@ bool AIService::conditionLevelDiffToSurrounding(NPC* npc, const AICOND_27* ai, A
 
 bool AIService::conditionAIVariable(class NPC* npc, const struct AICOND_28* ai) {
 	int aiValue = npc->getAIVar(ai->getVarIndex());
-	return AIService::checkOperation(aiValue, ai->value, ai->getOperationType());
+	return OperationService::checkOperation(aiValue, ai->value, ai->getOperationType());
 }
 
 bool AIService::conditionIsTargetClanmaster(class NPC* npc, const struct AICOND_29* ai, AITransfer* trans) {
@@ -770,7 +708,7 @@ void AIService::executeActions( const std::vector<Trackable<char>>& ai, NPC* npc
 				AIService::actionMoveToOwner(npc, reinterpret_cast<const AIACTION_29*>(aip));
 			break;
 			case BasicAIP::__AI_ACTION_30__:
-				AIService::actionSetQuestTrigger(npc, reinterpret_cast<const AIACTION_30*>(aip));
+				AIService::actionSetQuestTrigger(npc, reinterpret_cast<const AIACTION_30*>(aip), trans);
 			break;
 			case BasicAIP::__AI_ACTION_31__:
 				AIService::actionAttackOwnersTarget(npc);
@@ -904,7 +842,7 @@ void AIService::actionMoveToTarget(NPC * npc, const AIACTION_08 *act, AITransfer
 }
 
 void AIService::actionConvert(NPC* npc, const AIACTION_09* act) {
-	mainServer->convertTo( npc, act->monsterId );	
+	npc->convertTo( act->monsterId );	
 }
 
 void AIService::actionSpawnPet(NPC* npc, const AIACTION_10* act) {
@@ -1060,7 +998,7 @@ void AIService::actionCastSkill(NPC* npc, const AIACTION_24* act, AITransfer* tr
 void AIService::actionChangeNPCVar(NPC* npc, const AIACTION_25* act) {
 	int val = npc->getObjVar(act->varIdx);
 	int actVal = act->getValue();
-	int newVal = AIService::resultOperation(val, actVal, act->operation);
+	int newVal = OperationService::resultOperation(val, actVal, act->operation);
 
 	npc->setObjVar(act->varIdx, newVal);
 }
@@ -1091,9 +1029,9 @@ void AIService::actionMoveToOwner(NPC *npc, const AIACTION_29* act) {
 	mon->setStance(Stance::RUNNING);
 }
 
-void AIService::actionSetQuestTrigger(NPC *npc, const AIACTION_30* act) {
+void AIService::actionSetQuestTrigger(NPC *npc, const AIACTION_30* act, AITransfer* trans) {
 	const DWORD hash = ::makeQuestHash(act->triggerName);
-	try { throw TraceableExceptionARGS("NPC %s RUNS QUESTTRIGGER %i", npc->getName().c_str(), hash); }
+	try { throw TraceableExceptionARGS("NPC %s RUNS QUESTTRIGGER %s [0x%x]", npc->getName().c_str(), act->triggerName, hash); }
 	catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 	QuestService::runQuest(npc, hash);
 }
@@ -1125,14 +1063,16 @@ void AIService::actionGiveItemsToOwner(NPC* npc, const AIACTION_34* act) {
 	Player* player = reinterpret_cast<Player*>(mon->getOwner());
 	if (!player)
 		return;
-
-	//TODO: player->addToInventory( act->getItemNum(), act->getAmount() );
+	Item newItem(act->itemNum); newItem.amount = act->amount;
+	if (!player->addItemToInventory(newItem)) {
+		new Drop(player, player->getPositionCurrent().calcNewPositionWithinRadius(500), newItem, false);
+	}
 }
 
 void AIService::actionSetAIVar(NPC* npc, const AIACTION_35* act) {
 	int val = npc->getAIVar(act->getVariableIndex());
 	int newVal = act->getValue();
-	int result = AIService::resultOperation(val, newVal, act->getOperationType());
+	int result = OperationService::resultOperation(val, newVal, act->getOperationType());
 	npc->setAIVar(act->getVariableIndex(), result);
 }
 #pragma endregion

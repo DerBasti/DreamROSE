@@ -24,11 +24,7 @@ template<class _Ty, class = typename std::enable_if<std::is_integral<_Ty>::value
 		}
 		
 		Trackable(const Trackable<_Ty>& rhs) {
-			if (this->data) {
-				delete[] this->data;
-				this->data = nullptr;
-				this->_size = 0x00;
-			}
+			this->data = nullptr;
 			(*this) = rhs;
 		}
 

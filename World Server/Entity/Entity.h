@@ -129,46 +129,46 @@ class Entity {
 			_Ty result = 0;
 			switch (statType) {
 				case StatType::ATTACK_POWER:
-					result = this->stats.attackPower;
+					result = static_cast<_Ty>(this->stats.attackPower);
 				break;
 				case StatType::ATTACK_SPEED:
-					result = this->stats.attackSpeed;
+					result = static_cast<_Ty>(this->stats.attackSpeed);
 					break;
 				case StatType::CRIT_RATE:
-					result = this->stats.critRate;
+					result = static_cast<_Ty>(this->stats.critRate);
 					break;
 				case StatType::CURRENT_HP:
-					result = this->stats.curHP;
+					result = static_cast<_Ty>(this->stats.curHP);
 					break;
 				case StatType::CURRENT_MP:
-					result = this->stats.curMP;
+					result = static_cast<_Ty>(this->stats.curMP);
 					break;
 				case StatType::DEFENSE_MAGICAL:
-					result = this->stats.defenseMagical;
+					result = static_cast<_Ty>(this->stats.defenseMagical);
 					break;
 				case StatType::DEFENSE_PHYSICAL:
-					result = this->stats.defensePhysical;
+					result = static_cast<_Ty>(this->stats.defensePhysical);
 					break;
 				case StatType::DODGE_RATE:
-					result = this->stats.dodgeRate;
+					result = static_cast<_Ty>(this->stats.dodgeRate);
 					break;
 				case StatType::EXPERIENCE_RATE:
 					result = 0;
 					break;
 				case StatType::HIT_RATE:
-					result = this->stats.hitRate;
+					result = static_cast<_Ty>(this->stats.hitRate);
 					break;
 				case StatType::LEVEL:
-					result = this->getLevel();
+					result = static_cast<_Ty>(this->getLevel());
 					break;
 				case StatType::MAX_HP:
-					result = this->stats.maxHP;
+					result = static_cast<_Ty>(this->stats.maxHP);
 					break;
 				case StatType::MAX_MP:
-					result = this->stats.maxMP;
+					result = static_cast<_Ty>(this->stats.maxMP);
 					break;
 				case StatType::MOVEMENT_SPEED:
-					result = this->stats.movementSpeed;
+					result = static_cast<_Ty>(this->stats.movementSpeed);
 					break;
 			}
 			if (result > 0)
@@ -185,8 +185,8 @@ class Entity {
 
 		__inline virtual std::string getName() const { return std::string(""); }
 
-		__inline virtual void setClientId(WORD newId) { this->entityInfo.id = newId; }
-		__inline virtual WORD getClientId() const { return this->entityInfo.getId(); }
+		__inline virtual void setLocalId(WORD newId) { this->entityInfo.id = newId; }
+		__inline virtual WORD getLocalId() const { return this->entityInfo.getId(); }
 		__inline virtual bool isIngame() const { return this->entityInfo.isIngame(); }
 
 		__inline virtual WORD getMapId() const { return this->entityInfo.getMapId(); }
@@ -197,6 +197,8 @@ class Entity {
 
 		__inline virtual Entity* getTarget() const { return this->combat.getTarget(); }
 		virtual void setTarget(Entity* target);
+
+		virtual bool castSkill(const WORD skillId) { return true; }
 
 		virtual bool addDamage(Entity* enemy, const WORD amount, WORD& flag);
 		virtual bool onDamageReceived(Entity* enemy, const WORD damage) { return true; };

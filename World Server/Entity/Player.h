@@ -74,6 +74,7 @@ class Player : public Entity, public ClientSocket {
 			DWORD experience;
 			WORD skillPoints;
 			WORD statPoints;
+			WORD respawnTownId;
 			struct VisualTraits {
 				BYTE sex;
 				WORD hairStyle;
@@ -87,16 +88,90 @@ class Player : public Entity, public ClientSocket {
 			CharInfo() {
 				this->name = "";
 				this->id = this->experience = 0x00;
-				this->job = this->skillPoints = this->statPoints = 0x00;
+				this->job = this->skillPoints = this->statPoints = this->respawnTownId = 0x00;
 				this->level = 0x00;
 			}
 		} charInfo;
 
-		//std::vector<ConsumedItem> consumedItems;
-		Item inventory[Inventory::MAXIMUM];
+		struct ConsumedItem {
+			DWORD maxRate;
+			DWORD valueConsumed;
+			DWORD valuePerSecond;
+			WORD influencedAbility;
+			clock_t timeStamp;
+
+			ConsumedItem(const WORD abilityType, const DWORD max, const DWORD valueEachSecond) {
+				this->influencedAbility = abilityType;
+				this->maxRate = max;
+				this->valueConsumed = 0x00;
+				this->valuePerSecond = valueEachSecond;
+				this->timeStamp = clock();
+			}
+		};
+
+		std::vector<ConsumedItem> consumedItems;
+		class PlayerInventory {
+			public:
+				const static WORD FACE = 1;
+				const static WORD HEADGEAR = 2;
+				const static WORD ARMOR = 3;
+				const static WORD GLOVES = 6;
+				const static WORD SHOES = 4;
+				const static WORD BACK = 5;
+				const static WORD WEAPON = 7;
+				const static WORD SHIELD = 8;
+
+				const static WORD TAB_SIZE = 30;
+
+				const static WORD ARROWS = 132;
+				const static WORD BULLETS = 133;
+				const static WORD CANNONSHELLS = 134;
+				const static WORD CART_FRAME = 135;
+				const static WORD CART_ENGINE = 136;
+				const static WORD CART_WHEELS = 137;
+				const static WORD CART_WEAPON = 138;
+				const static WORD CART_ABILITY = 139;
+				const static WORD MAXIMUM = 140;
+			private:
+				Item internalInventory[PlayerInventory::MAXIMUM];
+			public:
+				PlayerInventory() {
+					for (unsigned int i = 0; i < PlayerInventory::MAXIMUM; i++) {
+						this->internalInventory[i].clear();
+					}
+				}
+				Item& operator[](const size_t pos) { return this->internalInventory[pos]; }
+				Item& operator[](const int pos) { return this->internalInventory[pos]; }
+
+				const static BYTE fromItemType(const BYTE itemType) {
+					   switch (itemType) {
+						   case ItemType::HEADGEAR:
+							   return PlayerInventory::HEADGEAR;
+						   case ItemType::FACE:
+							   return PlayerInventory::FACE;
+						   case ItemType::ARMOR:
+							   return PlayerInventory::ARMOR;
+						   case ItemType::GLOVES:
+							   return PlayerInventory::GLOVES;
+						   case ItemType::SHOES:
+							   return PlayerInventory::SHOES;
+						   case ItemType::BACK:
+							   return PlayerInventory::BACK;
+						   case ItemType::WEAPON:
+							   return PlayerInventory::WEAPON;
+						   case ItemType::SHIELD:
+							   return PlayerInventory::SHIELD;
+						   case ItemType::MONEY:
+							   return 0x00; //TEST
+					   }
+					   return PlayerInventory::MAXIMUM - 1;
+				}
+		} inventory;
 
 		struct questInfo {
 			const static BYTE JOURNEY_MAX = 10;
+			const static BYTE FLAGS_MAX_BYTE = 0x40;
+			const static BYTE FLAGS_MAX_DWORD = 0x10;
 
 			PlayerQuest* selected;
 			FixedArray<PlayerQuest*> journey;
@@ -112,7 +187,6 @@ class Player : public Entity, public ClientSocket {
 				const static BYTE PLANET_MAX = 7;
 				const static BYTE UNION_MAX = 10;
 
-				FixedArray<WORD> switches;
 				FixedArray<WORD> episode;
 				FixedArray<WORD> job;
 				FixedArray<WORD> planet;
@@ -152,13 +226,17 @@ class Player : public Entity, public ClientSocket {
 		bool pakChangeStance();
 		bool pakLocalChat();
 		bool pakShoutChat();
+		bool pakRespawnTown();
 		bool pakTelegate();
+		bool pakLearnSkill();
+		bool pakIncreaseSkillLevel();
 		bool pakEquipmentChange();
 		bool pakQuestAction();
 		bool pakPickUpDrop();
 		bool pakDropFromInventory();
 		bool pakBuyFromNPC();
 		bool pakSellToNPC();
+		bool pakConsumeItem();
 		
 		void addEntityVisually(Entity* entity);
 		void removeEntityVisually(Entity* entity);
@@ -166,6 +244,11 @@ class Player : public Entity, public ClientSocket {
 
 		const BYTE getFreeInventorySlot(const Item& item);
 		const CharInfo::VisualTraits& getVisualTraits() const { return this->charInfo.visualTraits; }
+
+		bool saveQuests();
+		bool loadQuests();
+
+		bool addConsumableToList(const WORD abilityToInfluence, const DWORD maxValue, const DWORD valuePerMilliSecond);
 
 	public:
 		Player(SOCKET sock, ServerSocket* server);
@@ -180,7 +263,7 @@ class Player : public Entity, public ClientSocket {
 		virtual void setPositionDest(const Position& newPos);
 		
 		DWORD getSpecialStatType(const WORD statType);
-		bool changeAbility(const WORD abilityType, const DWORD amount, const BYTE operation);
+		bool changeAbility(const WORD abilityType, const DWORD amount, const BYTE operation, bool sendChangePacket=false);
 
 		void updateAttackpower();
 		void updateAttackSpeed();
@@ -196,26 +279,19 @@ class Player : public Entity, public ClientSocket {
 		__inline QWORD getZulies() const { return this->inventory[0x00].amount; }
 		void checkRegeneration();
 
+		bool addQuest(const WORD questId);
+		bool updateQuestData();
+		bool sendQuestTrigger(const DWORD hash, bool success);
+		bool sendQuestTriggerViaMonster(const WORD monType);
 		bool searchAndSelectQuest(const DWORD questId);
 		__inline PlayerQuest* getSelectedQuest() const { return this->quest.selected; }
 		PlayerQuest* getQuestByID(const WORD questId);
 		PlayerQuest* getEmptyQuestSlot();
 		const WORD getQuestVariable(WORD varType, const WORD varId);
 		void setQuestVariable(WORD varType, const WORD varId, const WORD value);
-		__inline const DWORD getQuestSwitch(const WORD value) { return (this->quest.flag[value >> 0x03] & (1 << (value & 0x07))); }
-		void setQuestSwitch(const WORD switchNum, BYTE operation) {
-			if (operation == 0x00)
-				this->quest.flag[switchNum >> 0x03] &= ~(1 << (switchNum & 0x07));
-			else if (operation == 0x01)
-				this->quest.flag[switchNum >> 0x03] |= (1 << (switchNum & 0x07));
-			else if (operation == 0x02) {
-				if (this->getQuestSwitch(switchNum))
-					return this->setQuestSwitch(switchNum, 0x00);
-				else
-					return this->setQuestSwitch(switchNum, 0x01);
-			}
-		}
-		__inline void clearQuestSwitchGroup(const WORD switchGroup) { this->quest.flag[switchGroup] = 0x00; }
+		__inline BYTE getQuestFlag(const WORD flagGroup) { return this->quest.flag[flagGroup>>3] & (1 << (flagGroup&0x07)); }
+		void setQuestFlag(const WORD flagGroup, BYTE newValue);
+		__inline void clearQuestFlag(const WORD flagGroup) { this->quest.flag[flagGroup>>3] = 0x00; }
 
 		WORD checkClothesForStats(const WORD statAmount, ...);
 		WORD checkSkillsForStats(const WORD basicAmount, const WORD statAmount, ...);
@@ -264,7 +340,14 @@ class Player : public Entity, public ClientSocket {
 		void resetAttributes();
 		void resetSkills();
 
-		__inline Skill* getSkill(const BYTE skillSlot) { return this->skills[skillSlot]; }
+		__inline Skill* getSkill(const BYTE skillSlot) const { return this->skills[skillSlot]; }
+
+
+		//Return values: 
+		//0 = skill not found/learned; 
+		//1 = skill found, skillLevel is lower than the required one; 
+		//2 = skill found + skilllevel exceeds wanted skill
+		const BYTE isSkillLearned(const Skill* skillToFind);
 		bool changeSkill(const WORD totalId);
 
 		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }

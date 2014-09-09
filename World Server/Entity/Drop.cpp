@@ -11,7 +11,7 @@ void Drop::construct(Entity* giver, const Position& pos, bool isPublicDomain) {
 	this->position.current = pos;
 	this->position.destination = pos;
 
-	mainServer->assignClientID(this);
+	mainServer->getMap(this->getMapId())->assignClientID(this);
 
 	this->entityInfo.type = Entity::TYPE_DROP;
 
