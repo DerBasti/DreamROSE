@@ -325,7 +325,7 @@ void Entity::addSectorVisually(MapSector* newSector) {
 		if(!entity || !entity->isIngame() || entity == this)
 			continue;
 
-		//Two-way removal
+		//Two-way  removal
 		this->addEntityVisually(entity);
 		entity->addEntityVisually(this);
 	}

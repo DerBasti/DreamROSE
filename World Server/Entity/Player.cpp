@@ -15,7 +15,7 @@ Player::Player(SOCKET sock, ServerSocket* server){
 	this->entityInfo.ingame = false;
 	this->status.updateLastRegen();
 
-	for (unsigned int i = 0; i < Inventory::MAXIMUM; i++) {
+	for (unsigned int i = 0; i < PlayerInventory::Slots::MAXIMUM; i++) {
 		this->inventory[i].clear();
 	}
 	this->skills.reserve(PlayerSkill::PLAYER_MAX_SKILLS);
@@ -106,10 +106,10 @@ const BYTE Player::getFreeInventorySlot(const Item& item) {
 			if(item.type == 0x00 || item.type >= ItemType::PAT)
 				return std::numeric_limits<BYTE>::max();
 	}	
-	BYTE slotId = 12 + (Inventory::TAB_SIZE * inventoryTab);
+	BYTE slotId = 12 + (PlayerInventory::Slots::TAB_SIZE * inventoryTab);
 	if(inventoryTab == 0x01 || inventoryTab == 0x02) {
 		DWORD totalCount = 0x00;
-		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
+		for (unsigned int i = 0; i<PlayerInventory::Slots::TAB_SIZE; i++) {
 			if(this->inventory[slotId].id == item.id && this->inventory[slotId].type == item.type) {
 				totalCount = this->inventory[slotId].amount + item.amount;
 				if(totalCount < 1000)
@@ -117,15 +117,15 @@ const BYTE Player::getFreeInventorySlot(const Item& item) {
 			}
 			slotId++;
 		}
-		slotId -= Inventory::TAB_SIZE;
-		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
+		slotId -= PlayerInventory::Slots::TAB_SIZE;
+		for (unsigned int i = 0; i<PlayerInventory::Slots::TAB_SIZE; i++) {
 			if(!this->inventory[slotId].isValid()) {
 				return slotId;
 			}
 			slotId++;
 		}
 	} else {
-		for(unsigned int i=0;i<Inventory::TAB_SIZE;i++) {
+		for (unsigned int i = 0; i<PlayerInventory::Slots::TAB_SIZE; i++) {
 			if(this->inventory[slotId].type == 0x00 && this->inventory[slotId].amount == 0x00)
 				return slotId;
 			slotId++;
@@ -179,16 +179,28 @@ void Player::checkRegeneration() {
 	if (this->consumedItems.size() > 0) {
 		for (unsigned int i = 0; i < this->consumedItems.size(); i++) {
 			ConsumedItem& item = this->consumedItems.at(i);
-			DWORD amount = item.valuePerSecond * (clock() - item.timeStamp) / 1000;
-			item.timeStamp = clock();
-			item.valueConsumed += amount;
+			clock_t mod = (clock() - item.timeStamp);
+			DWORD amount = item.valuePerSecond * mod / 1000.0f; //100% / 1000ms
+			if (amount == 0x00)
+				continue;
 			bool eraseFlag = false;
 			if (amount + item.valueConsumed >= item.maxRate) {
 				amount = item.maxRate - item.valueConsumed;
 				eraseFlag = true;
 			}
-			this->changeAbility(item.influencedAbility, amount, OperationService::OPERATION_ADDITION);
+#ifdef __ROSE_DEBUG__
+			ChatService::sendDebugMessage(this, "Regenerated %i [%i] out of %i [%i per second] to a total of %i", amount, item.valueConsumed + amount, item.maxRate, item.valuePerSecond, this->getStatType<WORD>(item.influencedAbility) + amount);
+#endif
+			item.valueConsumed += amount;
+			item.timeStamp = clock();
+			this->changeAbility(item.influencedAbility, amount, OperationService::OPERATION_ADDITION, false);
 			if (eraseFlag) {
+				Packet pak(PacketID::World::Response::BUFFS);
+				pak.addWord(this->getLocalId());
+				pak.addDWord(this->getBuffsVisuality());
+				pak.addWord(this->getStatType<WORD>(item.influencedAbility));
+				this->sendToVisible(pak);
+
 				this->consumedItems.erase(this->consumedItems.begin() + i);
 				i--;
 			}
@@ -398,14 +410,15 @@ PlayerQuest* Player::getEmptyQuestSlot() {
 }
 
 Item Player::getItemFromInventory(const WORD itemSlot) {
-	if (itemSlot == 0 || itemSlot >= Inventory::MAXIMUM)
+	if (itemSlot == 0 || itemSlot >= PlayerInventory::Slots::MAXIMUM)
 		return Item();
 	return this->inventory[itemSlot];
 }
 
-bool Player::addItemToInventory(const Item& item) {
-	BYTE itemSlot = this->getFreeInventorySlot(item);
-	if (itemSlot != std::numeric_limits<BYTE>::max()) {
+bool Player::addItemToInventory(const Item& item, BYTE itemSlot) {
+	if (itemSlot == std::numeric_limits<BYTE>::max())
+		itemSlot = this->getFreeInventorySlot(item);
+	if (itemSlot < PlayerInventory::Slots::MAXIMUM) {
 		if (this->inventory[itemSlot].isValid()) {
 			this->inventory[itemSlot].amount += item.amount;
 		}
@@ -600,7 +613,7 @@ WORD Player::checkClothesForStats(const WORD statAmount, ...) {
 	for(unsigned int i=0;i<statAmount;i++) {
 		stats.push_back(va_arg(ap, DWORD));
 	}
-	for(unsigned int i=1;i<=Inventory::SHIELD;i++) {
+	for(unsigned int i=1;i<=PlayerInventory::Slots::SHIELD;i++) {
 		if(!this->inventory[i].isValid())
 			continue;
 		try {
@@ -665,9 +678,9 @@ void Player::updateAttackpower() {
 	WORD totalAttackpower = 0x00;
 	WORD weaponAtkPower = 0x00;
 	WORD weaponType = 0x00;
-	if(this->inventory[Inventory::WEAPON].isValid()) {
-		weaponAtkPower += mainServer->getWeaponAttackpower( this->inventory[Inventory::WEAPON].id );
-		weaponType = mainServer->getSubType( ItemType::WEAPON, this->inventory[Inventory::WEAPON].id );
+	if (this->inventory[PlayerInventory::Slots::WEAPON].isValid()) {
+		weaponAtkPower += mainServer->getWeaponAttackpower(this->inventory[PlayerInventory::Slots::WEAPON].id);
+		weaponType = mainServer->getSubType(ItemType::WEAPON, this->inventory[PlayerInventory::Slots::WEAPON].id);
 	} else {
 		WORD dexPart = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.3);
 		WORD strPart = static_cast<WORD>(this->attributes.getStrengthTotal() * 0.5);
@@ -702,19 +715,19 @@ void Player::updateAttackpower() {
 			weaponAtkParts[0] = static_cast<WORD>((this->attributes.getStrengthTotal() + this->getLevel()) * 0.1);
 			weaponAtkParts[1] = static_cast<WORD>(((this->attributes.getDexterityTotal() * 0.04) + (this->attributes.getSensibilityTotal() * 0.03 + 29)) * weaponAtkPower / 30.0);
 			weaponAtkParts[2] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.52);
-			weaponAtkParts[3] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::ARROWS].id) * 0.5);
+			weaponAtkParts[3] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[PlayerInventory::Slots::ARROWS].id) * 0.5);
 		break;
 		case WeaponType::RANGE_GUN:
 		case WeaponType::RANGE_DUAL_GUN:
 			weaponAtkParts[0] = static_cast<WORD>(this->attributes.getSensibilityTotal() * 0.47);
-			weaponAtkParts[1] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::BULLETS].id) * 0.8);
+			weaponAtkParts[1] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[PlayerInventory::Slots::BULLETS].id) * 0.8);
 			weaponAtkParts[2] = static_cast<WORD>(this->getLevel() * 0.1);
 			weaponAtkParts[3] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.3);
 			weaponAtkParts[4] = static_cast<WORD>((this->attributes.getConcentrationTotal() * 0.04 + this->attributes.getSensibilityTotal() * 0.05 + 29) * weaponAtkPower / 30.0);
 		break;
 		case WeaponType::RANGE_LAUNCHER:
 			weaponAtkParts[0] = static_cast<WORD>(this->attributes.getConcentrationTotal() * 0.47);
-			weaponAtkParts[1] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[Inventory::CANNONSHELLS].id));
+			weaponAtkParts[1] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[PlayerInventory::Slots::CANNONSHELLS].id));
 			weaponAtkParts[2] = static_cast<WORD>(this->attributes.getStrengthTotal() * 0.32);
 			weaponAtkParts[3] = static_cast<WORD>(this->attributes.getConcentrationTotal() * 0.45);
 			weaponAtkParts[4] = static_cast<WORD>((this->attributes.getConcentrationTotal() * 0.04 +
@@ -725,7 +738,7 @@ void Player::updateAttackpower() {
 			weaponAtkParts[1] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.04);
 			weaponAtkParts[2] = static_cast<WORD>((this->attributes.getSensibilityTotal() * 0.03 + 29) * weaponAtkPower / 30);
 			weaponAtkParts[3] = static_cast<WORD>(this->attributes.getDexterityTotal() * 0.52);
-			weaponAtkParts[4] = static_cast<WORD>(mainServer->getQuality( ItemType::OTHER, this->inventory[Inventory::ARROWS].id ) * 0.5);
+			weaponAtkParts[4] = static_cast<WORD>(mainServer->getQuality(ItemType::OTHER, this->inventory[PlayerInventory::Slots::ARROWS].id) * 0.5);
 		break;
 		case WeaponType::MAGIC_WAND:
 			weaponAtkParts[0] = static_cast<WORD>(this->getLevel() * 0.2);
@@ -896,7 +909,7 @@ NECESSARY FUNCTION:
 void Player::updateAttackSpeed() {
 	WORD atkSpeed = 115;
 	if(this->isWeaponEquipped()) {
-		int speedType = mainServer->getWeaponAttackspeed(this->inventory[Inventory::WEAPON].id);
+		int speedType = mainServer->getWeaponAttackspeed(this->inventory[PlayerInventory::Slots::WEAPON].id);
 		atkSpeed = 1500 / (speedType + 5);
 	}
 	atkSpeed += this->checkClothesForStats(1, StatType::ATTACK_SPEED);
@@ -907,7 +920,7 @@ void Player::updateAttackSpeed() {
 }
 
 bool Player::getAttackAnimation() {
-	this->combat.attackAnimation = mainServer->getAttackMotionPlayer(mainServer->getWeaponMotion(this->inventory[Inventory::WEAPON].id)); 
+	this->combat.attackAnimation = mainServer->getAttackMotionPlayer(mainServer->getWeaponMotion(this->inventory[PlayerInventory::Slots::WEAPON].id));
 	return this->combat.attackAnimation != nullptr;
 }
 
@@ -922,8 +935,8 @@ void Player::updateDefense() {
 	defense += this->checkClothesForStats(1, StatType::DEFENSE_PHYSICAL);
 	defense += this->getBuffAmount( Buffs::Visuality::DEFENSE_UP );
 	defense -= this->getBuffAmount( Buffs::Visuality::DEFENSE_DOWN );
-	for(unsigned int i=Inventory::FACE;i<Inventory::SHIELD;i++) {
-		if(i == Inventory::WEAPON || !this->inventory[i].isValid())
+	for (unsigned int i = PlayerInventory::Slots::FACE; i<PlayerInventory::Slots::SHIELD; i++) {
+		if (i == PlayerInventory::Slots::WEAPON || !this->inventory[i].isValid())
 			continue;
 		try {
 			STBEntry& armorEntry = mainServer->getEquipmentEntry(this->inventory[i].type, this->inventory[i].id);
@@ -943,8 +956,8 @@ void Player::updateHitrate() {
 	WORD newHitrate = 0x00;
 	if(this->isWeaponEquipped()) {
 		WORD statPart = static_cast<WORD>((this->attributes.getConcentrationTotal()+10)*0.8f);
-		WORD qualityPart = static_cast<WORD>(mainServer->getQuality(ItemType::WEAPON, this->inventory[Inventory::WEAPON].id) * 0.6);
-		WORD durabilityPart = static_cast<WORD>(this->inventory[Inventory::WEAPON].durability * 0.8);
+		WORD qualityPart = static_cast<WORD>(mainServer->getQuality(ItemType::WEAPON, this->inventory[PlayerInventory::Slots::WEAPON].id) * 0.6);
+		WORD durabilityPart = static_cast<WORD>(this->inventory[PlayerInventory::Slots::WEAPON].durability * 0.8);
 
 		newHitrate = statPart + qualityPart + durabilityPart;
 	} else {
@@ -1035,14 +1048,16 @@ void Player::updateMovementSpeed() {
 }
 
 float Player::getAttackRange() {
-	if(this->inventory[Inventory::WEAPON].amount == 0x00)
+	if (this->inventory[PlayerInventory::Slots::WEAPON].amount == 0x00)
 		return 100.0f;
-	STBEntry& weapon = mainServer->getEquipmentEntry(ItemType::WEAPON, this->inventory[Inventory::WEAPON].id);
+	STBEntry& weapon = mainServer->getEquipmentEntry(ItemType::WEAPON, this->inventory[PlayerInventory::Slots::WEAPON].id);
 	return std::max(100.0f, weapon.getColumn<float>(EquipmentSTB::ATTACK_RANGE));
 }
 
 void Player::resetAttributes() { 
-	this->attributes.resetStats(); 
+	for (unsigned int i = StatType::STRENGTH; i <= StatType::SENSIBILITY; i++) {
+		this->changeAbility(i, i <= StatType::CONCENTRATION ? 15 : 10, OperationService::OPERATION_RETURN_RHS);
+	}
 	this->charInfo.statPoints = 0;
 	for (unsigned int i = 1; i < this->getLevel(); i++) {
 		this->charInfo.statPoints += (i * 10 / 8) + 10;
@@ -1075,12 +1090,26 @@ bool Player::changeSkill(const WORD totalId) {
 	for (unsigned int i = skillPageStart; i < lastSkill; i++) {
 		if (this->skills[i] && this->skills[i]->getIdBasic() == wantedSkill->getIdBasic()) {
 			this->skills[i] = wantedSkill;
-			return true;
+
+			Packet pak(PacketID::World::Response::LEARN_SKILL);
+			pak.addByte(PlayerSkill::UPGRADE_SUCCESS);
+			pak.addByte(i); //SLOT
+			pak.addWord(this->skills[i]->getId());
+			pak.addWord(this->charInfo.skillPoints);
+			return this->sendData(pak);
 		}
 	}
+	return false;
+}
+
+bool Player::addSkill(Skill* skillToAdd) {
+	if (!skillToAdd)
+		return false;
+	WORD skillPageStart = Skill::getPage(skillToAdd);
+	WORD lastSkill = (skillPageStart + PlayerSkill::PAGE_SIZE);
 	for (unsigned int i = skillPageStart; i < lastSkill; i++) {
 		if (!this->skills[i]) {
-			this->skills[i] = wantedSkill;
+			this->skills[i] = skillToAdd;
 			Packet pak(PacketID::World::Response::LEARN_SKILL);
 			pak.addByte(PlayerSkill::LEARN_SUCCESS);
 			pak.addByte(i); //SLOT
@@ -1174,14 +1203,14 @@ bool Player::pakPlayerInfos() {
 	pak.addDWord(this->getVisualTraits().faceStyle);
 	pak.addDWord(this->getVisualTraits().hairStyle);
 
-	pak.addDWord(this->inventory[Inventory::HEADGEAR].getPakVisuality());
-	pak.addDWord(this->inventory[Inventory::ARMOR].getPakVisuality());
-	pak.addDWord(this->inventory[Inventory::GLOVES].getPakVisuality());
-	pak.addDWord(this->inventory[Inventory::SHOES].getPakVisuality());
-	pak.addDWord(this->inventory[Inventory::FACE].getPakVisuality());
-	pak.addDWord(this->inventory[Inventory::BACK].getPakVisuality());
-	pak.addDWord(this->inventory[Inventory::WEAPON].getPakVisuality());
-	pak.addDWord(this->inventory[Inventory::SHIELD].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::HEADGEAR].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::ARMOR].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::GLOVES].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::SHOES].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::FACE].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::BACK].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::WEAPON].getPakVisuality());
+	pak.addDWord(this->inventory[PlayerInventory::Slots::SHIELD].getPakVisuality());
 
 	pak.addByte(0x00); //BIRTHSTONE
 	pak.addWord(0x00); //BIRTHPLACE?
@@ -1263,7 +1292,7 @@ bool Player::pakInventory() {
 
 	pak.addWord( 0x00 );
 	pak.addDWord(0x00);
-	for (unsigned int i = 1; i < Inventory::MAXIMUM; i++) {
+	for (unsigned int i = 1; i < PlayerInventory::Slots::MAXIMUM; i++) {
 		pak.addWord(this->inventory[i].getPakHeader());
 		pak.addDWord(this->inventory[i].getPakData());
 	}
@@ -1441,7 +1470,7 @@ bool Player::saveInfos() {
 		return false;
 	if(!mainServer->sqlInsert("DELETE FROM inventory WHERE charId=%i", this->charInfo.id))
 		return false;
-	for(unsigned int i=1;i<Inventory::MAXIMUM;i++) {
+	for (unsigned int i = 1; i<PlayerInventory::Slots::MAXIMUM; i++) {
 		if(this->inventory[i].isValid())
 			mainServer->sqlInsert("INSERT INTO inventory (charId, slot, itemId, durability, lifespan, count, refine) VALUES(%i, %i, %i, %i, %i, %i, %i)", this->charInfo.id, i, this->inventory[i].type * 10000 + this->inventory[i].id, this->inventory[i].durability, this->inventory[i].lifespan, this->inventory[i].amount, this->inventory[i].refine);
 	}
@@ -1472,7 +1501,7 @@ bool Player::loadQuests() {
 		this->quest.journey[currentEntry]->setQuest(atoi(row[0]));
 		const DWORD passedTime = atoi(row[2]);
 		if (passedTime > 0)
-			this->quest.journey[currentEntry]->setPassedTime(time(NULL) - passedTime);
+			this->quest.journey[currentEntry]->setPassedTime(static_cast<DWORD>(time(NULL) - passedTime));
 
 		std::string vars = row[3]; BYTE idx = 0x00;
 		while (vars.find(",") != -1) {
@@ -1647,7 +1676,7 @@ bool Player::pakUpdateInventoryVisually( const BYTE slotAmount, const BYTE* slot
 	bool result = this->sendData(pak);
 
 	for(unsigned int j=0;j<slotAmount;j++) {
-		if(slotIds[j] == 0 || slotIds[j] >= Inventory::SHIELD)
+		if (slotIds[j] == 0 || slotIds[j] >= PlayerInventory::Slots::SHIELD)
 			continue;
 		Packet pak( PacketID::World::Response::EQUIPMENT_CHANGE);
 		pak.addWord(this->getLocalId());
@@ -1657,13 +1686,6 @@ bool Player::pakUpdateInventoryVisually( const BYTE slotAmount, const BYTE* slot
 		this->sendToVisible( pak );
 	}
 	return result;
-}
-
-bool Player::equipItem(const Item& item) {
-	BYTE slotId = Inventory::fromItemType(item.type);
-	this->inventory[slotId] = item;
-	this->updateStats();
-	return this->pakUpdateInventoryVisually(1, &slotId); 
 }
 
 bool Player::updateZulies(const QWORD newAmount) {
@@ -1929,22 +1951,22 @@ bool Player::pakSpawnPlayer(Player* player) {
 	pak.addDWord( player->getVisualTraits().faceStyle );
 	pak.addDWord( player->getVisualTraits().hairStyle );
 	
-	pak.addDWord( player->inventory[Inventory::HEADGEAR].getPakVisuality() );
-	pak.addDWord(player->inventory[Inventory::ARMOR].getPakVisuality());
-	pak.addDWord(player->inventory[Inventory::GLOVES].getPakVisuality());
-	pak.addDWord(player->inventory[Inventory::SHOES].getPakVisuality());
-	pak.addDWord(player->inventory[Inventory::FACE].getPakVisuality());
-	pak.addDWord(player->inventory[Inventory::BACK].getPakVisuality());
-	pak.addDWord(player->inventory[Inventory::WEAPON].getPakVisuality());
-	pak.addDWord(player->inventory[Inventory::SHIELD].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::HEADGEAR].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::ARMOR].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::GLOVES].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::SHOES].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::FACE].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::BACK].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::WEAPON].getPakVisuality());
+	pak.addDWord(player->inventory[PlayerInventory::Slots::SHIELD].getPakVisuality());
 	
-	for(unsigned int i=Inventory::ARROWS;i<=Inventory::CANNONSHELLS;i++)
+	for (unsigned int i = PlayerInventory::Slots::ARROWS; i <= PlayerInventory::Slots::CANNONSHELLS; i++)
 		pak.addWord( player->inventory[i].getPakHeader() );
 
 	pak.addWord( player->getJob() );
 	pak.addByte( player->getLevel() );
 
-	for(unsigned int i=Inventory::CART_FRAME;i<=Inventory::CART_ABILITY;i++)
+	for (unsigned int i = PlayerInventory::Slots::CART_FRAME; i <= PlayerInventory::Slots::CART_ABILITY; i++)
 		pak.addDWord( player->inventory[i].id | 0x400 );
 
 	pak.addWord( 0xcdcd ); //Z-Coord?
@@ -2292,7 +2314,7 @@ bool Player::pakConsumeItem() {
 			WORD abilityType = consumeEntry->getColumn<WORD>(ConsumeSTB::STAT_TYPE_ADD);
 			if (abilityType == 0x00) {
 				//if there's no ability to change, assume it's a skill
-				this->changeSkill(consumeEntry->getColumn<WORD>(ConsumeSTB::STAT_VALUE_ADD));
+				this->addSkill(mainServer->getSkill(consumeEntry->getColumn<WORD>(ConsumeSTB::STAT_VALUE_ADD)));
 			}
 			else {
 				this->changeAbility(consumeEntry->getColumn<WORD>(ConsumeSTB::STAT_TYPE_ADD), consumeEntry->getColumnAsInt(ConsumeSTB::STAT_VALUE_ADD), OperationService::OPERATION_ADDITION, false);
@@ -2317,10 +2339,20 @@ bool Player::pakConsumeItem() {
 		case 0x05: //Buff
 			this->combat.skill = mainServer->getSkill(consumeEntry->getColumn<WORD>(ConsumeSTB::STAT_VALUE_ADD));
 		break;
+		default:
+			std::cout << "ItemID " << this->inventory[inventorySlot].id << " has an unknown execution type: " << executionType << "\n";
 	}
 	this->inventory[inventorySlot].amount--;
 	if (this->inventory[inventorySlot].amount == 0x00)
 		this->inventory[inventorySlot].clear();
+
+
+	Packet visualityPak(PacketID::World::Response::USE_CONSUMABLE);
+	visualityPak.addWord(this->getLocalId());
+	visualityPak.addWord(this->inventory[inventorySlot].id);
+	if (!this->sendToVisible(visualityPak))
+		return false;
+
 	Packet pak(PacketID::World::Response::USE_CONSUMABLE);
 	pak.addWord(this->getLocalId());
 	pak.addWord(this->inventory[inventorySlot].id);

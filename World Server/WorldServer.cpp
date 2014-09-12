@@ -510,7 +510,8 @@ bool WorldServer::sendToAll(Packet& pak) {
 			LinkedList<Entity*>::Node* eNode = sector->getFirstPlayer();
 			while (eNode) {
 				Player* player = dynamic_cast<Player*>(eNode->getValue());
-				success &= player->sendData(pak);
+				if (player->isIngame())
+					success &= player->sendData(pak);
 				eNode = sector->getNextPlayer(eNode);
 			}
 		}
@@ -749,14 +750,7 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 
 						//In case the wanted item is valid (should always apply)
 						if (mainServer->isValidItem(k, m)) {
-							gm->equipItem(item);
-
-							Packet pak(PacketID::World::Response::REWARD_ITEM);
-							pak.addByte(0x01); //Amount of rewarded items
-							pak.addByte(Inventory::fromItemType(item.type));
-							pak.addWord(item.getPakHeader());
-							pak.addDWord(item.getPakData());
-							gm->sendData(pak);
+							gm->addItemToInventory(item, PlayerInventory::fromItemType(item.type));
 						}
 						return;
 					}

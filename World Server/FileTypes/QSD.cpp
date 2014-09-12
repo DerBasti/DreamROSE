@@ -979,7 +979,7 @@ bool QuestService::rewardAbility(QuestTrans* trans, const AbstractQuestInfo* hea
 	bool success = true;
 	for (unsigned int i = 0; i < reward->varAmount; i++) {
 		const QuestSetVar* abilityVar = reinterpret_cast<const QuestSetVar*>(&reward->vars[i]);
-		success &= player->changeAbility(abilityVar->varNum, abilityVar->amount, abilityVar->operation);
+		success &= player->changeAbility(abilityVar->varNum, static_cast<DWORD>(abilityVar->amount), abilityVar->operation);
 	}
 	return success;
 }
@@ -1164,7 +1164,7 @@ bool QuestService::rewardNewSkill(QuestTrans* trans, const AbstractQuestInfo* he
 	if (isTryoutRun)
 		return true;
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
-	return player->changeSkill(reward->skillId);
+	return player->addSkill(mainServer->getSkill(reward->skillId));
 }
 
 bool QuestService::rewardQuestSwitch(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryoutRun) {

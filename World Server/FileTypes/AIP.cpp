@@ -853,24 +853,21 @@ void AIService::actionCallAlliesForAttack(NPC* npc, const AIACTION_11 *act) {
 	Entity* target = npc->getTarget();
 	if(!target)
 		return;
-
-	UniqueSortedList<DWORD, MapSector*> sectors = npc->getVisibleSectors();
 	Entity* ally = nullptr;
 
 	DWORD numOfAttackers = 0x00;
-	for(unsigned int i=0;i<sectors.size();i++) {
-		MapSector* sector = sectors.getValue(i);
-		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
-		while(eNode) {
-			ally = eNode->getValue();
-			eNode = eNode->getNextNode();
-			if( ally->isAllied( npc ) && ally->getTarget() == nullptr || ally->getEntityType() == Entity::TYPE_MONSTER) {
-				ally->setTarget( target );
 
-				numOfAttackers++;
-				if(numOfAttackers >= act->numOfMonsters)
-					return;
-			}
+	MapSector* sector = npc->getSector();
+	LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
+	while(eNode) {
+		ally = eNode->getValue();
+		eNode = eNode->getNextNode();
+		if( ally->isAllied( npc ) && ally->getTarget() == nullptr || ally->getEntityType() == Entity::TYPE_MONSTER) {
+			ally->setTarget( target );
+
+			numOfAttackers++;
+			if(numOfAttackers >= act->numOfMonsters)
+				return;
 		}
 	}
 }
@@ -890,18 +887,15 @@ void AIService::actionCallEntireFamilyForAttack(NPC* npc) {
 		return;
 
 	WORD npcId = npc->getTypeId();
-
-	UniqueSortedList<DWORD, MapSector*> sectors = npc->getVisibleSectors();
-	for(unsigned int i=0;i<sectors.size();i++) {
-		MapSector* sector = sectors.getValue(i);
-		LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
-		for(;nNode;nNode = sector->getNextNPC(nNode)) {
-			NPC *currentNPC = dynamic_cast<NPC*>(nNode->getValue());
-			if(!currentNPC || currentNPC->getTypeId() != npcId)
-				continue;
-			if(npc->isAllied(currentNPC) && npc->getTarget() == nullptr) {
-				npc->setTarget(target);
-			}
+		
+	MapSector* sector = npc->getSector();
+	LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
+	for (; nNode; nNode = sector->getNextNPC(nNode)) {
+		NPC *currentNPC = dynamic_cast<NPC*>(nNode->getValue());
+		if(!currentNPC || currentNPC->getTypeId() != npcId)
+			continue;
+		if(npc->isAllied(currentNPC) && npc->getTarget() == nullptr) {
+			npc->setTarget(target);
 		}
 	}
 }
@@ -939,24 +933,22 @@ void AIService::actionCallFewFamilyMembersForAttack(NPC* npc, const AIACTION_18*
 	if(!target)
 		return;
 
-	UniqueSortedList<DWORD, MapSector*> sectors = npc->getVisibleSectors();
+	MapSector* sector = npc->getSector();
 	DWORD callCount = 0x00;
-	for(unsigned int i=0;i<sectors.size();i++) {
-		MapSector* sector = sectors.getValue(i);
-		LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
-		for(;nNode;nNode = sector->getNextNPC(nNode)) {
-			NPC* curNPC = dynamic_cast<NPC*>(nNode->getValue());
-			if(!curNPC || curNPC->getTarget() != nullptr)
-				continue;
-			if(curNPC->getTypeId() == npc->getTypeId() &&
-				npc->isAllied(curNPC) && 
-				curNPC->getPositionCurrent().distanceTo(npc->getPositionCurrent()) <= act->getDistance()) {
-					curNPC->setTarget(target);
-
-					callCount++;
-					if(callCount >= act->monAmount)
-						return;
-			}
+		
+	LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
+	for(;nNode;nNode = sector->getNextNPC(nNode)) {
+		NPC* curNPC = dynamic_cast<NPC*>(nNode->getValue());
+		if(!curNPC || curNPC->getTarget() != nullptr)
+			continue;
+		if(curNPC->getTypeId() == npc->getTypeId() &&
+			npc->isAllied(curNPC) && 
+			curNPC->getPositionCurrent().distanceTo(npc->getPositionCurrent()) <= act->getDistance()) {
+				curNPC->setTarget(target);
+				
+				callCount++;
+				if(callCount >= act->monAmount)
+					return;
 		}
 	}
 }

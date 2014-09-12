@@ -316,6 +316,7 @@ class OperationService {
 		const static BYTE OPERATION_NOT_EQUAL = 0x0A;
 };
 
+
 struct Item {
 	BYTE type;
 	WORD id;
@@ -386,7 +387,70 @@ struct Item {
 		return (refinePart | appraisePart | socketPart | lifeSpanPart | durabilityPart | stats | gem);
 	}
 };
+class PlayerInventory {
+	public:
+		class Slots {
+			private:
+				Slots() {}
+				~Slots() {}
+			public:
+				const static WORD FACE = 1;
+				const static WORD HEADGEAR = 2;
+				const static WORD ARMOR = 3;
+				const static WORD GLOVES = 6;
+				const static WORD SHOES = 4;
+				const static WORD BACK = 5;
+				const static WORD WEAPON = 7;
+				const static WORD SHIELD = 8;
 
+				const static WORD ARROWS = 132;
+				const static WORD BULLETS = 133;
+				const static WORD CANNONSHELLS = 134;
+				const static WORD CART_FRAME = 135;
+				const static WORD CART_ENGINE = 136;
+				const static WORD CART_WHEELS = 137;
+				const static WORD CART_WEAPON = 138;
+				const static WORD CART_ABILITY = 139;
+
+				const static WORD TAB_SIZE = 30;
+				const static WORD MAXIMUM = 140;
+		};
+	private:
+		Item internalInventory[PlayerInventory::Slots::MAXIMUM];
+	public:
+		PlayerInventory() {
+			for (unsigned int i = 0; i < PlayerInventory::Slots::MAXIMUM; i++) {
+				this->internalInventory[i].clear();
+			}
+		}
+		template<class _Ty, class = std::enable_if<std::is_integral<_Ty>::value>::type> const Item& operator[](const _Ty pos) const { return this->internalInventory[pos]; }
+		template<class _Ty, class = std::enable_if<std::is_integral<_Ty>::value>::type> Item& operator[](const _Ty pos) { return this->internalInventory[pos]; }
+		Item& operator[](int pos) { return this->internalInventory[pos]; }
+
+		const static BYTE fromItemType(const BYTE itemType) {
+			switch (itemType) {
+			case ItemType::HEADGEAR:
+				return PlayerInventory::Slots::HEADGEAR;
+			case ItemType::FACE:
+				return PlayerInventory::Slots::FACE;
+			case ItemType::ARMOR:
+				return PlayerInventory::Slots::ARMOR;
+			case ItemType::GLOVES:
+				return PlayerInventory::Slots::GLOVES;
+			case ItemType::SHOES:
+				return PlayerInventory::Slots::SHOES;
+			case ItemType::BACK:
+				return PlayerInventory::Slots::BACK;
+			case ItemType::WEAPON:
+				return PlayerInventory::Slots::WEAPON;
+			case ItemType::SHIELD:
+				return PlayerInventory::Slots::SHIELD;
+			case ItemType::MONEY:
+				return 0x00; //TEST
+			}
+			return PlayerInventory::Slots::MAXIMUM - 1;
+		}
+};
 
 struct Combat {
 	class Entity* target;

@@ -174,6 +174,7 @@ class PacketID {
 						const static WORD INCREASE_ATTRIBUTE = 0x7A9;
 						const static WORD LEARN_SKILL = 0x7B0;
 						const static WORD INCREASE_SKILL_LEVEL = 0x7B1;
+						const static WORD BUFFS = 0x7B7;
 						const static WORD GAMING_PLAN = 0x7DE;
 						const static WORD CLAN_MANAGER = 0x7E0;
 						const static WORD MESSAGE_MANAGER = 0x7E1;

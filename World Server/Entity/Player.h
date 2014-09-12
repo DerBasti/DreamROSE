@@ -110,63 +110,7 @@ class Player : public Entity, public ClientSocket {
 		};
 
 		std::vector<ConsumedItem> consumedItems;
-		class PlayerInventory {
-			public:
-				const static WORD FACE = 1;
-				const static WORD HEADGEAR = 2;
-				const static WORD ARMOR = 3;
-				const static WORD GLOVES = 6;
-				const static WORD SHOES = 4;
-				const static WORD BACK = 5;
-				const static WORD WEAPON = 7;
-				const static WORD SHIELD = 8;
-
-				const static WORD TAB_SIZE = 30;
-
-				const static WORD ARROWS = 132;
-				const static WORD BULLETS = 133;
-				const static WORD CANNONSHELLS = 134;
-				const static WORD CART_FRAME = 135;
-				const static WORD CART_ENGINE = 136;
-				const static WORD CART_WHEELS = 137;
-				const static WORD CART_WEAPON = 138;
-				const static WORD CART_ABILITY = 139;
-				const static WORD MAXIMUM = 140;
-			private:
-				Item internalInventory[PlayerInventory::MAXIMUM];
-			public:
-				PlayerInventory() {
-					for (unsigned int i = 0; i < PlayerInventory::MAXIMUM; i++) {
-						this->internalInventory[i].clear();
-					}
-				}
-				Item& operator[](const size_t pos) { return this->internalInventory[pos]; }
-				Item& operator[](const int pos) { return this->internalInventory[pos]; }
-
-				const static BYTE fromItemType(const BYTE itemType) {
-					   switch (itemType) {
-						   case ItemType::HEADGEAR:
-							   return PlayerInventory::HEADGEAR;
-						   case ItemType::FACE:
-							   return PlayerInventory::FACE;
-						   case ItemType::ARMOR:
-							   return PlayerInventory::ARMOR;
-						   case ItemType::GLOVES:
-							   return PlayerInventory::GLOVES;
-						   case ItemType::SHOES:
-							   return PlayerInventory::SHOES;
-						   case ItemType::BACK:
-							   return PlayerInventory::BACK;
-						   case ItemType::WEAPON:
-							   return PlayerInventory::WEAPON;
-						   case ItemType::SHIELD:
-							   return PlayerInventory::SHIELD;
-						   case ItemType::MONEY:
-							   return 0x00; //TEST
-					   }
-					   return PlayerInventory::MAXIMUM - 1;
-				}
-		} inventory;
+		PlayerInventory inventory;
 
 		struct questInfo {
 			const static BYTE JOURNEY_MAX = 10;
@@ -262,8 +206,15 @@ class Player : public Entity, public ClientSocket {
 		virtual void setPositionCurrent(const Position& newPos);
 		virtual void setPositionDest(const Position& newPos);
 		
+		//Retrieves a statType which is only available to a player (e.g. hair).
 		DWORD getSpecialStatType(const WORD statType);
-		bool changeAbility(const WORD abilityType, const DWORD amount, const BYTE operation, bool sendChangePacket=false);
+
+		//Changes (e.g. adds/removes) a given abilityType (e.g. current health, stat points) based on the given amount
+		//and operation. The "sendChangePacket"-flag determines whether the client shall be notified immediately upon
+		//change or not.
+		//@Return Value: true if the abilityType was found and changed; In case the flag is set to true, the client has to
+		//receive the packet as well in order to be true. All other cases will return a false.
+		bool changeAbility(const WORD abilityType, const DWORD amount, const BYTE operationFromOperationService, bool sendChangePacket=true);
 
 		void updateAttackpower();
 		void updateAttackSpeed();
@@ -348,11 +299,17 @@ class Player : public Entity, public ClientSocket {
 		//1 = skill found, skillLevel is lower than the required one; 
 		//2 = skill found + skilllevel exceeds wanted skill
 		const BYTE isSkillLearned(const Skill* skillToFind);
+
+		//Changes a learned skill based on the given basic id. 
+		//@Return Value: In case it was found and changed (including client notification), true will be returned, otherwise false.
 		bool changeSkill(const WORD totalId);
 
-		__inline bool isWeaponEquipped() const { return this->inventory[Inventory::WEAPON].amount > 0; }
-		bool addItemToInventory(const Item& item);
-		bool equipItem(const Item& item);
+		//Adds a skill to the client's skill list.
+		//@Return Value: if a skillslot was assignable as well as the successful notification of the client, it will return true. In all other instances false.
+		bool addSkill(Skill* skillToAdd);
+
+		__inline bool isWeaponEquipped() const { return this->inventory[PlayerInventory::Slots::WEAPON].amount > 0; }
+		bool addItemToInventory(const Item& item, BYTE slotId = std::numeric_limits<BYTE>::max());
 		Item getItemFromInventory(const WORD itemSlot); 
 		Item getQuestItem(const DWORD itemId);
 
