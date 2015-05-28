@@ -7,15 +7,15 @@
 #include "D:\Programmieren\CMyFile\MyFile.h"
 
 #ifdef __ROSE_USE_VFS__
-AIP::AIP(const WORD id, VFSData& vfsData) {
-	CMyBufferedReader reader(vfsData.data, vfsData.data.size());
+AIP::AIP(const word_t id, VFSData& vfsData) {
+	CMyBufferedFileReader<char> reader(vfsData.data, vfsData.data.size());
 	this->id = id;
 	this->checkInterval = this->damageAmountTrigger = 0x00;
 	this->filePath = std::string("");
 	this->loadFrom(reader);
 }
 #else
-AIP::AIP(const WORD id, const char* fileName) {
+AIP::AIP(const word_t id, const char* fileName) {
 	CMyFile file(fileName, "rb");
 	this->id = id;
 	this->checkInterval = this->damageAmountTrigger = 0x00;
@@ -33,69 +33,69 @@ AIP::~AIP() {
 }
 /*
 	FORMAT:
-		DWORD blockCount;
-		DWORD idleTimeInSeconds
-		DWORD attackMoveTimeInSeconds
+		dword_t blockCount;
+		dword_t idleTimeInSeconds
+		dword_t attackMoveTimeInSeconds
 		
-		DWORD strLen
+		dword_t strLen
 		strLen AIname
 
 		foreach(block : blockCount)
-			BYTE blockName[0x20]
-			DWORD recordsInBlock
+			byte_t blockName[0x20]
+			dword_t recordsInBlock
 			foreach(record : recordsInBlock) 
-				DWORD conditionCount
+				dword_t conditionCount
 				if conditionCount > 0
-					DWORD blockLen
-					DWORD operationCode
-					BYTE data[(blockLen - (sizeof(DWORD)*2)]
-				DWORD actionCount
+					dword_t blockLen
+					dword_t operationCode
+					byte_t data[(blockLen - (sizeof(DWORD)*2)]
+				dword_t actionCount
 				if actionCount > 0
-					DWORD blockLen
-					DWORD operationCode
-					BYTE data[(blockLen - (sizeof(DWORD)*2)]
+					dword_t blockLen
+					dword_t operationCode
+					byte_t data[(blockLen - (sizeof(DWORD)*2)]
 			end_foreach(record)
 		end_foreach(block)
 
 */
 template<class FileType> void AIP::loadFrom(FileType &fh) {
-	DWORD triggerCount = fh.read<DWORD>();
+	dword_t triggerCount = fh.read<DWORD>();
 
 	if(triggerCount != AIP::MAX_BLOCKS)
 		return;
 
-	BYTE len = 0x00; char buf[0x200] = {0x00};
+	byte_t len = 0x00; char buf[0x200] = {0x00};
 	this->checkInterval = fh.read<DWORD>();
 	this->damageAmountTrigger = fh.read<DWORD>();
-	fh.readStringT<DWORD>(buf);
+	fh.readLengthThenString<DWORD>(buf);
 
 	for(unsigned int i=0;i<AIP::MAX_BLOCKS;i++) {
 		fh.skip(0x20); //0x20 FIXED STRING LENGTH
 		
-		DWORD recordCount = fh.read<DWORD>();
+		dword_t recordCount = fh.read<DWORD>();
 		this->blocks[i].records.reserve(recordCount);
 		for(unsigned int j=0;j<recordCount;j++) {
 			fh.skip(0x20); //FIXED STRING
 			this->blocks[i].records.push_back(AIP::Record());
-			DWORD condCount = fh.read<DWORD>();
+			dword_t condCount = fh.read<DWORD>();
 			if(condCount>0) {
 				std::vector<Trackable<char>>& conditions = this->blocks[i].records[j].conditions;
 				conditions.reserve(condCount);
 				for(unsigned int k=0;k<condCount;k++) {
-					fh.readString(0x08, buf);
-					DWORD dLen = *((DWORD*)buf);
-					fh.readString(dLen - 0x08, &buf[0x08]);
+					fh.readStringWithGivenLength(0x08, buf);
+					dword_t dLen = *((DWORD*)buf);
+					fh.readStringWithGivenLength(dLen - 0x08, &buf[0x08]);
 					conditions.push_back(Trackable<char>(buf, dLen));
 				}
 			}
-			DWORD actionCount = fh.read<DWORD>();
+			dword_t actionCount = fh.read<DWORD>();
 			if(actionCount > 0) {
 				std::vector<Trackable<char>>& actions = this->blocks[i].records[j].actions;
 				actions.reserve(actionCount);
 				for(unsigned int k=0;k<actionCount;k++) {
-					fh.readString(0x08, buf);
-					DWORD aLen = *((DWORD*)buf);
-					fh.readString(aLen - 0x08, &buf[0x08]);
+					fh.readStringWithGivenLength(0x08, buf);
+					dword_t aLen = *((DWORD*)buf);
+					fh.readStringWithGivenLength(aLen - 0x08, &buf[0x08]);
 					actions.push_back(Trackable<char>(buf, aLen));
 				}
 			}
@@ -103,7 +103,7 @@ template<class FileType> void AIP::loadFrom(FileType &fh) {
 	}
 }
 
-const char* AIService::getAbilityTypeName(BYTE abilityType) {
+const char* AIService::getAbilityTypeName(byte_t abilityType) {
 	switch(abilityType) {
 		case AIService::ABILITY_LEVEL:
 			return "Level";
@@ -119,7 +119,7 @@ const char* AIService::getAbilityTypeName(BYTE abilityType) {
 	return "UNKNOWN!";
 }
 
-WORD AIService::getAbilityType( BYTE abilityType, Entity* entity ) {
+word_t AIService::getAbilityType( byte_t abilityType, Entity* entity ) {
 	switch(abilityType) {
 		case AIService::ABILITY_LEVEL:
 			return entity->getLevel();
@@ -135,8 +135,8 @@ WORD AIService::getAbilityType( BYTE abilityType, Entity* entity ) {
 	return 0;
 }
 
-bool AIService::run(NPC* npc, const BYTE blockId, Entity* target, const DWORD dmgDealt) {
-	WORD timeDiff = static_cast<WORD>(time(nullptr) - npc->getTimeAICheck());
+bool AIService::run(NPC* npc, const byte_t blockId, Entity* target, const dword_t dmgDealt) {
+	word_t timeDiff = static_cast<WORD>(time(nullptr) - npc->getTimeAICheck());
 	if(npc->getAI() == nullptr) {
 		return false;
 	}
@@ -294,7 +294,7 @@ bool AIService::conditionEnoughDamageReceived(NPC* npc, const AICOND_01* conditi
 	if(condition->isActionOnDeal())
 		return false;
 
-	DWORD dmgReceived = mon->getMaxHP() - mon->getCurrentHP();
+	dword_t dmgReceived = mon->getMaxHP() - mon->getCurrentHP();
 	if(dmgReceived >= condition->getDamage())
 		return true;
 	return false;
@@ -302,12 +302,12 @@ bool AIService::conditionEnoughDamageReceived(NPC* npc, const AICOND_01* conditi
 
 bool AIService::conditionHasEnoughTargets(NPC *npc, const AICOND_02* cond, AITransfer* trans) {
 	bool alliedStatus = cond->isAlliedEntity;
-	DWORD targetCount = 0x00;
+	dword_t targetCount = 0x00;
 	float nearestDist = 9999999.0f;
 
 	Entity* target = nullptr;
 	for(unsigned int i=0;i<npc->getVisibleSectors().size(); i++) {
-		MapSector* sector = npc->getVisibleSectors().getValue(i);
+		Map::Sector* sector = npc->getVisibleSectors().getValueAtPosition(i);
 		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
 		for(;eNode;eNode = eNode->getNextNode()) {
 			Entity* curEntity = eNode->getValue();
@@ -358,19 +358,19 @@ bool AIService::conditionCheckAbilityDifference(NPC* npc, const AICOND_05* cond)
 	if(!npc->getTarget())
 		return false;
 
-	WORD abilityValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
+	word_t abilityValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
 	if (OperationService::checkOperation(abilityValue, cond->difference, cond->moreOrLess ? OperationService::OPERATION_SMALLER_EQUAL : OperationService::OPERATION_BIGGER_EQUAL))
 		return true;
 	return false;
 }
 
 bool AIService::conditionCheckPercentHP(NPC* npc, const AICOND_06* cond) {
-	BYTE percentHP = npc->getPercentHP();
+	byte_t percentHP = npc->getPercentHP();
 	return OperationService::checkOperation(percentHP, cond->hp, cond->needsLessHP() ? OperationService::OPERATION_SMALLER_EQUAL : OperationService::OPERATION_BIGGER_EQUAL);
 }
 
 bool AIService::conditionRandomPercentageMet(const AICOND_07* cond) {
-	BYTE randomPercentage = rand() % 100;
+	byte_t randomPercentage = rand() % 100;
 	if(randomPercentage <= cond->percent)
 		return true;
 	return false;
@@ -378,7 +378,7 @@ bool AIService::conditionRandomPercentageMet(const AICOND_07* cond) {
 
 bool AIService::conditionFindNearestEligibleTarget(NPC* npc, const AICOND_08* cond, AITransfer* trans) {
 	for(unsigned int i=0;i<npc->getVisibleSectors().size();i++) {
-		MapSector* currentSector = npc->getVisibleSectors().getValue(i);
+		Map::Sector* currentSector = npc->getVisibleSectors().getValueAtPosition(i);
 		LinkedList<Entity*>::Node* eNode = currentSector->getFirstEntity();
 		for(;eNode;eNode = eNode->getNextNode()) {
 			Entity* entity = eNode->getValue();
@@ -408,9 +408,9 @@ bool AIService::conditionCompareAbilities(NPC *npc, const AICOND_10* cond, AITra
 	if(npc->getTarget() == nullptr || trans->designatedTarget == nullptr)
 		return false;
 
-	WORD npcTargetValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
+	word_t npcTargetValue = AIService::getAbilityType(cond->abilityType, npc->getTarget());
 
-	WORD transTargetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
+	word_t transTargetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
 	return OperationService::checkOperation(npcTargetValue, transTargetValue, cond->moreOrLess ? OperationService::OPERATION_SMALLER : OperationService::OPERATION_BIGGER);
 }
 
@@ -418,7 +418,7 @@ bool AIService::conditionIsStatSufficient(NPC* npc, const AICOND_11* cond, AITra
 	if(npc->getTarget() != nullptr || trans->designatedTarget == nullptr)
 		return false;
 
-	WORD targetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
+	word_t targetValue = AIService::getAbilityType(cond->abilityType, trans->designatedTarget);
 	return OperationService::checkOperation(targetValue, cond->value, cond->moreOrLess ? OperationService::OPERATION_SMALLER_EQUAL : OperationService::OPERATION_BIGGER_EQUAL);
 }
 
@@ -436,7 +436,7 @@ bool AIService::conditionHasBuff(NPC* npc, const AICOND_13* cond) {
 			return false;
 	}
 	
-	DWORD buffs = 0x00;
+	dword_t buffs = 0x00;
 	switch( cond->statusType ) {
 		case 0:
 			buffs = target->getBuffStatus( Buffs::POSITIVE_BUFFS );
@@ -468,7 +468,7 @@ bool AIService::conditionIsEconomyVarValid(const AICOND_16* cond) {
 bool AIService::conditionIsNPCNearby(NPC *npc, const AICOND_17* ai) {
 	Map* currentMap = mainServer->getMap(npc->getMapId());
 	for(unsigned int i=0;i<currentMap->getSectorCount();i++) {
-		MapSector* sector = currentMap->getSector(i);
+		Map::Sector* sector = currentMap->getSector(i);
 		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
 		for(;eNode;eNode = eNode->getNextNode()) {
 			Entity* curEntity = eNode->getValue();
@@ -488,20 +488,20 @@ bool AIService::conditionCheckDistanceToOwner(NPC* npc, const AICOND_18* cond) {
 	if(!mon || mon->getOwner() == nullptr)
 		return false;
 
-	DWORD dist = static_cast<DWORD>(mon->getPositionCurrent().distanceTo(mon->getPositionCurrent()));
+	dword_t dist = static_cast<DWORD>(mon->getPositionCurrent().distanceTo(mon->getPositionCurrent()));
 	float condDist = cond->getDistance();
 	return OperationService::checkOperation(dist, condDist, cond->operation);
 }
 
 bool AIService::conditionCheckZoneTime(NPC* npc, const AICOND_19* cond) {
-	DWORD localTime = mainServer->getMapTime(npc->getMapId());
+	dword_t localTime = mainServer->getMapTime(npc->getMapId());
 	if(localTime >= cond->startTime && localTime <= cond->endTime)
 		return true;
 	return false;
 }
 
 bool AIService::conditionAreOwnStatsSufficient(NPC* npc, const AICOND_20* cond) {
-	WORD value = AIService::getAbilityType(cond->abilityType, npc);
+	word_t value = AIService::getAbilityType(cond->abilityType, npc);
 	return OperationService::checkOperation(value, cond->value, cond->operation);
 }
 
@@ -557,9 +557,9 @@ bool AIService::conditionUnknown(const AICOND_26* ai) {
 }
 
 bool AIService::conditionLevelDiffToSurrounding(NPC* npc, const AICOND_27* ai, AITransfer* trans) {
-	DWORD foundAmount = 0;
+	dword_t foundAmount = 0;
 	for (unsigned int i = 0; i < npc->getVisibleSectors().size(); i++) {
-		MapSector* sector = npc->getVisibleSectors().getValue(i);
+		Map::Sector* sector = npc->getVisibleSectors().getValueAtPosition(i);
 		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
 		while (eNode) {
 			Entity* entity = eNode->getValue();
@@ -760,7 +760,7 @@ void AIService::actionSayMessage(NPC* npc, const AIACTION_02* act) {
 }
 
 void AIService::actionSetNewRandomPos(NPC* npc, const AIACTION_03* act) {
-	Position newPos( npc->getPositionCurrent() );
+	position_t newPos( npc->getPositionCurrent() );
 	newPos.x += QuickInfo::fRand(act->getDistance(), true);
 	newPos.y += QuickInfo::fRand(act->getDistance(), true);
 	
@@ -769,7 +769,7 @@ void AIService::actionSetNewRandomPos(NPC* npc, const AIACTION_03* act) {
 }
 
 void AIService::actionSetNewPosFromSpawn(NPC* npc, const AIACTION_04* act) {
-	Position newPos( npc->getSpawnPosition() );
+	position_t newPos( npc->getSpawnPosition() );
 	
 	const float dist = act->getDistance();
 	newPos.x += QuickInfo::fRand(dist, true);
@@ -783,7 +783,7 @@ void AIService::actionSetPositionToFoundTarget(NPC* npc, const AIACTION_05* act,
 	if(trans->lastFound == nullptr)
 		return;
 
-	Position newPos( trans->lastFound->getPositionCurrent() );
+	position_t newPos( trans->lastFound->getPositionCurrent() );
 	newPos.x += QuickInfo::fRand(200, true);
 	newPos.y += QuickInfo::fRand(200, true);
 	
@@ -795,10 +795,10 @@ void AIService::actionAttackTarget(NPC* npc, const AIACTION_06* act) {
 	Entity* maxTarget = nullptr;
 	Entity* minTarget = nullptr;
 
-	UniqueSortedList<DWORD, MapSector*> sectors = npc->getVisibleSectors();
-	WORD minValue = 0xFFFF; WORD maxValue = 0;
+	UniqueSortedList<DWORD, Map::Sector*> sectors = npc->getVisibleSectors();
+	word_t minValue = 0xFFFF; word_t maxValue = 0;
 	for(unsigned int i=0;i<sectors.size();i++) {
-		MapSector* sector = sectors.getValue(i);
+		Map::Sector* sector = sectors.getValueAtPosition(i);
 		LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
 		
 		for(;eNode;eNode = eNode->getNextNode()) {
@@ -806,7 +806,7 @@ void AIService::actionAttackTarget(NPC* npc, const AIACTION_06* act) {
 			if(!curChar || dynamic_cast<Entity*>(npc)->isAllied(curChar))
 				continue;
 
-			WORD value = AIService::getAbilityType(act->abilityType, curChar);
+			word_t value = AIService::getAbilityType(act->abilityType, curChar);
 			if(value < minValue) {
 				minTarget = curChar;
 				minValue = value;
@@ -837,7 +837,7 @@ void AIService::actionMoveToTarget(NPC * npc, const AIACTION_08 *act, AITransfer
 	float dist = npc->getPositionCurrent().distanceTo(npc->getTarget()->getPositionCurrent());
 	
 	npc->setStance(act->stance);
-	npc->setPositionDest(Position(npc->getCurrentX() - (act->getDistance() * fX / dist),
+	npc->setPositionDest(position_t(npc->getCurrentX() - (act->getDistance() * fX / dist),
 		npc->getCurrentY() - (act->getDistance() * fY / dist)));
 }
 
@@ -855,9 +855,9 @@ void AIService::actionCallAlliesForAttack(NPC* npc, const AIACTION_11 *act) {
 		return;
 	Entity* ally = nullptr;
 
-	DWORD numOfAttackers = 0x00;
+	dword_t numOfAttackers = 0x00;
 
-	MapSector* sector = npc->getSector();
+	Map::Sector* sector = npc->getSector();
 	LinkedList<Entity*>::Node* eNode = sector->getFirstEntity();
 	while(eNode) {
 		ally = eNode->getValue();
@@ -886,9 +886,9 @@ void AIService::actionCallEntireFamilyForAttack(NPC* npc) {
 	if(!target)
 		return;
 
-	WORD npcId = npc->getTypeId();
+	word_t npcId = npc->getTypeId();
 		
-	MapSector* sector = npc->getSector();
+	Map::Sector* sector = npc->getSector();
 	LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
 	for (; nNode; nNode = sector->getNextNPC(nNode)) {
 		NPC *currentNPC = dynamic_cast<NPC*>(nNode->getValue());
@@ -905,7 +905,7 @@ void AIService::actionAttackDesignatedTarget(NPC* npc, AITransfer* trans) {
 }
 
 void AIService::actionRunAway(NPC* npc, const AIACTION_16* act) {
-	Position newPos = npc->getPositionCurrent();
+	position_t newPos = npc->getPositionCurrent();
 
 	float xMod = QuickInfo::fRand(act->getDistance(), true);
 	float yMod = 1.0f - (xMod / act->getDistance());
@@ -933,8 +933,8 @@ void AIService::actionCallFewFamilyMembersForAttack(NPC* npc, const AIACTION_18*
 	if(!target)
 		return;
 
-	MapSector* sector = npc->getSector();
-	DWORD callCount = 0x00;
+	Map::Sector* sector = npc->getSector();
+	dword_t callCount = 0x00;
 		
 	LinkedList<Entity*>::Node* nNode = sector->getFirstNPC();
 	for(;nNode;nNode = sector->getNextNPC(nNode)) {
@@ -1022,8 +1022,8 @@ void AIService::actionMoveToOwner(NPC *npc, const AIACTION_29* act) {
 }
 
 void AIService::actionSetQuestTrigger(NPC *npc, const AIACTION_30* act, AITransfer* trans) {
-	const DWORD hash = ::makeQuestHash(act->triggerName);
-	try { throw TraceableExceptionARGS("NPC %s RUNS QUESTTRIGGER %s [0x%x]", npc->getName().c_str(), act->triggerName, hash); }
+	const dword_t hash = ::makeQuestHash(act->triggerName);
+	try { throw TraceableException("NPC %s RUNS QUESTTRIGGER %s [0x%x]", npc->getName().c_str(), act->triggerName, hash); }
 	catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 	QuestService::runQuest(npc, hash);
 }

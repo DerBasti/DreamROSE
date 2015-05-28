@@ -10,12 +10,18 @@ extern class ConfigA* config;
 
 class CharServer : public ServerSocket {
 	private:
+		InternalServerConnection loginServer;
+		InternalServerConnection worldServer;
+		//TODO: Multiple connections
+		//std::vector<InternalServerConnection> worldServers;
+
 		void registerServer();
+		bool checkForServer(ClientSocket* client, std::string& ip);
 	public:
 		CharServer(WORD port, MYSQL* mysql);
 		~CharServer();
 		CharClient* createClient(SOCKET sock);
-		void loadEncryption();
+		void loadEncryption(); 
 };
 
 extern CharServer* mainServer;

@@ -28,9 +28,10 @@ class BaseSocket {
 		__inline void setIsActive(bool value) { this->active = value; }
 
 		__inline SOCKET getSocket() const { return this->socket; }
-		__inline void closeSocket() {
+		void closeSocket() {
 			if (!this->isActive() || this->getSocket() == SOCKET_ERROR) return;
-			closesocket(this->socket);
+			::shutdown(this->getSocket(), SD_BOTH);
+			::closesocket(this->getSocket());
 
 			this->socket = SOCKET_ERROR;
 			this->active = false;

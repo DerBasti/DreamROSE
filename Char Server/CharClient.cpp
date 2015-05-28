@@ -2,6 +2,8 @@
 #include "CharServer.h"
 #include "..\Common\PacketIDs.h"
 
+#include "D:\Programmieren\ConfigReader\Config.h"
+
 CharClient::CharClient(SOCKET sock, ServerSocket* newServer) {
 	this->accountInfo.isLoggedIn = false;
 	this->accountInfo.password = "";
@@ -118,7 +120,7 @@ bool CharClient::pakCreateCharacter() {
 	newChar.faceStyle = this->packet.getByte(0x03);
 	newChar.id = this->characters.size() + 1;
 	newChar.hairStyle = this->packet.getByte(0x02);
-	newChar.level = 150;
+	newChar.level = 1;
 	newChar.name = this->packet.getString(0x07);
 	newChar.sex = this->packet.getByte(0x00) % 2;
 
@@ -134,12 +136,25 @@ bool CharClient::pakCreateCharacter() {
 	if (!mainServer->sqlInsert("INSERT INTO character_stats(id) VALUES(%i)", newChar.id))
 		return false;
 
+	//Headgear
+	if (!mainServer->sqlInsert("INSERT INTO inventory(charId, slot, itemId) VALUES(%i, %i, %i)", newChar.id, 2, 20222 - newChar.sex))
+		return false;
+
+	//Body
+	if (!mainServer->sqlInsert("INSERT INTO inventory(charId, slot, itemId) VALUES(%i, %i, %i)", newChar.id, 3, 30030))
+		return false;
+
+	//Weapon
+	if (!mainServer->sqlInsert("INSERT INTO inventory(charId, slot, itemId) VALUES(%i, %i, %i)", newChar.id, 7, 70001))
+		return false;
+
 	if (!mainServer->sqlInsert("INSERT INTO character_skills(id, basicSkills, passiveSkills, activeSkills) VALUES(%i, '%s', '%s', '%s')", newChar.id,
 		"11,12,16,20,41,42,43,181,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
 		"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
 		"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"))
 		return false;
-	if (!mainServer->sqlInsert("INSERT INTO character_quest_flags(charId, questFlags, episodeFlags, jobFlags, planetFlags, fractionFlags) VALUES(%i, '%s', '%s', '%s', '%s', '%s'",
+
+	if (!mainServer->sqlInsert("INSERT INTO character_quest_flags(charId, questFlags, episodeFlags, jobFlags, planetFlags, fractionFlags) VALUES(%i, '%s', '%s', '%s', '%s', '%s')",
 		newChar.id, "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
 		"0,0,0,0,0", "0,0,0", "0,0,0,0,0,0,0", "0,0,0,0,0,0,0,0,0,0"))
 		return false;

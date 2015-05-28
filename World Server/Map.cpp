@@ -1,26 +1,27 @@
 #include "Map.h"
 #include "Entity\NPC.h"
+#include "Entity\Monster.h"
 #include "WorldServer.h"
-#include "FileTypes\ZON.h"
+#include "D:\Programmieren\QuickInfos\LinkedList.h"
 
-MapSector::MapSector() {
+Map::Sector::Sector() {
 #ifdef __MAPSECTOR_LL__
 	this->entitiesInSector.clear();
 #endif
-	this->center = Position(520000.0f, 520000.0f);
+	this->center = position_t(520000.0f, 520000.0f);
 }
 
-MapSector::MapSector(const MapSector& rhs) {
+Map::Sector::Sector(const Map::Sector& rhs) {
 	(*this) = rhs;
 }
 
-MapSector::~MapSector() {
+Map::Sector::~Sector() {
 #ifdef __MAPSECTOR_LL__
 	this->entitiesInSector.clear();
 #endif
 }
 
-MapSector& MapSector::operator=(const MapSector& rhs) {
+Map::Sector& Map::Sector::operator=(const Map::Sector& rhs) {
 	if((&rhs) == this) {
 		return (*this);
 	}
@@ -32,7 +33,7 @@ MapSector& MapSector::operator=(const MapSector& rhs) {
 }
 
 #ifdef __MAPSECTOR_LL__
-LinkedList<Entity*>::Node* MapSector::getNext(LinkedList<Entity*>::Node* curNode, BYTE entityType) {
+LinkedList<Entity*>::Node* Map::Sector::getNext(LinkedList<Entity*>::Node* curNode, byte_t entityType) const {
 	if(!curNode)
 		return nullptr;
 	while (curNode) {
@@ -43,31 +44,46 @@ LinkedList<Entity*>::Node* MapSector::getNext(LinkedList<Entity*>::Node* curNode
 	return nullptr;
 }
 
-LinkedList<Entity*>::Node* MapSector::getFirstEntity() {
+LinkedList<Entity*>::Node* Map::Sector::getFirstEntity() const {
 	return this->entitiesInSector.getHeadNode();
 }
 		
-LinkedList<Entity*>::Node* MapSector::getNextEntity(LinkedList<Entity*>::Node* curNode) {
+LinkedList<Entity*>::Node* Map::Sector::getNextEntity(LinkedList<Entity*>::Node* curNode) const {
 	if (curNode) {
 		return curNode->getNextNode();
 	}
 	return nullptr;
 }
 
-LinkedList<Entity*>::Node* MapSector::getFirstPlayer() {
+LinkedList<Entity*>::Node* Map::Sector::getFirstPlayer() const {
 	return this->getNext(this->entitiesInSector.getHeadNode(), Entity::TYPE_PLAYER);
 }
 		
-LinkedList<Entity*>::Node* MapSector::getNextPlayer(LinkedList<Entity*>::Node* curNode) {
+LinkedList<Entity*>::Node* Map::Sector::getNextPlayer(LinkedList<Entity*>::Node* curNode) const {
 	return this->getNext((curNode == nullptr ? nullptr : curNode->getNextNode()), Entity::TYPE_PLAYER);
 }
 	
-LinkedList<Entity*>::Node* MapSector::getFirstNPC() {
+LinkedList<Entity*>::Node* Map::Sector::getFirstNPC() const {
 	return this->getNext(this->entitiesInSector.getHeadNode(), Entity::TYPE_NPC);
 }
 
-LinkedList<Entity*>::Node* MapSector::getNextNPC(LinkedList<Entity*>::Node* curNode) {
+LinkedList<Entity*>::Node* Map::Sector::getNextNPC(LinkedList<Entity*>::Node* curNode) const {
 	return this->getNext((curNode == nullptr ? nullptr : curNode->getNextNode()), Entity::TYPE_NPC);
+}
+
+bool Map::Sector::exists(const Entity* entity) const {
+	return (this->find(entity->getLocalId()) != nullptr);
+}
+
+Entity* Map::Sector::find(const word_t id) const {
+	LinkedList<Entity*>::Node* current = this->getFirstEntity();
+	do {
+		Entity* value = current->getValue();
+		if (value->getLocalId() == id) {
+			return value;
+		}
+	} while ((current = this->getNextEntity(current)) != nullptr);
+	return nullptr;
 }
 #endif
 
@@ -91,7 +107,7 @@ const Map& Map::operator=(const Map& rhs) {
 	this->mapPath = rhs.mapPath;
 	return (*this);
 }
-WORD Map::assignClientID(Entity* newEntity) {
+word_t Map::assignLocalId(Entity* newEntity) {
 	if (!newEntity)
 		return 0;
 
@@ -107,13 +123,13 @@ WORD Map::assignClientID(Entity* newEntity) {
 	return 0;
 }
 
-void Map::freeClientId(Entity* toDelete) {
+void Map::freeLocalId(Entity* toDelete) {
 	this->clientIDs[toDelete->getLocalId()] = nullptr;
 	toDelete->setLocalId(0x00);
 }
 
 
-void Map::setDayCycle(const DWORD totalLen, const DWORD morningBegin, const DWORD noonBegin, const DWORD eveningBegin, const DWORD nightBegin) {
+void Map::setDayCycle(const dword_t totalLen, const dword_t morningBegin, const dword_t noonBegin, const dword_t eveningBegin, const dword_t nightBegin) {
 	this->dayCycle.length = totalLen;
 	this->dayCycle.morning = morningBegin;
 	this->dayCycle.day = noonBegin;
@@ -121,10 +137,10 @@ void Map::setDayCycle(const DWORD totalLen, const DWORD morningBegin, const DWOR
 	this->dayCycle.night = nightBegin;
 }
 
-BYTE Map::getDayTime(const DWORD worldTime) const {
+byte_t Map::getDayTime(const dword_t worldTime) const {
 	if(this->dayCycle.nightOnly)
 		return 0x03;
-	DWORD currentTime = getLocalTime(worldTime);
+	dword_t currentTime = getLocalTime(worldTime);
 	if(currentTime >= this->dayCycle.night)
 		return Map::NIGHT;
 	if(currentTime >= this->dayCycle.evening)
@@ -134,22 +150,22 @@ BYTE Map::getDayTime(const DWORD worldTime) const {
 	return Map::MORNING;
 }		
 
-MapSector* Map::getSector(const WORD sectorId) {
+Map::Sector* Map::getSector(const word_t sectorId) const {
 	try {
-		DWORD subLevel = this->mapSectors.capacitySubLevel();
-		WORD xSector = static_cast<WORD>(sectorId / subLevel);
-		WORD ySector = static_cast<WORD>(sectorId % subLevel);
+		dword_t subLevel = this->mapSectors.capacitySubLevel();
+		word_t xSector = static_cast<WORD>(sectorId / subLevel);
+		word_t ySector = static_cast<WORD>(sectorId % subLevel);
 		return this->mapSectors.getValue(xSector, ySector);
 	} catch(...) { }
 	return nullptr;
 }
 
-MapSector* Map::getSector(const Position& pos) {
-	MapSector* firstSector = this->mapSectors.getValue(0x00, 0x00);
+Map::Sector* Map::getSector(const position_t& pos) const {
+	Map::Sector* firstSector = this->mapSectors.getValue(0x00, 0x00);
 	int firstIdTmp = QuickInfo::round<int>((pos.x - firstSector->getCenter().x) / this->getSectorWidthAndHeight());
 	int secondIdTmp = QuickInfo::round<int>((pos.y - firstSector->getCenter().y) / this->getSectorWidthAndHeight());
-	WORD realFirstId = 0x00;
-	WORD realSecondId = 0x00;
+	word_t realFirstId = 0x00;
+	word_t realSecondId = 0x00;
 	if(firstIdTmp < 0)
 		firstIdTmp = 0;
 			
@@ -164,14 +180,26 @@ MapSector* Map::getSector(const Position& pos) {
   	if(realSecondId >= this->mapSectors.capacitySubLevel())
 		realSecondId = static_cast<WORD>(this->mapSectors.capacitySubLevel() - 1);
 	try {
-		WORD sectorId = static_cast<WORD>(realFirstId * this->mapSectors.capacitySubLevel() + realSecondId);
+		word_t sectorId = static_cast<WORD>(realFirstId * this->mapSectors.capacitySubLevel() + realSecondId);
 		return this->getSector(sectorId);
 	} catch(...) { }
 	return nullptr;
 }
 
+Player* Map::getPlayer(const word_t localId) {
+	LinkedList<Entity*>::Node* nNode = this->getFirstEntity();
+	for (; nNode; nNode = nNode->getNextNode()) {
+		Entity* entity = nNode->getValue();
+		if (!entity || entity->getEntityType() != Entity::TYPE_PLAYER)
+			continue;
+		Player* curPlayer = dynamic_cast<Player*>(entity);
+		if (curPlayer->getLocalId() == localId)
+			return curPlayer;
+	}
+	return nullptr;
+}
 
-NPC* Map::getNPC(const WORD type) {
+NPC* Map::getNPC(const word_t type) {
 	LinkedList<Entity*>::Node* nNode = this->getFirstEntity();
 	for(;nNode;nNode = nNode->getNextNode()) {
 		Entity* entity = nNode->getValue();
@@ -184,18 +212,18 @@ NPC* Map::getNPC(const WORD type) {
 	return nullptr;
 }
 
-MapSector* Map::getSectorBySpawn(const IFOSpawn* spawn) {
+Map::Sector* Map::getSectorBySpawn(const IFOSpawn* spawn) const {
 	return this->getSector(spawn->getPosition()); 
 }
 
-ZON::EventInfo* Map::getRespawn(Position& pos) {
+ZON::EventInfo* Map::getRespawn(position_t& pos) {
 	ZON* zon = mainServer->getZON(this->getId());
-	Position nearestPos; float distance = 999999.9f;
+	position_t nearestPos; float distance = 999999.9f;
 
 	ZON::EventInfo* bestRespawn = nullptr;
 	for(unsigned int i=0;i<zon->getEventInfoAmount();i++) {
 		ZON::EventInfo& info = zon->getEventInfo(i);
-		Position infoPos = Position(info.x, info.y);
+		position_t infoPos = position_t(info.x, info.y);
 		if(_stricmp(info.name.c_str(), "restore")==0) {
 			if(distance > pos.distanceTo(infoPos)) {
 				nearestPos = infoPos;
@@ -207,37 +235,37 @@ ZON::EventInfo* Map::getRespawn(Position& pos) {
 	return bestRespawn;
 }
 
-const Position Map::getRespawnPoint(const char* spawnName) {
+const position_t Map::getRespawnPoint(const char* spawnName) {
 	ZON* zon = mainServer->getZON(this->getId());
 
 	ZON::EventInfo* respawn = nullptr;
 	for (unsigned int i = 0; i < zon->getEventInfoAmount(); i++) {
 		if (_stricmp(zon->getEventInfo(i).name.c_str(), spawnName) == 0)
-			return Position(zon->getEventInfo(i).x, zon->getEventInfo(i).y);
+			return position_t(zon->getEventInfo(i).x, zon->getEventInfo(i).y);
 	}
-	return Position(0.0f, 0.0f);
+	return position_t(0.0f, 0.0f);
 }
 
-const WORD Map::getRespawnPointId(Position& pos) {
+const word_t Map::getRespawnPointId(position_t& pos) {
 	ZON::EventInfo* respawn = this->getRespawn(pos);
 	if(respawn)
 		return respawn->id;
 	return 0x00;
 }
 
-const Position Map::getRespawnPoint(const size_t pos) {
+const position_t Map::getRespawnPoint(const size_t pos) {
 	ZON* zon = mainServer->getZON(this->getId());
 
 	ZON::EventInfo* bestRespawn = nullptr;
 	for(unsigned int i=0;i<zon->getEventInfoAmount();i++) {
 		if(i == pos)
-			return Position(zon->getEventInfo(i).x, zon->getEventInfo(i).y);
+			return position_t(zon->getEventInfo(i).x, zon->getEventInfo(i).y);
 	}
-	return Position(0.0f, 0.0f);
+	return position_t(0.0f, 0.0f);
 }
 
-const Position Map::getRespawnPoint(Position& pos) {
-	Position retPos;
+const position_t Map::getRespawnPoint(position_t& pos) {
+	position_t retPos;
 	ZON::EventInfo* respawn = this->getRespawn(pos);
 	if(respawn) {
 		retPos.x = respawn->x;
@@ -246,28 +274,28 @@ const Position Map::getRespawnPoint(Position& pos) {
 	return retPos;
 }
 
-MapSector* Map::getSurroundingSector(MapSector* center, BYTE surroundingSectorType) {
-	surroundingSectorType %= MapSector::SURROUNDING_MAX; //just to be safe
+Map::Sector* Map::getSurroundingSector(Map::Sector* center, byte_t surroundingSectorType) {
+	surroundingSectorType %= Map::Sector::SURROUNDING_MAX; //just to be safe
 	int mapSectorId = center->getId();
 	switch(surroundingSectorType) {
-		case MapSector::UPPER_LEFT: //UPPER LEFT
-		case MapSector::UPPER_CENTER: //UPPER
-		case MapSector::UPPER_RIGHT: //UPPER RIGHT
-			mapSectorId -= this->mapSectors.capacitySubLevel();
-			mapSectorId += static_cast<int>(static_cast<int>(surroundingSectorType) - MapSector::UPPER_CENTER);
+		case Map::Sector::UPPER_LEFT: //UPPER LEFT
+		case Map::Sector::UPPER_CENTER: //UPPER
+		case Map::Sector::UPPER_RIGHT: //UPPER RIGHT
+				mapSectorId -= this->mapSectors.capacitySubLevel();
+				mapSectorId += static_cast<int>(static_cast<int>(surroundingSectorType)-Map::Sector::UPPER_CENTER);
 		break;
-		case MapSector::CENTER_LEFT:
-			mapSectorId--;
+		case Map::Sector::CENTER_LEFT:
+				mapSectorId--;
 		break;
-		case MapSector::CENTER_RIGHT: //CENTER RIGHT
-			mapSectorId++;
+		case Map::Sector::CENTER_RIGHT: //CENTER RIGHT
+				mapSectorId++;
 		break;
-		case MapSector::LOWER_LEFT: //LOWER LEFT
-		case MapSector::LOWER_CENTER: //LOWER
-		case MapSector::LOWER_RIGHT: //LOWER RIGHT
-			mapSectorId += this->mapSectors.capacitySubLevel();
-			mapSectorId += static_cast<int>(static_cast<int>(surroundingSectorType) - MapSector::LOWER_CENTER);
-		break;
+		case Map::Sector::LOWER_LEFT: //LOWER LEFT
+		case Map::Sector::LOWER_CENTER: //LOWER
+		case Map::Sector::LOWER_RIGHT: //LOWER RIGHT
+				mapSectorId += this->mapSectors.capacitySubLevel();
+				mapSectorId += static_cast<int>(static_cast<int>(surroundingSectorType)-Map::Sector::LOWER_CENTER);
+			break;
 	}
 	if(mapSectorId < 0x00)
 		mapSectorId = 0x00;
@@ -278,9 +306,9 @@ MapSector* Map::getSurroundingSector(MapSector* center, BYTE surroundingSectorTy
 
 	return this->getSector(static_cast<WORD>(mapSectorId));
 }
-void Map::findMinMax(std::vector<std::string>& files, WORD *x, WORD *y) {
-	WORD curX = 0x00;
-	WORD curY = 0x00;
+void Map::findMinMax(std::vector<std::string>& files, word_t *x, word_t *y) {
+	word_t curX = 0x00;
+	word_t curY = 0x00;
 	std::string curIFO = "";
 
 	for(unsigned int i=0;i<files.size();i++) {
@@ -310,16 +338,16 @@ void Map::findMinMax(std::vector<std::string>& files, WORD *x, WORD *y) {
 void Map::createSectors(std::vector<std::string>& files) {
 	if(files.empty())
 		return;
-	WORD minMaxX[2] = {0xFFFF, 0x00};
-	WORD minMaxY[2] = {0xFFFF, 0x00};
+	word_t minMaxX[2] = {0xFFFF, 0x00};
+	word_t minMaxY[2] = {0xFFFF, 0x00};
 
 	//Parse all *.ifo files to see which X/Y-Coordinates are the
 	//local maxima/minima
 	this->findMinMax(files, minMaxX, minMaxY);
 	
 	//calculate the center ((max - min) / 2) + min = IFO-X/Y
-	WORD centerX = ((minMaxX[1] - minMaxX[0]) / 2) + minMaxX[0];
-	WORD centerY = ((minMaxY[1] - minMaxY[0]) / 2) + minMaxY[0];
+	word_t centerX = ((minMaxX[1] - minMaxX[0]) / 2) + minMaxX[0];
+	word_t centerY = ((minMaxY[1] - minMaxY[0]) / 2) + minMaxY[0];
 	
 	//Just as precaution for having the same high and low values.
 	//e.g. 30 for min and max -> 0 sectors difference.
@@ -329,11 +357,11 @@ void Map::createSectors(std::vector<std::string>& files) {
 	minMaxY[1]++;
 
 	//520000 + offset from center * default_sector_size (16000)
-	Position min(520000.0f + static_cast<float>(static_cast<float>(minMaxX[0] - centerX)) * IFO::DEFAULT_SECTOR_SIZE,
+	position_t min(520000.0f + static_cast<float>(static_cast<float>(minMaxX[0] - centerX)) * IFO::DEFAULT_SECTOR_SIZE,
 				 520000.0f + static_cast<float>(static_cast<float>(minMaxY[0] - centerY)) * IFO::DEFAULT_SECTOR_SIZE
 				);
 
-	Position max(520000.0f + static_cast<float>(static_cast<float>(minMaxX[1] - centerX)) * IFO::DEFAULT_SECTOR_SIZE,
+	position_t max(520000.0f + static_cast<float>(static_cast<float>(minMaxX[1] - centerX)) * IFO::DEFAULT_SECTOR_SIZE,
 				 520000.0f + static_cast<float>(static_cast<float>(minMaxY[1] - centerY)) * IFO::DEFAULT_SECTOR_SIZE
 				);
 	
@@ -348,9 +376,9 @@ void Map::createSectors(std::vector<std::string>& files) {
 			float cX = min.x + i * this->getSectorWidthAndHeight();
 			float cY = min.y + j * this->getSectorWidthAndHeight();
 
-			MapSector* newSector = new MapSector();
+			Map::Sector* newSector = new Map::Sector();
 			newSector->id = i * sectorCountY + j;
-			newSector->setCenter( Position(cX, cY) );
+			newSector->setCenter( position_t(cX, cY) );
 			
 #ifdef __MAPSECTOR_DEBUG__
 			newSector->mapId = this->id;
@@ -361,12 +389,56 @@ void Map::createSectors(std::vector<std::string>& files) {
 }
 
 void Map::dumpSectors(const char* filePath) {
-	CMyFile file(filePath, "a+");
-	DWORD totalSectorCount = this->getSectorCount();
-	file.putStringWithVarOnly("MapID: %i\n", this->getId());
-	for(unsigned int i=0;i<totalSectorCount;i++) {
-		MapSector* sector = this->getSector(i);
-		file.putStringWithVarOnly("[Sector %i of %i]: %f, %f with verticelength %i\n", i, totalSectorCount, sector->getCenter().x, sector->getCenter().y, this->getSectorWidthAndHeight());
+	CMyFileWriter<char> file(filePath, true);
+	dword_t totalSectorCount = this->getSectorCount();
+	file.putStringWithVar("MapID: %i\n", this->getId());
+	for (unsigned int i = 0; i < totalSectorCount; i++) {
+		Map::Sector* sector = this->getSector(i);
+		file.putStringWithVar("[Sector %i of %i]: %f, %f with verticelength %i\n", i, totalSectorCount, sector->getCenter().x, sector->getCenter().y, this->getSectorWidthAndHeight());
 	}
 	file.putString("\n\n");
+}
+	
+bool Map::hasActivePlayers() const {
+	for (word_t i = 0; i < this->getSectorCount(); i++) {
+		Map::Sector* sector = this->getSector(i);
+		if (sector->getFirstPlayer() != nullptr) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool Map::checkSpawns() {
+	for (unsigned int i = 0; i<this->getSpawnCount(); i++) {
+		IFOSpawn* curSpawn = this->getSpawn(i);
+		//As long as we didn't reach the allowed max, keep spawning monsters
+		while (curSpawn->getCurrentlySpawned() < curSpawn->getMaxSimultanouslySpawned()) {
+			dword_t curSpawnId = curSpawn->getCurrentSpawnId();
+			IFOSpawnEntry* selectedSpawn = nullptr;
+			//Calculate the wanted spawnId and select the fitting spawnEntry
+			if (curSpawnId >= curSpawn->getBasicMobSpawnCount()) {
+				curSpawnId -= curSpawn->getBasicMobSpawnCount();
+				selectedSpawn = &curSpawn->getTacticalMobSpawn(curSpawnId);
+			}
+			else {
+				selectedSpawn = &curSpawn->getBasicMobSpawn(curSpawnId);
+			}
+			//Get the NPCData of the monster and spawn it
+			//(also, add it to the map and thus visuality of the players)
+			NPCData* npcData = mainServer->getNPCData(selectedSpawn->getMobId());
+			for (unsigned int i = 0; i<selectedSpawn->getAmount(); i++) {
+				position_t spawnPos(curSpawn->getPosition().x + QuickInfo::fRand(curSpawn->getAllowedSpawnDistance(), true),
+					curSpawn->getPosition().y + QuickInfo::fRand(curSpawn->getAllowedSpawnDistance(), true));
+				new Monster(npcData, mainServer->getAIData(npcData->getAIId()), this->getId(), spawnPos);
+			}
+			//Add the amount of spawned monsters to the total size of the spawn
+			curSpawn->setCurrentlySpawned(curSpawn->getCurrentlySpawned() + selectedSpawn->getAmount());
+
+			//Advance to the next spawnId; in case the max spawn was reached,
+			//regress to the first basic spawn
+			curSpawn->nextSpawnId();
+		}
+	}
+	return true;
 }

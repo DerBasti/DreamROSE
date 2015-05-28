@@ -3,24 +3,27 @@
 #ifndef __PRIVATE_LOGGER__
 #define __PRIVATE_LOGGER__
 
-#include "..\QuickInfos\QuickInfo.h"
-#include "..\CMyFile\MyFile.h"
+#include "D:\Programmieren\QuickInfos\VarsToString"
+#include "D:\Programmieren\CMyFile\MyFile.h"
 
 class Logger {
 	private:
-		CMyFile file;
+		CMyFileWriter<char>* file;
 	public:
 		Logger() {
 		}
 		~Logger() {
-			file.close();
+			delete file;
+			file = nullptr;
 		}
 		void setFile(const char* path){ 
-			file.openFile(path, "a+");
+			file = new CMyFileWriter<char>(path, true);
 		}
 		void logDebug(const char* fmt, ...) {
-			::ArgConverterA(result, fmt);
-			file.putStringWithVarAndTime(result.c_str());
+			va_list args; va_start(args, fmt);
+			std::string result = QuickInfo::convertVarsToString(fmt, args);
+			va_end(args);
+			file->putStringWithVar(result.c_str());
 		}
 };
 

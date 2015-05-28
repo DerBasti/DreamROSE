@@ -5,7 +5,7 @@
 #ifdef __ROSE_USE_VFS__
 
 #ifdef __ROSE_DEBUG__
-QSD::QSD(WORD newId, VFS* pVFS, const char* filePath) {
+QSD::QSD(word_t newId, VFS* pVFS, const char* filePath) {
 	this->id = newId;
 #else
 QSD::QSD(VFS* pVFS, const char* filePath) {
@@ -15,7 +15,7 @@ QSD::QSD(VFS* pVFS, const char* filePath) {
 	if (strlen(filePath) > 0) {
 		this->filePath = filePath;
 		VFSData vfsData; pVFS->readFile(filePath, vfsData);
-		CMyBufferedReader reader(vfsData.data, vfsData.data.size());
+		CMyBufferedFileReader<char> reader(vfsData.data, vfsData.data.size());
 		this->read(reader);
 	}
 }
@@ -32,27 +32,27 @@ QSD::QSD(const char* filePath) {
 
 template<class FileType> void QSD::read(FileType& file) {
 	file.read<DWORD>(); //FileVersion
-	DWORD blockCount = file.read<DWORD>();
+	dword_t blockCount = file.read<DWORD>();
 
 	char name[0x200] = { 0x00 };
-	file.readStringT<WORD, char*>(name);
+	file.readLengthThenString<WORD>(name);
 
 	this->internalName = name;
 
 	for (unsigned int i = 0; i < blockCount; i++) {
 
-		DWORD recordCount = file.read<DWORD>();
+		dword_t recordCount = file.read<DWORD>();
 
-		file.readStringT<WORD, char*>(name);
+		file.readLengthThenString<WORD>(name);
 		QuestEntry* previousEntry = nullptr;
-		BYTE checkNext = 0x00;
+		byte_t checkNext = 0x00;
 		for (unsigned int j = 0; j < recordCount; j++) {
 
 			checkNext = file.read<BYTE>() > 0; //CheckNEXT ? 
-			DWORD conditionCount = file.read<DWORD>();
-			DWORD actionCount = file.read<DWORD>();
+			dword_t conditionCount = file.read<DWORD>();
+			dword_t actionCount = file.read<DWORD>();
 
-			file.readStringT<WORD, char*>(name);
+			file.readLengthThenString<WORD>(name);
 			QuestEntry* newEntry = new QuestEntry(::makeQuestHash(name), conditionCount, actionCount);
 #ifdef __ROSE_DEBUG__
 			newEntry->parent = this;
@@ -62,7 +62,7 @@ template<class FileType> void QSD::read(FileType& file) {
 			newEntry->checkNextTrigger = checkNext;
 			char* tmpBuf = nullptr;
 			for (unsigned int k = 0; k < conditionCount; k++) {
-				DWORD condLen = file.read<DWORD>();
+				dword_t condLen = file.read<DWORD>();
 				file.setPosition(file.getPosition() - 4);
 
 				file.readAndAlloc(&tmpBuf, condLen);
@@ -83,7 +83,7 @@ template<class FileType> void QSD::read(FileType& file) {
 				tmpBuf = nullptr;
 			}
 			for (unsigned int k = 0; k < actionCount; k++) {
-				DWORD actLen = file.read<DWORD>();
+				dword_t actLen = file.read<DWORD>();
 				file.setPosition(file.getPosition() - 4);
 				file.readAndAlloc(&tmpBuf, actLen);
 
@@ -111,7 +111,7 @@ template<class FileType> void QSD::read(FileType& file) {
 	}
 }
 
-const DWORD makeQuestHash(const char* qsdname) {
+const dword_t makeQuestHash(const char* qsdname) {
 	//Thanks to Drakia / Brett19 / ExJam for this particular codepiece :>
 	const unsigned long keys[256] = {
 		0x697A5, 0x6045C, 0xAB4E2, 0x409E4, 0x71209, 0x32392, 0xA7292, 0xB09FC, 0x4B658, 0xAAAD5, 0x9B9CF, 0xA326A, 0x8DD12, 0x38150, 0x8E14D, 0x2EB7F,
@@ -146,7 +146,7 @@ const DWORD makeQuestHash(const char* qsdname) {
 	return result;
 }
 
-void PlayerQuest::setSwitch(const WORD switchBit, const DWORD value) {
+void PlayerQuest::setSwitch(const word_t switchBit, const dword_t value) {
 	if (switchBit >= sizeof(DWORD)* 8) //32 Bits
 		return;
 	if (value == 0x00) {
@@ -157,7 +157,7 @@ void PlayerQuest::setSwitch(const WORD switchBit, const DWORD value) {
 	}
 }
 
-template<class _Ty> _Ty QuestService::rewardOperation(Entity* entity, const _Ty& basicValue, const BYTE operation) {
+template<class _Ty> _Ty QuestService::rewardOperation(Entity* entity, const _Ty& basicValue, const byte_t operation) {
 	_Ty result = 0;
 	switch (operation) {
 		case 0x00:
@@ -201,7 +201,7 @@ template<class _Ty> _Ty QuestService::rewardOperation(Entity* entity, const _Ty&
 	return result;
 }
 
-const char* QuestService::getAbilityTypeName(BYTE abilityType) {
+const char* QuestService::getAbilityTypeName(byte_t abilityType) {
 	switch (abilityType) {
 		case StatType::LEVEL:
 			return "Level";
@@ -219,9 +219,9 @@ const char* QuestService::getAbilityTypeName(BYTE abilityType) {
 	return "UNKNOWN!";
 }
 
-DWORD QuestService::currentQuestId;
+dword_t QuestService::currentQuestId;
 
-const DWORD QuestService::runQuest(Entity* entity, const DWORD questHash) {
+const dword_t QuestService::runQuest(Entity* entity, const dword_t questHash) {
 #ifndef __ROSE_QSD_DEBUG__
 	QuestEntry* quest = mainServer->getQuest(questHash);
 	if (!quest)
@@ -414,7 +414,7 @@ bool QuestService::checkQuestVariables(QuestTrans* trans, const AbstractQuestInf
 	const QuestCondition001* cond = reinterpret_cast<const QuestCondition001*>(conditionHeader);
 	for (unsigned int i = 0; i < cond->dataCount; i++) {
 		const QuestCheckVar* data = reinterpret_cast<const QuestCheckVar*>(&cond->data[i]);
-		WORD questVar = player->getQuestVariable(data->varType, data->varNum);
+		word_t questVar = player->getQuestVariable(data->varType, data->varNum);
 		if (!OperationService::checkOperation(questVar, data->amount, data->operation))
 			return false;
 	}
@@ -425,7 +425,7 @@ bool QuestService::checkUserVariables(QuestTrans* trans, const AbstractQuestInfo
 	const QuestCondition003* cond = reinterpret_cast<const QuestCondition003*>(conditionHeader);
 	for (unsigned int i = 0; i < cond->dataCount; i++) {
 		const QuestCheckAbility* data = reinterpret_cast<const QuestCheckAbility*>(&cond->data[i]);
-		DWORD value = trans->questTriggerCauser->getStatType<DWORD>(static_cast<WORD>(data->abilityType));
+		dword_t value = trans->questTriggerCauser->getStatType<DWORD>(static_cast<WORD>(data->abilityType));
 		if (!OperationService::checkOperation(value, data->amount, data->operation))
 			return false;
 	}
@@ -456,7 +456,7 @@ bool QuestService::checkItemAmount(QuestTrans* trans, const AbstractQuestInfo* c
 		else {
 			//TODO
 			try {
-				throw TraceableExceptionARGS("[QUEST: %i] ITEMTYPE NOT IMPLEMENTED: %i", QuestService::currentQuestId, data->itemId);
+				throw TraceableException("[QUEST: %i] ITEMTYPE NOT IMPLEMENTED: %i", QuestService::currentQuestId, data->itemId);
 			}
 			catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 		}
@@ -470,7 +470,7 @@ bool QuestService::checkPartyLeaderAndLevel(QuestTrans* trans, const AbstractQue
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
 	const QuestCondition005* cond = reinterpret_cast<const QuestCondition005*>(conditionHeader);
 	try {
-		throw TraceableExceptionARGS("[QUEST: %i] PARTY NOT IMPLEMENTED: isLeader = %i, PartyLevel = %i", QuestService::currentQuestId, cond->isLeader, cond->level);
+		throw TraceableException("[QUEST: %i] PARTY NOT IMPLEMENTED: isLeader = %i, PartyLevel = %i", QuestService::currentQuestId, cond->isLeader, cond->level);
 	}
 	catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 	return false;
@@ -483,7 +483,7 @@ bool QuestService::checkDistanceFromPoint(QuestTrans* trans, const AbstractQuest
 	const QuestCondition006* cond = reinterpret_cast<const QuestCondition006*>(conditionHeader);
 	if (trans->questTriggerCauser->getMapId() != cond->mapId)
 		return false;
-	Position wantedPos(cond->x, cond->y);
+	position_t wantedPos(cond->x, cond->y);
 	if (wantedPos.distanceTo(trans->questTriggerCauser->getPositionCurrent()) > cond->radius)
 		return false;
 	return true;
@@ -491,8 +491,8 @@ bool QuestService::checkDistanceFromPoint(QuestTrans* trans, const AbstractQuest
 
 bool QuestService::checkWorldTime(QuestTrans* trans, const AbstractQuestInfo* conditionHeader) {
 	//I guess it would trigger only once if we didn't do this.
-	//BYTE would be too little as value (-> once every 4-5 minutes)
-	WORD worldTime = static_cast<WORD>(mainServer->getWorldTime());
+	//byte_t would be too little as value (-> once every 4-5 minutes)
+	word_t worldTime = static_cast<WORD>(mainServer->getWorldTime());
 	const QuestCondition007* cond = reinterpret_cast<const QuestCondition007*>(conditionHeader);
 	if (worldTime >= cond->startTime && worldTime <= cond->endTime)
 		return true;
@@ -503,7 +503,7 @@ bool QuestService::checkRemainingTime(QuestTrans* trans, const AbstractQuestInfo
 	if (!trans->selectedQuest)
 		return false;
 	const QuestCondition008* cond = reinterpret_cast<const QuestCondition008*>(conditionHeader);
-	const DWORD passedTime = trans->selectedQuest->getPassedTime();
+	const dword_t passedTime = trans->selectedQuest->getPassedTime();
 	return OperationService::checkOperation(passedTime, cond->totalTime, cond->operation);
 }
 
@@ -518,7 +518,7 @@ bool QuestService::checkSkill(QuestTrans* trans, const AbstractQuestInfo* condit
 		if (!curSkill)
 			continue;
 #ifdef __ROSE_DEBUG__
-		WORD currentSkillId = curSkill->getId();
+		word_t currentSkillId = curSkill->getId();
 		if (currentSkillId >= cond->skillIdFirst && currentSkillId <= cond->skillIdSecond) {
 #else
 		if (curSkill->getId() >= cond->skillIdFirst && curSkill->getId() <= cond->skillIdSecond) {
@@ -534,7 +534,7 @@ bool QuestService::checkSkill(QuestTrans* trans, const AbstractQuestInfo* condit
 
 bool QuestService::checkRandomPercentage(QuestTrans* trans, const AbstractQuestInfo* conditionHeader) {
 	const QuestCondition010* cond = reinterpret_cast<const QuestCondition010*>(conditionHeader);
-	const DWORD randomChance = rand() % 101;
+	const dword_t randomChance = rand() % 101;
 	if (randomChance >= cond->percentageLow && randomChance <= cond->percentageHigh)
 		return true;
 	return false;
@@ -543,7 +543,7 @@ bool QuestService::checkRandomPercentage(QuestTrans* trans, const AbstractQuestI
 bool QuestService::checkObjectVar(QuestTrans* trans, const AbstractQuestInfo* conditionHeader) {
 	const QuestCondition011* cond = reinterpret_cast<const QuestCondition011*>(conditionHeader);
 
-	DWORD objValue = 0x00;
+	dword_t objValue = 0x00;
 		
 	NPC* npc = dynamic_cast<NPC*>(trans->questTarget);
 	if (!npc)
@@ -589,7 +589,7 @@ bool QuestService::checkMapTime(QuestTrans* trans, const AbstractQuestInfo* cond
 	Entity* realTarget = cond->who == 2 ? trans->questTriggerCauser : trans->questTarget;
 	if (!realTarget)
 		return false;
-	const DWORD zoneTime = mainServer->getMapTime(realTarget->getMapId());
+	const dword_t zoneTime = mainServer->getMapTime(realTarget->getMapId());
 	return (zoneTime >= cond->timeStart && zoneTime <= cond->timeEnd);
 }
 
@@ -598,10 +598,10 @@ bool QuestService::checkNPCVarDifferences(QuestTrans* trans, const AbstractQuest
 	try {
 		NPC* first = mainServer->getNPCGlobal(cond->firstVar.npcId);
 		if (!first)
-			throw TraceableExceptionARGS("Couldn't find first NPC %i", cond->firstVar.npcId);
+			throw TraceableException("Couldn't find first NPC %i", cond->firstVar.npcId);
 		NPC* second = mainServer->getNPCGlobal(cond->secondVar.npcId);
 		if (!second)
-			throw TraceableExceptionARGS("Couldn't find second NPC %i", cond->secondVar.npcId);
+			throw TraceableException("Couldn't find second NPC %i", cond->secondVar.npcId);
 		int npcVarOne = first->getObjVar(cond->firstVar.varType);
 		int npcVarTwo = second->getObjVar(cond->secondVar.varType);
 		return OperationService::checkOperation(npcVarOne, npcVarTwo, cond->operation);
@@ -618,7 +618,7 @@ bool QuestService::checkServerTimeMonth(QuestTrans* trans, const AbstractQuestIn
 	SYSTEMTIME localTime; GetSystemTime(&localTime);
 	if (cond->day && cond->day != localTime.wDay)
 		return false;
-	WORD wCurTime = localTime.wHour * 60 + localTime.wMinute;
+	word_t wCurTime = localTime.wHour * 60 + localTime.wMinute;
 	if (wCurTime >= (cond->hourStart * 60 + cond->minuteStart) && wCurTime <= (cond->hourEnd * 60 + cond->minuteEnd))
 		return true;
 	return false;
@@ -630,7 +630,7 @@ bool QuestService::checkServerTimeWeekday(QuestTrans* trans, const AbstractQuest
 	SYSTEMTIME localTime; GetSystemTime(&localTime);
 	if (cond->weekDay != localTime.wDayOfWeek)
 		return false;
-	WORD wCurTime = localTime.wHour * 60 + localTime.wMinute;
+	word_t wCurTime = localTime.wHour * 60 + localTime.wMinute;
 	if (wCurTime >= (cond->hourStart * 60 + cond->minuteStart) && wCurTime <= (cond->hourEnd * 60 + cond->minuteEnd))
 		return true;
 	return false;
@@ -662,7 +662,7 @@ bool QuestService::checkClanInternalPosition(QuestTrans* trans, const AbstractQu
 		return false;
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
 	const QuestCondition024* cond = reinterpret_cast<const QuestCondition024*>(conditionHeader);
-	//TODO: CLAN -- GET INTERNAL_POSITION IN CLAN --> CHECK
+	//TODO: CLAN -- GET INTERNAL_position_t IN CLAN --> CHECK
 	return false;
 }
 
@@ -718,8 +718,8 @@ bool QuestService::checkUNKNOWN(QuestTrans* trans, const AbstractQuestInfo* basi
 	try {
 		QuestEntry* quest = mainServer->getQuest(trans->questHash);
 		if (quest)
-			throw TraceableExceptionARGS("[Quest %s (Hash: 0x%x) by %s] RewardID: 0x%x with length %i\n", quest->getQuestName().c_str(), trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
-		throw TraceableExceptionARGS("[QuestHash: 0x%x by %s] RewardID: 0x%x with length %i\n", trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
+			throw TraceableException("[Quest %s (Hash: 0x%x) by %s] RewardID: 0x%x with length %i\n", quest->getQuestName().c_str(), trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
+		throw TraceableException("[QuestHash: 0x%x by %s] RewardID: 0x%x with length %i\n", trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
 	}
 	catch (std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -899,7 +899,7 @@ bool QuestService::rewardNewQuest(QuestTrans *trans, const AbstractQuestInfo* he
 					if (trans->wasPreviouslyEstablishingQuest) {
 						return true;
 					}
-					DWORD currentlySelectedId = (questPlayer->getSelectedQuest() == nullptr ? 0x00 : questPlayer->getSelectedQuest()->getQuestId());
+					dword_t currentlySelectedId = (questPlayer->getSelectedQuest() == nullptr ? 0x00 : questPlayer->getSelectedQuest()->getQuestId());
 					bool result = questPlayer->searchAndSelectQuest(reward->questId);
 					questPlayer->searchAndSelectQuest(currentlySelectedId);
 					return result;
@@ -933,14 +933,14 @@ bool QuestService::rewardQuestItem(QuestTrans* trans, const AbstractQuestInfo* h
 					}
 					return trans->selectedQuest->removeItemIfSufficient(rewardItem);
 				}
-				throw TraceableExceptionARGS("Player is supposed to wear/get the item %i", reward->itemId);
+				throw TraceableException("Player is supposed to wear/get the item %i", reward->itemId);
 			}
 			catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 		break;
 		case 0x01: //QuestOwner QuestItem
 			try {
 				if (reward->partyOption == 1)
-					throw TraceableExceptionARGS("Player is supposed to split item %i within party ", reward->itemId);
+					throw TraceableException("Player is supposed to split item %i within party ", reward->itemId);
 			}
 			catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 			if (isTryoutRun)
@@ -961,8 +961,8 @@ bool QuestService::rewardQuestVar(QuestTrans* trans, const AbstractQuestInfo* he
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
 	for (unsigned int i = 0; i < reward->varAmount; i++) {
 		const QuestSetVar* questVar = reinterpret_cast<const QuestSetVar*>(&reward->vars[i]);
-		WORD currentQuestVarValue = player->getQuestVariable(questVar->varType, questVar->varNum);
-		WORD newQuestVarValue = OperationService::resultOperation(currentQuestVarValue, questVar->amount, questVar->operation);
+		word_t currentQuestVarValue = player->getQuestVariable(questVar->varType, questVar->varNum);
+		word_t newQuestVarValue = OperationService::resultOperation(currentQuestVarValue, questVar->amount, questVar->operation);
 		player->setQuestVariable(questVar->varType, questVar->varNum, newQuestVarValue);
 	}
 	return true;
@@ -993,14 +993,14 @@ bool QuestService::rewardExpMoneyOrItem(QuestTrans* trans, const AbstractQuestIn
 	const QuestReward005* reward = reinterpret_cast<const QuestReward005*>(header);
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
 	if (reward->rewardType == 0x00) {
-		const DWORD curExp = player->getExperience();
-		DWORD newExp = QuestService::rewardOperation(player, reward->amount, reward->equate);
+		const dword_t curExp = player->getExperience();
+		dword_t newExp = QuestService::rewardOperation(player, reward->amount, reward->equate);
 		player->addExperience(newExp);
 		wasSuccessful = true;
 	}
 	else if (reward->rewardType == 0x01) {
-		const QWORD curZulies = player->getZulies();
-		const QWORD newZulies = QuestService::rewardOperation(player, reward->amount, reward->equate) * (trans->selectedQuest->getQuestVar(PlayerQuest::QUEST_VAR_MAX - 1)+1);
+		const qword_t curZulies = player->getZulies();
+		const qword_t newZulies = QuestService::rewardOperation(player, reward->amount, reward->equate) * (trans->selectedQuest->getQuestVar(PlayerQuest::QUEST_VAR_MAX - 1)+1);
 		wasSuccessful = player->updateZulies(curZulies + newZulies);
 		if (wasSuccessful)
 			trans->selectedQuest->setQuestVar(PlayerQuest::QUEST_VAR_MAX - 1, 0);
@@ -1011,7 +1011,7 @@ bool QuestService::rewardExpMoneyOrItem(QuestTrans* trans, const AbstractQuestIn
 		wasSuccessful = player->addItemToInventory(item);
 		if (reward->partyOption || reward->itemOption) {
 			try {
-				throw TraceableExceptionARGS("Item %i should be rewarded [Options: Item %i, Party %i]", reward->itemId, reward->itemOption, reward->partyOption);
+				throw TraceableException("Item %i should be rewarded [Options: Item %i, Party %i]", reward->itemId, reward->itemOption, reward->partyOption);
 			}
 			catch (std::exception& ex) {
 				std::cout << ex.what() << "\n";
@@ -1025,8 +1025,8 @@ bool QuestService::rewardRegeneration(QuestTrans* trans, const AbstractQuestInfo
 	if (isTryoutRun)
 		return true;
 	const QuestReward006* reward = reinterpret_cast<const QuestReward006*>(header);
-	DWORD newHp = trans->questTriggerCauser->getMaxHP() * reward->percentHP / 100;
-	DWORD newMp = trans->questTriggerCauser->getMaxMP() * reward->percentMP / 100;
+	dword_t newHp = trans->questTriggerCauser->getMaxHP() * reward->percentHP / 100;
+	dword_t newMp = trans->questTriggerCauser->getMaxMP() * reward->percentMP / 100;
 
 	trans->questTriggerCauser->setCurrentHP(newHp);
 	trans->questTriggerCauser->setCurrentMP(newMp);
@@ -1040,7 +1040,7 @@ bool QuestService::rewardWarp(QuestTrans* trans, const AbstractQuestInfo* header
 	const QuestReward007* reward = reinterpret_cast<const QuestReward007*>(header);
 	if (reward->partyOption) {
 		try {
-			throw TraceableExceptionARGS("[QUEST %i] Reward should warp entire party to %i [%i, %i]!", QuestService::currentQuestId, reward->mapId, reward->x, reward->y);
+			throw TraceableException("[QUEST %i] Reward should warp entire party to %i [%i, %i]!", QuestService::currentQuestId, reward->mapId, reward->x, reward->y);
 		}
 		catch (std::exception& ex) {
 			std::cout << ex.what() << "\n";
@@ -1049,7 +1049,7 @@ bool QuestService::rewardWarp(QuestTrans* trans, const AbstractQuestInfo* header
 	else  {
 		if (trans->questTriggerCauser->isPlayer()) {
 			Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
-			return player->pakTelegate(reward->mapId, Position(reward->x, reward->y));
+			return player->pakTelegate(reward->mapId, position_t(reward->x, reward->y));
 		}
 	}
 	return true;
@@ -1059,7 +1059,7 @@ bool QuestService::rewardSpawnMonster(QuestTrans* trans, const AbstractQuestInfo
 	if (isTryoutRun)
 		return true;
 	const QuestReward008* reward = reinterpret_cast<const QuestReward008*>(header);
-	WORD mapId; Position newPos;
+	word_t mapId; position_t newPos;
 	switch (reward->targetType) {
 		case 0x00:
 			mapId = trans->questTriggerCauser->getMapId();
@@ -1072,7 +1072,7 @@ bool QuestService::rewardSpawnMonster(QuestTrans* trans, const AbstractQuestInfo
 		break;
 		case 0x03:
 			mapId = reward->mapId;
-			newPos = Position(reward->x, reward->y);
+			newPos = position_t(reward->x, reward->y);
 		break;
 	}
 	for (unsigned int i = 0; i < reward->amount; i++) {
@@ -1085,9 +1085,9 @@ bool QuestService::rewardNextQuestHash(QuestTrans* trans, const AbstractQuestInf
 	if (isTryoutRun)
 		return true;
 	const QuestReward009* reward = reinterpret_cast<const QuestReward009*>(header);
-	DWORD questHash = ::makeQuestHash(reward->triggerName);
+	dword_t questHash = ::makeQuestHash(reward->triggerName);
 	try {
-		throw TraceableExceptionARGS("Trigger %s [0x%x] wants to be triggered!", reward->triggerName, questHash);
+		throw TraceableException("Trigger %s [0x%x] wants to be triggered!", reward->triggerName, questHash);
 	}
 	catch (std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -1116,8 +1116,8 @@ bool QuestService::rewardObjectVar(QuestTrans* trans, const AbstractQuestInfo* h
 		return false;
 	if (isTryoutRun)
 		return true;
-	WORD currentValue = npc->getObjVar(reward->varType);
-	WORD newValue = OperationService::resultOperation(currentValue, reward->value, reward->operation);
+	word_t currentValue = npc->getObjVar(reward->varType);
+	word_t newValue = OperationService::resultOperation(currentValue, reward->value, reward->operation);
 	npc->setObjVar(reward->varType, newValue);
 	return true;
 }
@@ -1149,7 +1149,7 @@ bool QuestService::rewardQuestTriggerWhenTimeExpired(QuestTrans* trans, const Ab
 	if (isTryoutRun)
 		return false; //TODO
 	try {
-		throw TraceableExceptionARGS("[QUEST %i] Trigger %s wants to be triggered after %i seconds!", QuestService::currentQuestId, reward->triggerName, reward->seconds);
+		throw TraceableException("[QUEST %i] Trigger %s wants to be triggered after %i seconds!", QuestService::currentQuestId, reward->triggerName, reward->seconds);
 	}
 	catch (std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -1186,7 +1186,7 @@ bool QuestService::rewardQuestClearSwitch(QuestTrans* trans, const AbstractQuest
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
 	const QuestReward016* reward = reinterpret_cast<const QuestReward016*>(header);
 	try {
-		throw TraceableExceptionARGS("[QUEST %i] SwitchGroup %i wants to be cleared", QuestService::currentQuestId, reward->groupId);
+		throw TraceableException("[QUEST %i] SwitchGroup %i wants to be cleared", QuestService::currentQuestId, reward->groupId);
 	}
 	catch (std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -1203,7 +1203,7 @@ bool QuestService::rewardQuestClearAllSwitches(QuestTrans* trans, const Abstract
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
 	const QuestReward017* reward = reinterpret_cast<const QuestReward017*>(header);
 	try {
-		throw TraceableExceptionARGS("[QUEST %i] All questSwitches want to be cleared", QuestService::currentQuestId );
+		throw TraceableException("[QUEST %i] All questSwitches want to be cleared", QuestService::currentQuestId);
 	}
 	catch (std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -1219,7 +1219,7 @@ bool QuestService::rewardServerAnnouncement(QuestTrans* trans, const AbstractQue
 		return false; //TODO
 	const QuestReward018* reward = reinterpret_cast<const QuestReward018*>(header);
 	try {
-		throw TraceableExceptionARGS("[QUEST %i] ServerAnnouncement not possible! DataCount: %i", QuestService::currentQuestId, reward->dataCount);
+		throw TraceableException("[QUEST %i] ServerAnnouncement not possible! DataCount: %i", QuestService::currentQuestId, reward->dataCount);
 	}
 	catch (std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -1293,7 +1293,7 @@ bool QuestService::rewardScriptTrigger(QuestTrans* trans, const AbstractQuestInf
 	const QuestReward029* reward = reinterpret_cast<const QuestReward029*>(header);
 	std::vector<char> script(reward->scriptLength+1);
 	memcpy(script.data(), reward->script, reward->scriptLength);
-	const DWORD newQuestHash = ::makeQuestHash(script.data());
+	const dword_t newQuestHash = ::makeQuestHash(script.data());
 	return QuestService::runQuest(trans->questTriggerCauser, newQuestHash, isTryoutRun);
 	*/
 	//Seems to be something internal in the ROSE-client (trigger for other events?)
@@ -1317,8 +1317,8 @@ bool QuestService::rewardSingleQuestVar(QuestTrans* trans, const AbstractQuestIn
 		return true;
 	Player* player = dynamic_cast<Player*>(trans->questTriggerCauser);
 	const QuestReward031* reward = reinterpret_cast<const QuestReward031*>(header);
-	WORD varValue = player->getQuestVariable(reward->var.varType, reward->var.varNum);
-	WORD newValue = OperationService::resultOperation(varValue, reward->var.amount, reward->var.operation);
+	word_t varValue = player->getQuestVariable(reward->var.varType, reward->var.varNum);
+	word_t newValue = OperationService::resultOperation(varValue, reward->var.amount, reward->var.operation);
 	player->setQuestVariable(reward->var.varType, reward->var.varNum, newValue);
 	return true;
 }
@@ -1343,7 +1343,7 @@ bool QuestService::rewardNPCVisuality(QuestTrans* trans, const AbstractQuestInfo
 	NPC *npc = dynamic_cast<NPC*>(trans->questTarget);
 	const QuestReward033* reward = reinterpret_cast<const QuestReward033*>(header);
 	try {
-		throw TraceableExceptionARGS("[QUEST: %i] NPC %s needs a visuality change to %i!\n", QuestService::currentQuestId, npc->getName().c_str(), reward->unknown);
+		throw TraceableException("[QUEST: %i] NPC %s needs a visuality change to %i!\n", QuestService::currentQuestId, npc->getName().c_str(), reward->unknown);
 	}
 	catch (std::exception& ex) { std::cout << ex.what() << "\n"; }
 	return false;
@@ -1353,8 +1353,8 @@ bool QuestService::rewardUNKNOWN(QuestTrans* trans, const AbstractQuestInfo* bas
 	try {
 		QuestEntry* quest = mainServer->getQuest(trans->questHash);
 		if (quest)
-			throw TraceableExceptionARGS("[Quest %s (Hash: 0x%x) by %s] RewardID: 0x%x with length %i\n", quest->getQuestName().c_str(), trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
-		throw TraceableExceptionARGS("[QuestHash: 0x%x by %s] RewardID: 0x%x with length %i\n", trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
+			throw TraceableException("[Quest %s (Hash: 0x%x) by %s] RewardID: 0x%x with length %i\n", quest->getQuestName().c_str(), trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
+		throw TraceableException("[QuestHash: 0x%x by %s] RewardID: 0x%x with length %i\n", trans->questHash, trans->questTriggerCauser->getName().c_str(), basicInfo->header.operationType, basicInfo->header.length);
 	}
 	catch (std::exception& ex) {
 		std::cout << ex.what() << "\n";
@@ -1452,7 +1452,7 @@ std::string QuestService::conditionToString(const char* data) {
 		case 0x0C:
 		{
 					 const QuestCondition012* cond = reinterpret_cast<const QuestCondition012*>(data);
-					 sprintf(&buffer[strlen(buffer)], "Check Event %i at Position (%i, %i) on map %i\n", cond->eventId, cond->x, cond->y, cond->mapId);
+					 sprintf(&buffer[strlen(buffer)], "Check Event %i at position_t (%i, %i) on map %i\n", cond->eventId, cond->x, cond->y, cond->mapId);
 		}
 		break;
 		case 0x0D:

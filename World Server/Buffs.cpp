@@ -1,34 +1,33 @@
-#include "Buffs.h"
+#include "Structures.h"
 #undef max
 
 Buffs::Buffs() {
-	this->buffs.clear();
 	this->currentTime = clock();
 }
 
 Buffs::~Buffs() {
-	this->buffs.clear();
 }
 
+
 Buffs& Buffs::operator=(const Buffs& rhs) {
-	this->buffs.clear();
-	this->buffs = rhs.buffs;
+	for (unsigned int i = 0; i < Buffs::TOTAL_COUNT; i++) {
+		this->buffs[i] = rhs.buffs[i];
+	}
 	this->currentTime = rhs.currentTime;
 	return (*this);
 }
 
-void Buffs::internalClear(DWORD clearFlags) {
-	if(this->buffs.size() == 0)
+void Buffs::internalClear(dword_t clearFlags) {
+	if (this->_getActiveBuffCount() == 0)
 		return;
 	size_t idx = 0x00;
-	BYTE curByte = 0x00;
+	byte_t curByte = 0x00;
 	//As long as there are buffs, iterate through them and
 	//get the visuality-byte. Shift 1 times visuality-bits
-	//to get the DWORD value. bit-AND the value with the
+	//to get the dword_t value. bit-AND the value with the
 	//wanted clear flag -> in case it's a wanted buff, remove it
-	while(idx < this->buffs.size()) {
-		curByte = this->buffs.getValue(idx).visuality;
-		if( (1<<curByte) & clearFlags ) {
+	while(idx < Buffs::TOTAL_COUNT) {
+		if( this->buffs[idx].amount > 0 && (1<<idx) & clearFlags ) {
 			this->removeBuff(idx);
 			continue;
 		}
@@ -36,7 +35,15 @@ void Buffs::internalClear(DWORD clearFlags) {
 	}
 }
 
-void Buffs::clearBuff(BYTE clearType) {
+const byte_t Buffs::_getActiveBuffCount() const {
+	byte_t result = 0;
+	for (unsigned int i = 0; i < Buffs::TOTAL_COUNT; i++) {
+		result += static_cast<byte_t>(this->buffs[i].endTime != 0);
+	}
+	return result;
+}
+
+void Buffs::clearBuff(byte_t clearType) {
 	switch(clearType) {
 		case Buffs::POSITIVE_BUFFS:
 			this->internalClear(Buffs::POSITIVE_BITS);
@@ -48,41 +55,35 @@ void Buffs::clearBuff(BYTE clearType) {
 			this->internalClear(Buffs::POSITIVE_BITS | Buffs::NEGATIVE_BITS);
 		break;
 		default: //ALL_BUFFS_ADMIN_INCLUDED
-			this->internalClear(std::numeric_limits<DWORD>().max());
+			this->internalClear(std::numeric_limits<dword_t>().max());
 	}
 }
 
-bool Buffs::addBuff(const BYTE bitFromVisuality, const WORD amount, const DWORD durationInMilliseconds) {
+bool Buffs::addBuff(const byte_t bitFromVisuality, const word_t amount, const dword_t durationInMilliseconds) {
 	if(bitFromVisuality >= TOTAL_COUNT)
 		return false;
-	//Iterate through all buffs to see whether the wanted buff
-	//already exists.
-	for(unsigned int i=0;i<this->buffs.size();i++) {
-		if(this->buffs.getKey(i) == bitFromVisuality) {
-			//Existent buff is stronger
-			if(this->buffs.getValue(i).amount > amount)
-				return false;
-			//In case the current buff is equal or stronger,
-			//remove and then add it with the new values
-			this->removeBuff(i);
-			break;
+	if (this->buffs[bitFromVisuality].endTime != 0) {
+		if (this->buffs[bitFromVisuality].amount > amount) {
+			return false;
 		}
 	}
-	this->buffs.add(clock() + durationInMilliseconds, buffValuePair(amount,bitFromVisuality));
+	this->buffs[bitFromVisuality].endTime = clock() + durationInMilliseconds;
+	this->buffs[bitFromVisuality].amount = amount;
 	return true;
 }
 
 void Buffs::removeBuff(const size_t pos) {
-	this->buffs.removeAt(pos);
+	this->buffs[pos].amount = 0;
+	this->buffs[pos].endTime = 0;
 }
 
 bool Buffs::checkBuffs() {
 	this->currentTime = clock();
-	DWORD idx = 0x00;
+	dword_t idx = 0x00;
 	bool result = false;
 	//Iterate through all buffs to see whether they expired
-	while(idx < this->buffs.size() ) {
-		clock_t buffTime = this->buffs.getKey(idx);
+	while(idx < Buffs::TOTAL_COUNT ) {
+		clock_t buffTime = this->buffs[idx].endTime;
 		//In case a buff expired, remove it and set result to true
 		//in order to tell out-of-scope functions that something
 		//changed
@@ -98,20 +99,16 @@ bool Buffs::checkBuffs() {
 	return result;
 }
 
-const WORD Buffs::getStatusAmount(BYTE visualityBit) {
-	for(unsigned int i=0;i<this->buffs.size();i++) {
-		if(this->buffs.getValue(i).visuality == visualityBit)
-			return this->buffs.getValue(i).amount;
-	}
-	return 0x00;
+const word_t Buffs::getStatusAmount(byte_t visualityBit) {
+	return this->buffs[visualityBit].amount;
 }
 
-const DWORD Buffs::getVisuality(BYTE type) {
-	DWORD result = 0x00;
+const dword_t Buffs::getVisuality(byte_t type) {
+	dword_t result = 0x00;
 	//Iterate through all buff-bits and bit-shift it to get a 
 	//DWORD
-	for(unsigned int i=0;i<this->buffs.size();i++) {
-		result |= 1<<this->buffs.getValue(i).visuality;
+	for(unsigned int i=0;i<Buffs::TOTAL_COUNT;i++) {
+		result |= this->buffs[i].amount > 0 ? 1<<i : 0;
 	}
 	//In case we want a certain buff type, we remove the opposite
 	//via bit-"NOT_AND"

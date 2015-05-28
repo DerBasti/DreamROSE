@@ -12,7 +12,7 @@ class Monster : public NPC {
 	private:
 		Entity* owner;
 	public:		
-		Monster(const NPCData* newData, const AIP* newAi, const WORD mapId, const Position& pos);
+		Monster(const NPCData* newData, const AIP* newAi, const word_t mapId, const position_t& pos);
 		~Monster();
 
 		__inline bool isAllied( NPC* npc ) { return true; }
@@ -27,7 +27,7 @@ class Monster : public NPC {
 		__inline Entity* getOwner() const { return this->owner; }
 		__inline void setOwner(Entity* newOwner) { this->owner = newOwner; }
 
-		__inline DWORD getMaxHP() const { return this->data->getMaxHP(); }
+		__inline dword_t getMaxHP() const { return this->data->getMaxHP(); }
 };
 
 #endif //__ROSE_MONSTER__

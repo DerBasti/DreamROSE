@@ -9,32 +9,37 @@
 #include <vector>
 
 #include "..\Structures.h"
+#include "..\..\Common\Definitions.h"
 
-typedef unsigned char BYTE;
-typedef unsigned short WORD;
-typedef unsigned long DWORD;
+#ifdef __ROSE_USE_VFS__
+#include "VFS.h"
+#endif
+
+typedef unsigned char byte_t;
+typedef unsigned short word_t;
+typedef unsigned long dword_t;
 
 class IFOType {
 	private:
 		IFOType() {}
 		~IFOType() {}
 	public:
-		const static DWORD NPC_ENTRY = 0x02;
-		const static DWORD SPAWN_ENTRY = 0x08;
-		const static DWORD TELEGATE_ENTRY = 0x0A;
-		const static DWORD EVENT_ENTRY = 0x0C;
+		const static dword_t NPC_ENTRY = 0x02;
+		const static dword_t SPAWN_ENTRY = 0x08;
+		const static dword_t TELEGATE_ENTRY = 0x0A;
+		const static dword_t EVENT_ENTRY = 0x0C;
 };
 
 class _basicIFOEntry {
 	protected:
 		friend class IFO;
 		std::string strData;
-		WORD unknown1;
-		WORD eventId;
-		DWORD objType;
-		DWORD objId;
-		DWORD mapPosX;
-		DWORD mapPosY;
+		word_t unknown1;
+		word_t eventId;
+		dword_t objType;
+		dword_t objId;
+		dword_t mapPosX;
+		dword_t mapPosY;
 		float quatW;
 		float quatX;
 		float quatY;
@@ -46,7 +51,7 @@ class _basicIFOEntry {
 		float scaleY;
 		float scaleZ;
 
-		Position pos;
+		position_t pos;
 		
 		void setBasicInfos(_basicIFOEntry newEntry) {
 			this->strData = newEntry.strData;
@@ -69,17 +74,17 @@ class _basicIFOEntry {
 		
 			float posX = this->posX + 520000.f;
 			float posY = this->posY + 520000.f;
-			this->pos = Position(posX, posY);
+			this->pos = position_t(posX, posY);
 		}
 		_basicIFOEntry() {}
 	public:
 		_basicIFOEntry(char* strData,
-			WORD unknown1,
-			WORD eventId,
-			DWORD objType,
-			DWORD objId,
-			DWORD mapPosX,
-			DWORD mapPosY,
+			word_t unknown1,
+			word_t eventId,
+			dword_t objType,
+			dword_t objId,
+			dword_t mapPosX,
+			dword_t mapPosY,
 			float quatW,
 			float quatX,
 			float quatY,
@@ -108,18 +113,18 @@ class _basicIFOEntry {
 				this->scaleY = scaleY;
 				this->scaleZ = scaleZ;
 		}
-		__inline Position getPosition() const { return this->pos; }
+		__inline position_t getPosition() const { return this->pos; }
 		__inline virtual std::string getStringData() const { return this->strData; }
-		__inline virtual const DWORD getUnknown() const { return this->unknown1; }
-		__inline virtual const DWORD getEventId() const { return this->eventId; }
-		__inline virtual const DWORD getObjectId() const { return this->objId; }
-		__inline virtual const DWORD getObjectType() const { return this->objType; }
+		__inline virtual const dword_t getUnknown() const { return this->unknown1; }
+		__inline virtual const dword_t getEventId() const { return this->eventId; }
+		__inline virtual const dword_t getObjectId() const { return this->objId; }
+		__inline virtual const dword_t getObjectType() const { return this->objType; }
 };
 
 class IFONPC : public _basicIFOEntry {
 	private:
 		friend class IFO;
-		DWORD unknown;
+		dword_t unknown;
 		float dir;
 		std::string conFile;
 	public:
@@ -129,12 +134,12 @@ class IFONPC : public _basicIFOEntry {
 		IFONPC(_basicIFOEntry& newEntry) {
 			this->setBasicInfos(newEntry);
 		}
-		void setOtherInfo(DWORD unknown, float direction, const char* conFile) {
+		void setOtherInfo(dword_t unknown, float direction, const char* conFile) {
 			this->unknown = unknown;
 			this->dir = direction;
 			this->conFile = std::string(conFile);
 		}
-		__inline DWORD getUnknownSecond() const { return this->unknown; }
+		__inline dword_t getUnknownSecond() const { return this->unknown; }
 		__inline float getDirection() const { return this->dir; }
 		__inline std::string getCONFile() const { return this->conFile; }
 };
@@ -144,31 +149,31 @@ class IFOSpawnEntry {
 		friend class IFOSpawn;
 		friend class IFO;
 		std::string mobName;
-		DWORD mobId;
-		DWORD amount;
+		dword_t mobId;
+		dword_t amount;
 	public:
 		IFOSpawnEntry() {}
 
-		__inline const DWORD getMobId() const { return this->mobId; };
-		__inline const DWORD getAmount() const { return this->amount; }
+		__inline const dword_t getMobId() const { return this->mobId; };
+		__inline const dword_t getAmount() const { return this->amount; }
 };
 
 class IFOSpawn : public _basicIFOEntry {
 	private:
 		friend class IFO;
 		std::string spawnName;
-		DWORD basicMobAmount;
+		dword_t basicMobAmount;
 		std::vector<IFOSpawnEntry> basicSpawn;
 
-		DWORD tacticalMobAmount;
+		dword_t tacticalMobAmount;
 		std::vector<IFOSpawnEntry> tacticalSpawn;
 
-		DWORD respawnInterval; 
-		DWORD currentlySpawned;
-		DWORD limit;
+		dword_t respawnInterval; 
+		dword_t currentlySpawned;
+		dword_t limit;
 		float allowedSpawnDistance;
-		DWORD tacPoints;
-		DWORD currentSpawnId;
+		dword_t tacPoints;
+		dword_t currentSpawnId;
 public:
 		IFOSpawn() {
 			this->currentlySpawned = 0x00;
@@ -207,22 +212,22 @@ public:
 			basicSpawn.clear();
 			tacticalSpawn.clear();
 		}
-		__inline DWORD getBasicMobSpawnCount() const { return this->basicMobAmount; }
-		__inline IFOSpawnEntry& getBasicMobSpawn(const DWORD spawnId) { return this->basicSpawn.at(spawnId); }
-		__inline DWORD getTacticalMobSpawnCount() const { return this->tacticalMobAmount; }
-		__inline IFOSpawnEntry& getTacticalMobSpawn(const DWORD spawnId) { return this->tacticalSpawn.at(spawnId); }
-		__inline DWORD getRespawnInterval() const { return this->respawnInterval; }
-		__inline DWORD getCurrentlySpawned() const { return this->currentlySpawned; }
-		__inline void setCurrentlySpawned(const DWORD newVal) { 
+		__inline dword_t getBasicMobSpawnCount() const { return this->basicMobAmount; }
+		__inline IFOSpawnEntry& getBasicMobSpawn(const dword_t spawnId) { return this->basicSpawn.at(spawnId); }
+		__inline dword_t getTacticalMobSpawnCount() const { return this->tacticalMobAmount; }
+		__inline IFOSpawnEntry& getTacticalMobSpawn(const dword_t spawnId) { return this->tacticalSpawn.at(spawnId); }
+		__inline dword_t getRespawnInterval() const { return this->respawnInterval; }
+		__inline dword_t getCurrentlySpawned() const { return this->currentlySpawned; }
+		__inline void setCurrentlySpawned(const dword_t newVal) { 
 			this->currentlySpawned = newVal; 
 		}
-		__inline DWORD getCurrentSpawnId() const { return this->currentSpawnId; }
+		__inline dword_t getCurrentSpawnId() const { return this->currentSpawnId; }
 		void nextSpawnId() { 
 			this->currentSpawnId++; 
 			if(this->currentSpawnId >= (this->getBasicMobSpawnCount() + this->getTacticalMobSpawnCount()))
 				this->currentSpawnId = 0;
 		}
-		__inline DWORD getMaxSimultanouslySpawned() const { return this->limit; }
+		__inline dword_t getMaxSimultanouslySpawned() const { return this->limit; }
 		__inline float getAllowedSpawnDistance() const { return this->allowedSpawnDistance; }
 		/*
 		bool operator==(const IFOSpawn& ifo) {
@@ -261,34 +266,40 @@ class IFOTelegate : public _basicIFOEntry {
 
 class IFO {
 	private:
-		const char* filePath;
+		std::string filePath;
 		std::vector<IFONPC> npcs;
 		std::vector<IFOTelegate> telegates;
 		std::vector<IFOSpawn> spawns;
+#ifdef __ROSE_USE_VFS__
+		template<class _FileType> bool loadInfos(_FileType& file);
+#else
 		bool loadInfos();
+#endif
 	public:
-		const static DWORD DEFAULT_SECTOR_SIZE = 16000;
-		const static DWORD CUSTOMIZED_SECTOR_SIZE = 4000;
-		IFO(const char* filePath) {
-			this->filePath = filePath;
-			this->loadInfos();
-		}
-		__inline const char* getFilePath() const { return this->filePath; }
+		const static dword_t DEFAULT_SECTOR_SIZE = 16000;
+		const static dword_t CUSTOMIZED_SECTOR_SIZE = 4000;
+#ifdef __ROSE_USE_VFS__
+		IFO(const VFSData* file);
+#else
+		IFO(const char* filePath);
+#endif
+		~IFO();
+		__inline const char* getFilePath() const { return this->filePath.c_str(); }
 
-		__inline IFONPC& getNPC(const DWORD& spawnId) {
+		__inline IFONPC& getNPC(const dword_t& spawnId) {
 			return this->npcs.at(spawnId);
 		}
-		__inline const DWORD getNPCAmount() const { return this->npcs.size(); }
+		__inline const dword_t getNPCAmount() const { return this->npcs.size(); }
 
-		__inline IFOSpawn& getSpawn(const DWORD& spawnId) {
+		__inline IFOSpawn& getSpawn(const dword_t& spawnId) {
 			return this->spawns.at(spawnId);
 		}
-		__inline const DWORD getSpawnAmount() const { return this->spawns.size(); }
+		__inline const dword_t getSpawnAmount() const { return this->spawns.size(); }
 
-		__inline IFOTelegate& getTelegate(const DWORD& spawnId) {
+		__inline IFOTelegate& getTelegate(const dword_t& spawnId) {
 			return this->telegates.at(spawnId);
 		}
-		__inline const DWORD getTelegateAmount() const { return this->telegates.size(); }
+		__inline const dword_t getTelegateAmount() const { return this->telegates.size(); }
 };
 
 #endif //__IFO__

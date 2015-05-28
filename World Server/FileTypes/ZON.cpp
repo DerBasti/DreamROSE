@@ -3,13 +3,36 @@
 #include "D:\Programmieren\CMyFile\MyFile.h"
 #include "..\WorldServer.h"
 
+#ifndef __ROSE_USE_VFS__
+ZON::ZON(const char* filePath, const word_t mapId) {
+	this->filePath = filePath;
+	this->mapId = mapId;
+	this->loadInfos();
+}
+#else
+ZON::ZON(const VFSData* file, const word_t mapId) {
+	this->mapId = mapId;
+	if (file)  {
+		this->filePath = file->filePath;
+		this->loadInfos(file);
+	}
+}
+#endif
+
+#ifndef __ROSE_USE_VFS__
 bool ZON::loadInfos() {
 	if(this->filePath.length() < 4) //".zon"
 		return false;
-	CMyFile file(this->filePath.c_str(), "rb");
+	CMyFileReader<char> file(this->filePath.c_str(), true);
+#else
+bool ZON::loadInfos(const VFSData* zon) {
+	if (!zon || zon->data.size() == 0) //".zon"
+		return false;
+	CMyBufferedFileReader<char> file(zon->data, zon->data.size());
+#endif
 	if(!file.exists())
 		return false;
-	DWORD infoCount = file.read<DWORD>();
+	dword_t infoCount = file.read<DWORD>();
 
 	struct _blocks {
 		std::vector<DWORD> type;
@@ -34,25 +57,25 @@ bool ZON::loadInfos() {
 		}
 	}
 	EventInfo newCenter = this->findEventInfo(std::string("start"));
-	this->MapCenter.position = Position(newCenter.x, newCenter.y);
+	this->MapCenter.position = position_t(newCenter.x, newCenter.y);
 	return true;
 }
 
-bool ZON::loadZoneInfos(CMyFile& file) {
+template<class _FileReader> bool ZON::loadZoneInfos(_FileReader& file) {
 	file.skip(0x04);
 
 	//unimportant?
-	DWORD mapWidth = file.read<DWORD>();
-	DWORD mapHeight = file.read<DWORD>();
+	dword_t mapWidth = file.read<DWORD>();
+	dword_t mapHeight = file.read<DWORD>();
 
-	DWORD patchGridCount = file.read<DWORD>();
+	dword_t patchGridCount = file.read<DWORD>();
 	short gridSize = static_cast<short>(file.read<float>());
 	float patchSize = static_cast<float>(patchGridCount * gridSize);
 
 	/*float totalSize = 1024 * patchSize;
-	DWORD zoneSize = mainServer->getZoneSTB()->getZoneSize(this->mapId) * 2;
-	DWORD iX = static_cast<DWORD>(totalSize / zoneSize) + 1; 
-	DWORD iY = iX;
+	dword_t zoneSize = mainServer->getZoneSTB()->getZoneSize(this->mapId) * 2;
+	dword_t iX = static_cast<DWORD>(totalSize / zoneSize) + 1; 
+	dword_t iY = iX;
 
 	CMyFile zoneLog("D:\\Games\\ZoneLog.log", "a+");
 	for(unsigned int i=0;i<iY;i++) {
@@ -66,8 +89,8 @@ bool ZON::loadZoneInfos(CMyFile& file) {
 	return true;
 }
 
-bool ZON::loadEventInfos(CMyFile& file) {
-	DWORD entryCount = file.read<DWORD>();
+template<class _FileReader> bool ZON::loadEventInfos(_FileReader& file) {
+	dword_t entryCount = file.read<DWORD>();
 	for (unsigned int i = 0; i < entryCount; i++) {
 		EventInfo info;
 		info.x = file.read<float>() + 520000.0f;
@@ -75,7 +98,7 @@ bool ZON::loadEventInfos(CMyFile& file) {
 		info.y = file.read<float>() + 520000.0f;
 		info.id = static_cast<BYTE>(i);
 		char buf[0x100] = { 0x00 };
-		file.readString(buf);
+		file.readLengthThenString(buf);
 
 		info.name = std::string(buf);
 
@@ -84,28 +107,28 @@ bool ZON::loadEventInfos(CMyFile& file) {
 	return true;
 }
 
-bool ZON::loadEconomyInfos(CMyFile& file) {
+template<class _FileReader> bool ZON::loadEconomyInfos(_FileReader& file) {
 	char buf[0x100] = {0x00};
-	file.readString(buf);
+	file.readLengthThenString(buf);
 
-	DWORD isDungeon = file.read<DWORD>();
+	dword_t isDungeon = file.read<DWORD>();
 	
 	//MUSIC?
-	file.readString(buf);
+	file.readLengthThenString(buf);
 
 	//MODEL?
-	file.readString(buf);
-	DWORD townCounter = file.read<DWORD>();
-	DWORD popCounter = file.read<DWORD>();
-	DWORD devCounter = file.read<DWORD>();
-	for(BYTE i=ZON::ECONOMY_ITEMTYPE_MIN;i<ZON::ECONOMY_ITEMTYPE_MAX;i++) {
-		DWORD consumRate = file.read<DWORD>();
+	file.readLengthThenString(buf);
+	dword_t townCounter = file.read<DWORD>();
+	dword_t popCounter = file.read<DWORD>();
+	dword_t devCounter = file.read<DWORD>();
+	for(byte_t i=ZON::ECONOMY_ITEMTYPE_MIN;i<ZON::ECONOMY_ITEMTYPE_MAX;i++) {
+		dword_t consumRate = file.read<DWORD>();
 		consumRate = consumRate;
 	}
 	return true;
 }
 
-void ZON::setZoneInfo(WORD minX, WORD minY, WORD maxX, WORD maxY) {
+void ZON::setZoneInfo(word_t minX, word_t minY, word_t maxX, word_t maxY) {
 	this->MapInfo.sectorBeginX = minX;
 	this->MapInfo.sectorBeginY = minY;
 	this->MapInfo.sectorCountX = (maxX - minX) + 1;
@@ -117,9 +140,9 @@ void ZON::setZoneInfo(WORD minX, WORD minY, WORD maxX, WORD maxY) {
 	this->MapInfo.offsetPerY = fieldSize / static_cast<float>(this->MapInfo.sectorCountY);
 }
 
-Position ZON::calculateCenter(const WORD sectorId) {
-	WORD sectorX = sectorId % this->MapInfo.sectorCountX;
-	WORD sectorY = sectorId / this->MapInfo.sectorCountX;
+position_t ZON::calculateCenter(const word_t sectorId) {
+	word_t sectorX = sectorId % this->MapInfo.sectorCountX;
+	word_t sectorY = sectorId / this->MapInfo.sectorCountX;
 
 	float resultX = ((this->MapCenter.centerIFOX - this->MapInfo.sectorBeginX) - sectorX) * this->MapInfo.offsetPerX;
 	resultX = this->MapCenter.position.x - resultX;
@@ -127,5 +150,5 @@ Position ZON::calculateCenter(const WORD sectorId) {
 	float resultY = ((this->MapCenter.centerIFOY - this->MapInfo.sectorBeginY) - sectorY) * this->MapInfo.offsetPerY;
 	resultY = this->MapCenter.position.y - resultY;
 
-	return Position(resultX, resultY);
+	return position_t(resultX, resultY);
 }

@@ -7,15 +7,14 @@
 #include <vector>
 
 #include "..\Structures.h"
-
-typedef unsigned char BYTE;
-typedef unsigned short WORD;
-typedef unsigned long DWORD;
+#include "D:\Programmieren\CMyFile\MyFile.h"
+#include "..\..\Common\Definitions.h"
+#include "VFS.h"
 
 class ZON {
 	public:
 		struct EventInfo {
-			BYTE id;
+			byte_t id;
 			float x;
 			float y;
 			float z;
@@ -24,45 +23,50 @@ class ZON {
 
 		//Combined id of the IFO which is the center
 		struct mapCenterInfo {
-			WORD centerIFOX;
-			WORD centerIFOY;
+			word_t centerIFOX;
+			word_t centerIFOY;
 
-			Position position;
+			position_t position;
 		} MapCenter;
 
 		struct mapInfo {
 			float totalMapSize;
-			WORD sectorCountX;
-			WORD sectorCountY;
-			WORD sectorBeginX;
-			WORD sectorBeginY;
+			word_t sectorCountX;
+			word_t sectorCountY;
+			word_t sectorBeginX;
+			word_t sectorBeginY;
 
 			float offsetPerX;
 			float offsetPerY;
 		} MapInfo;
 	private:
 		std::string filePath;
-		WORD mapId;
+		word_t mapId;
+#ifndef __ROSE_USE_VFS__
 		bool loadInfos();
+#else
+		bool loadInfos(const VFSData* file);
+#endif
 
-		bool loadZoneInfos(class CMyFile& file);
-		bool loadEventInfos(class CMyFile& file);
-		bool loadEconomyInfos(class CMyFile& file);
+		template<class _FileReader> bool loadZoneInfos(_FileReader& file);
+		template<class _FileReader> bool loadEventInfos(_FileReader& file);
+		template<class _FileReader> bool loadEconomyInfos(_FileReader& file);
 
 		std::vector<EventInfo> eventInfos;
 	public:
-		const static BYTE ZONE_INFO = 0x00;
-		const static BYTE EVENT_INFO = 0x01;
+		const static byte_t ZONE_INFO = 0x00;
+		const static byte_t EVENT_INFO = 0x01;
 		//0x02 = ZoneTile, 0x03 = TileType = unimportant
-		const static BYTE ECONOMY_INFO = 0x04;
+		const static byte_t ECONOMY_INFO = 0x04;
 
-		const static BYTE ECONOMY_ITEMTYPE_MIN = 0x01; //Masks
-		const static BYTE ECONOMY_ITEMTYPE_MAX = 0x0B; //Jewelry
-		ZON(const char* filePath, const WORD mapId) {
-			this->filePath = filePath;
-			this->mapId = mapId;
-			this->loadInfos();
-		}
+		const static byte_t ECONOMY_ITEMTYPE_MIN = 0x01; //Masks
+		const static byte_t ECONOMY_ITEMTYPE_MAX = 0x0B; //Jewelry
+#ifndef __ROSE_USE_VFS__
+		ZON(const char* filePath, const word_t mapId);
+#else
+		ZON(const VFSData* file, const word_t mapId);
+#endif
+
 		~ZON() {
 			this->eventInfos.clear();
 		}
@@ -76,10 +80,10 @@ class ZON {
 			throw std::exception();
 		}
 		
-		__inline DWORD getCenterIFOX() const { return this->MapCenter.centerIFOX; }
-		__inline DWORD getCenterIFOY() const { return this->MapCenter.centerIFOY; }
-		void setZoneInfo(WORD minX, WORD maxX, WORD minY, WORD maxY);
-		Position calculateCenter(const WORD sectorId);
+		__inline dword_t getCenterIFOX() const { return this->MapCenter.centerIFOX; }
+		__inline dword_t getCenterIFOY() const { return this->MapCenter.centerIFOY; }
+		void setZoneInfo(word_t minX, word_t maxX, word_t minY, word_t maxY);
+		position_t calculateCenter(const word_t sectorId);
 };
 
 #endif //

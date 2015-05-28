@@ -11,9 +11,8 @@ typedef unsigned long DWORD;
 
 #include <vector>
 #include <string>
-#include "..\..\QuickInfos\Trackable.hpp"
-
-#include "..\..\CMyFile\MyFile.h"
+#include "D:\Programmieren\QuickInfos\Trackable.hpp"
+#include "D:\Programmieren\CMyFile\MyFile.h"
 #include "..\..\Common\Definitions.h"
 
 #ifdef __ROSE_USE_VFS__
@@ -25,11 +24,11 @@ class STLEntryMULTI {
 		friend class STLFileMULTI;
 		friend class STLFile;
 		Trackable<char> idName;
-		DWORD idNum;
+		dword_t idNum;
 		std::vector<Trackable<char>> languageEntry;
 		std::vector<Trackable<char>> languageDescription;
 	public:
-		STLEntryMULTI(std::string newIdName, const DWORD newIdNum) {
+		STLEntryMULTI(std::string newIdName, const dword_t newIdNum) {
 			this->idName.init(newIdName.c_str(), newIdName.length());
 			this->idNum = newIdNum;
 		}
@@ -42,7 +41,7 @@ class STLEntryMULTI {
 			}
 		}
 		const Trackable<char> getIDName() const { return this->idName; }
-		const DWORD getID() const { return this->idNum; }
+		const dword_t getID() const { return this->idNum; }
 		const Trackable<char> getEntry(const size_t language) {
 			try {
 				return Trackable<char>(this->languageEntry.at(language));
@@ -72,17 +71,17 @@ class STLFileMULTI {
 #ifdef __ROSE_USE_VFS__
 		template<class FileReader> void loadInfos(FileReader& file) {
 			char buf[0x800] = { 0x00 };
-			file.readStringT<BYTE, char*>(buf);
+			file.readLengthThenString(buf);
 			if (_stricmp(buf, "ITST01") == 0)
 				this->descriptionAdded = true;
 
 			this->entries.reserve(file.read<DWORD>());
 
 			for(unsigned int i=0;i<this->entries.capacity();i++) {
-				file.readStringT<BYTE, char*>(buf);
+				file.readLengthThenString(buf);
 				this->entries.push_back(STLEntryMULTI(std::string(buf), file.read<DWORD>()));
 			}
-			DWORD numOfLanguages = file.read<DWORD>();
+			dword_t numOfLanguages = file.read<DWORD>();
 			std::vector<DWORD> languageOffsets; languageOffsets.reserve(numOfLanguages);
 			for(unsigned int i=0;i<numOfLanguages;i++) {
 				languageOffsets.push_back(file.read<DWORD>());
@@ -98,11 +97,11 @@ class STLFileMULTI {
 				}
 				for (unsigned int j = 0; j<substrOffsets.capacity(); j++) {
 					file.setPosition(substrOffsets.at(j));
-					WORD len = file.read<BYTE>();
+					word_t len = file.read<BYTE>();
 					if (len > 0x7F) {
 						len = file.read<BYTE>() << 8 | len;
 					}
-					file.readString(len, buf);
+					file.readStringWithGivenLength(len, buf);
 					std::string res = std::string(buf);
 					std::string desc = "";
 					STLEntryMULTI& entry = this->entries.at(j);
@@ -111,7 +110,7 @@ class STLFileMULTI {
 						if (len > 0x7F) {
 							len = file.read<BYTE>() << 8 | len;
 						}
-						file.readString(len, buf);
+						file.readStringWithGivenLength(len, buf);
 						desc = std::string(buf);
 					}
 					entry.addLanguage(res, desc);
@@ -121,23 +120,23 @@ class STLFileMULTI {
 #else
 		void loadInfos(FILE* fh) {
 			char buf[0x800] = {0x00};
-			BYTE len = 0x00;
+			byte_t len = 0x00;
 			__READ_STRING__(len, buf);
 			if(_stricmp(buf, "ITST01")==0)
 				this->descriptionAdded = true;
 
-			DWORD dTmp = 0x00;
+			dword_t dTmp = 0x00;
 			fread(&dTmp, 4, 1, fh);
 			this->entries.reserve(dTmp);
 
-			DWORD entryCount = this->entries.capacity();
+			dword_t entryCount = this->entries.capacity();
 			for(unsigned int i=0;i<entryCount;i++) {
 				__READ_STRING__(len, buf);
 				fread(&dTmp, 4, 1, fh);
 				
 				this->entries.push_back(STLEntryMULTI(std::string(buf), dTmp));
 			}
-			DWORD numOfLanguages = 0x00;
+			dword_t numOfLanguages = 0x00;
 			fread(&numOfLanguages, 4, 1, fh);
 			
 			std::vector<DWORD> languageOffsets; languageOffsets.reserve(numOfLanguages);
@@ -146,7 +145,7 @@ class STLFileMULTI {
 				languageOffsets.push_back(dTmp);
 			}
 			std::vector<DWORD> substrOffsets;
-			BYTE bLen=0x00; WORD wLen = 0x00;
+			byte_t bLen=0x00; word_t wLen = 0x00;
 			for(unsigned int i=0;i<numOfLanguages;i++) {
 				fseek(fh, languageOffsets.at(i), SEEK_SET);
 
@@ -190,15 +189,15 @@ class STLFileMULTI {
 #endif
 		STLFileMULTI() { }
 	public:
-		const static BYTE JAPANESE = 0x00;
-		const static BYTE ENGLISH = 0x01;
-		const static BYTE TAIWANESE = 0x02;
-		const static BYTE LANGUAGE_MAX = 0x05;
+		const static byte_t JAPANESE = 0x00;
+		const static byte_t ENGLISH = 0x01;
+		const static byte_t TAIWANESE = 0x02;
+		const static byte_t LANGUAGE_MAX = 0x05;
 #ifdef __ROSE_USE_VFS__
 		STLFileMULTI(VFSData& vfsData) {
 			this->descriptionAdded = false;
 			if (vfsData.data.size() > 0) {
-				CMyBufferedReader reader(vfsData.data, vfsData.data.size());
+				CMyBufferedFileReader<char> reader(vfsData.data, vfsData.data.size());
 				this->loadInfos(reader);
 			}
 		}
@@ -215,7 +214,7 @@ class STLFileMULTI {
 		virtual ~STLFileMULTI() {
 			this->entries.clear();
 		}
-		__inline Trackable<char> getEntryName(const DWORD rowId, BYTE language = STLFileMULTI::ENGLISH) {
+		__inline Trackable<char> getEntryName(const dword_t rowId, byte_t language = STLFileMULTI::ENGLISH) {
 			language %= STLFileMULTI::LANGUAGE_MAX;
 			try {
 				return this->entries.at(rowId).getEntry(language);
@@ -223,7 +222,7 @@ class STLFileMULTI {
 			}
 			return Trackable<char>();
 		}
-		__inline Trackable<char> getEntryDescription(const DWORD rowId, BYTE language = STLFileMULTI::ENGLISH) {
+		__inline Trackable<char> getEntryDescription(const dword_t rowId, byte_t language = STLFileMULTI::ENGLISH) {
 			language %= STLFileMULTI::LANGUAGE_MAX;
 			try {
 				return Trackable<char>(this->entries.at(rowId).getDescription(language));
@@ -238,7 +237,7 @@ class STLFileMULTI {
 class STLEntry {
 	private:
 		Trackable<char> idName;
-		DWORD idNum;
+		dword_t idNum;
 #ifdef __ROSE_READ_DESCRIPTION__
 		typedef std::pair<Trackable<char>,Trackable<char>> trackableEntry;
 		std::vector<trackableEntry> entries;
@@ -246,12 +245,12 @@ class STLEntry {
 		std::vector<Trackable<char>> entries;
 #endif //__ROSE_READ_DESCRIPTION__
 	public:
-		STLEntry(const char* newIdName, const DWORD newId) {
+		STLEntry(const char* newIdName, const dword_t newId) {
 			this->idName.init(newIdName, strlen(newIdName));
 			this->idNum = newId;
 		}
 		__inline const char* getIDName() const { return this->idName.getData(); }
-		__inline const DWORD getID() const { return this->idNum; }
+		__inline const dword_t getID() const { return this->idNum; }
 		const char* getEntry(const size_t pos) {
 			try {
 #ifdef __ROSE_READ_DESCRIPTION__
@@ -322,7 +321,7 @@ class STLFile {
 #endif
 			this->copyPrimaryLanguage(multiFile);
 		}
-		__inline DWORD getEntryId(const size_t pos) {
+		__inline dword_t getEntryId(const size_t pos) {
 			return this->entries.at(pos).getID();
 		}
 		__inline std::string getEntryName(const size_t pos) {

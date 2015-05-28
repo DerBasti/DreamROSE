@@ -11,6 +11,8 @@
 #include <xmemory>
 #include <vector>
 #include <mysql.h>
+#include "D:\Programmieren\QuickInfos\VarsToString"
+#include "D:\Programmieren\Exceptions\CustomExceptions.h"
 
 #include "Logger.h"
 #include "Definitions.h"
@@ -18,20 +20,14 @@
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "libmysql")
 
-typedef unsigned char BYTE;
-typedef unsigned short WORD;
-typedef unsigned long DWORD;
-typedef unsigned long long QWORD;
-
-
 class Packet {
 public:
-	const static DWORD DEFAULT_DATA_MAX = 0x400;
-	const static DWORD DEFAULT_HEADER_OFFSET = 0x06;
+	const static dword_t DEFAULT_DATA_MAX = 0x400;
+	const static dword_t DEFAULT_HEADER_OFFSET = 0x06;
 private:
-	WORD length;
-	WORD command;
-	WORD notUsed;
+	word_t length;
+	word_t command;
+	word_t notUsed;
 	char data[Packet::DEFAULT_DATA_MAX];
 public:
 	Packet() {
@@ -39,65 +35,65 @@ public:
 		this->length = DEFAULT_HEADER_OFFSET;
 	}
 
-	Packet(WORD command, WORD newSize = Packet::DEFAULT_HEADER_OFFSET) {
+	Packet(word_t command, word_t newSize = Packet::DEFAULT_HEADER_OFFSET) {
 		this->newPacket(command, newSize);
 	}
 
 	operator unsigned char*() { return reinterpret_cast<unsigned char*>(this); }
 
-	void newPacket(WORD command, WORD newSize = Packet::DEFAULT_HEADER_OFFSET) {
+	void newPacket(word_t command, word_t newSize = Packet::DEFAULT_HEADER_OFFSET) {
 		this->command = command;
 		this->length = newSize;
 		this->notUsed = 0x00;
 
 		memset(this->data, 0x00, Packet::DEFAULT_DATA_MAX);
 	}
-	void addByte(const BYTE toAdd) {
+	void addByte(const byte_t toAdd) {
 		this->data[this->length - Packet::DEFAULT_HEADER_OFFSET] = toAdd;
 		this->length++;
 	}
-	BYTE getByte(const WORD position) {
+	byte_t getByte(const word_t position) {
 		if (position < this->getLength())
 			return this->data[position];
 		return static_cast<BYTE>(-1);
 	}
 
-	void addWord(const WORD toAdd) {
+	void addWord(const word_t toAdd) {
 		*reinterpret_cast<WORD*>(&this->data[this->length - Packet::DEFAULT_HEADER_OFFSET]) = toAdd;
 		this->length += sizeof(WORD);
 	}
-	WORD getWord(const WORD position) {
+	word_t getWord(const word_t position) {
 		if (position < this->getLength())
 			return *(reinterpret_cast<WORD*>(&this->data[position]));
 		return static_cast<WORD>(-1);
 	}
 
-	void addDWord(const DWORD toAdd) {
+	void addDWord(const dword_t toAdd) {
 		*reinterpret_cast<DWORD*>(&this->data[this->length - Packet::DEFAULT_HEADER_OFFSET]) = toAdd;
 		this->length += sizeof(DWORD);
 	}
-	DWORD getDWord(const WORD position) {
+	dword_t getDWord(const word_t position) {
 		if (position < this->getLength())
 			return *(reinterpret_cast<DWORD*>(&this->data[position]));
 		return static_cast<DWORD>(-1);
 	}
 
-	void addQWord(const QWORD toAdd) {
-		*reinterpret_cast<QWORD*>(&this->data[this->length - Packet::DEFAULT_HEADER_OFFSET]) = toAdd;
-		this->length += sizeof(QWORD);
+	void addQWord(const qword_t toAdd) {
+		*reinterpret_cast<qword_t*>(&this->data[this->length - Packet::DEFAULT_HEADER_OFFSET]) = toAdd;
+		this->length += sizeof(qword_t);
 	}
-	QWORD getQWord(const WORD position) {
+	qword_t getQWord(const word_t position) {
 		if (position < this->getLength())
-			return *(reinterpret_cast<QWORD*>(&this->data[position]));
-		return static_cast<QWORD>(-1);
+			return *(reinterpret_cast<qword_t*>(&this->data[position]));
+		return static_cast<qword_t>(-1);
 	}
 
 	void addFloat(const float toAdd) {
 		*reinterpret_cast<float*>(&this->data[this->length - Packet::DEFAULT_HEADER_OFFSET]) = toAdd;
 		this->length += sizeof(float);
 	}
-	float getFloat(const WORD position) {
-		if (position < this->getLength())
+	float getFloat(const word_t position) {
+		if (position  < this->getLength())
 			return *(reinterpret_cast<float*>(&this->data[position]));
 		return static_cast<float>(-1);
 	}
@@ -108,15 +104,15 @@ public:
 	void addString(const char* toAdd) {
 		if (!toAdd)
 			return;
-		DWORD len = strlen(toAdd);
+		dword_t len = strlen(toAdd);
 		for (unsigned int i = 0; i < len; i++)
 			this->addByte(toAdd[i]);
 	}
 
-	char* getString(WORD position) { return &this->data[position]; }
+	char* getString(word_t position) { return &this->data[position]; }
 
-	WORD getLength() const { return this->length; }
-	WORD getCommand() const { return this->command; }
+	word_t getLength() const { return this->length; }
+	word_t getCommand() const { return this->command; }
 
 	const char* getData() const { return this->data; }
 };
@@ -139,7 +135,7 @@ private:
 	const char* userName;
 	const char* pw;
 	const char* database;
-	DWORD port;
+	dword_t port;
 	MYSQL* sql;
 	MYSQL_RES *result;
 	std::string lastQuery;
@@ -159,7 +155,7 @@ public:
 		this->sql = nullptr;
 		this->result = nullptr;
 	}
-	DataBase(const char* serverAddr, const char* user, const char* password, const char* db, DWORD _port, MYSQL* _mysql) {
+	DataBase(const char* serverAddr, const char* user, const char* password, const char* db, dword_t _port, MYSQL* _mysql) {
 		this->init(serverAddr, user, password, db, _port, _mysql);
 	}
 	~DataBase() {
@@ -167,7 +163,7 @@ public:
 			this->disconnect();
 		}
 	}
-	void init(const char* serverAddr, const char* user, const char* password, const char* db, DWORD _port, MYSQL* _mysql) {
+	void init(const char* serverAddr, const char* user, const char* password, const char* db, dword_t _port, MYSQL* _mysql) {
 		this->server = serverAddr;
 		this->userName = user;
 		this->sql = _mysql;
@@ -218,7 +214,10 @@ public:
 	}
 
 	MYSQL_RES* get(const char* fmt, ...) {
-		ArgConverterA(result, fmt);
+		va_list args; 
+		va_start(args, fmt);
+		std::string result = QuickInfo::convertVarsToString(fmt, args);
+		va_end(args);
 		if (mysql_query(this->sql, result.c_str()) != 0) {
 			this->lastQuery = std::string("MYSQL_GET: ") + result;
 			this->showErrorMsg();
@@ -235,7 +234,10 @@ public:
 	}
 
 	bool put(const char* fmt, ...) {
-		ArgConverterA(result, fmt);
+		va_list args;
+		va_start(args, fmt);
+		std::string result = QuickInfo::convertVarsToString(fmt, args);
+		va_end(args);
 		if (mysql_query(this->sql, result.c_str()) != 0) {
 			this->lastQuery = std::string("MYSQL_PUT: ") + result;
 			this->showErrorMsg();
@@ -252,7 +254,7 @@ public:
 			return nullptr;
 		return mysql_fetch_row(this->result);
 	}
-	DWORD getRowCount() {
+	dword_t getRowCount() {
 		if (!this->result)
 			return 0x00;
 		return static_cast<DWORD>(mysql_num_rows(this->result));

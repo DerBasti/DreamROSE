@@ -6,7 +6,7 @@
 #include <string>
 #include <map>
 #include "..\..\Common\Definitions.h"
-#include "..\..\QuickInfos\QuickInfo.h"
+#include "D:\Programmieren\QuickInfos\QuickInfo.h"
 #include "..\Structures.h"
 #include "STB.h"
 
@@ -17,8 +17,8 @@
 class Entity;
 
 struct QuestHeaderInfo {
-	const DWORD length;
-	const DWORD operationType;
+	const dword_t length;
+	const dword_t operationType;
 };
 
 struct AbstractQuestInfo {
@@ -32,15 +32,15 @@ class QuestEntry {
 	private:
 		friend class QSD;
 		friend class QuestService;
-		BYTE checkNextTrigger;
+		byte_t checkNextTrigger;
 
 #ifdef __ROSE_DEBUG__
 		std::string qsdName;
 		QSD* parent;
 #endif
 		std::string questName;
-		DWORD questHash;
-		WORD questId;
+		dword_t questHash;
+		word_t questId;
 
 		FixedArray<Trackable<char>> conditions;
 		FixedArray<Trackable<char>> actions;
@@ -51,40 +51,40 @@ class QuestEntry {
 		__inline void addCondition(Trackable<char>* newCond) { this->conditions.addValue(*newCond); }
 		__inline void addAction(Trackable<char>* newAction) { this->actions.addValue(*newAction); }
 	public:
-		QuestEntry(const DWORD newQuestHash, const DWORD conditionCount, const DWORD actionCount) {
+		QuestEntry(const dword_t newQuestHash, const dword_t conditionCount, const dword_t actionCount) {
 			this->questHash = newQuestHash;
 
 			this->conditions.reserve(conditionCount);
 			this->actions.reserve(actionCount);
 		}
-		__inline const DWORD getQuestHash() const { return this->questHash; }
-		__inline const WORD getQuestId() const { return this->questId; }
+		__inline const dword_t getQuestHash() const { return this->questHash; }
+		__inline const word_t getQuestId() const { return this->questId; }
 		__inline QuestEntry* getPreviousQuest() const { return this->previousQuest; }
 		__inline QuestEntry* getNextQuest() const { return (this->checkNextTrigger ? this->nextQuest : nullptr); }
 		__inline const std::string& getQuestName() const { return this->questName; }
 
-		__inline const DWORD getConditionCount() const { return this->conditions.size(); }
-		__inline const DWORD getActionCount() const { return this->actions.size(); }
+		__inline const dword_t getConditionCount() const { return this->conditions.size(); }
+		__inline const dword_t getActionCount() const { return this->actions.size(); }
 		__inline const FixedArray<Trackable<char>>& getConditions() const { return this->conditions; }
 		__inline const FixedArray<Trackable<char>>& getActions() const { return this->actions; }
 };
 
 class PlayerQuest {
 	public:
-		const static BYTE QUEST_VAR_MAX = 10;
-		const static BYTE QUEST_ITEMS_MAX = 6;
+		const static byte_t QUEST_VAR_MAX = 10;
+		const static byte_t QUEST_ITEMS_MAX = 6;
 	private:
 		FixedArray<WORD> questVars;
 		FixedArray<Item> questItems;
-		WORD questId;
-		DWORD passedTime;
+		word_t questId;
+		dword_t passedTime;
 		union {
-			DWORD lever;
-			BYTE leverBYTE[4];
+			dword_t lever;
+			byte_t leverBYTE[4];
 		};
-		BYTE slotId;
+		byte_t slotId;
 	public:
-		PlayerQuest(const BYTE slotId) {
+		PlayerQuest(const byte_t slotId) {
 			this->slotId = slotId;
 			this->questId = 0x00;
 			this->passedTime = 0x00;
@@ -140,21 +140,21 @@ class PlayerQuest {
 		}
 
 		//To make things easier
-		__inline const BYTE getSlotId() const { return this->slotId; }
-		__inline Item getItem(const BYTE slot) const { return this->questItems[slot]; }
-		__inline WORD getVar(const BYTE slot) const { return this->questVars[slot]; }
-		__inline const WORD getQuestId() const { return this->questId; }
-		__inline void setQuest(const WORD questId) { this->questId = questId; }
+		__inline const byte_t getSlotId() const { return this->slotId; }
+		__inline Item getItem(const byte_t slot) const { return this->questItems[slot]; }
+		__inline word_t getVar(const byte_t slot) const { return this->questVars[slot]; }
+		__inline const word_t getQuestId() const { return this->questId; }
+		__inline void setQuest(const word_t questId) { this->questId = questId; }
 		__inline bool isEntryFree() const { return (this->getQuestId() == 0); }
 
-		__inline const WORD getQuestVar(const WORD varType) { return this->questVars[varType]; }
-		__inline const void setQuestVar(const WORD varType, const WORD newValue) { this->questVars[varType] = newValue; }
-		__inline const DWORD getPassedTime() const { return this->passedTime; }
-		__inline void setPassedTime(const DWORD newTime) { this->passedTime = newTime; }
+		__inline const word_t getQuestVar(const word_t varType) { return this->questVars[varType]; }
+		__inline const void setQuestVar(const word_t varType, const word_t newValue) { this->questVars[varType] = newValue; }
+		__inline const dword_t getPassedTime() const { return this->passedTime; }
+		__inline void setPassedTime(const dword_t newTime) { this->passedTime = newTime; }
 
-		__inline const DWORD getSwitch(const WORD switchBit) { return (this->leverBYTE[switchBit>>3] & (1 << (switchBit & 0x07))); }
-		__inline const DWORD getAllSwitches() const { return this->lever; }
-		void setSwitch(const WORD switchNum, const DWORD value);
+		__inline const dword_t getSwitch(const word_t switchBit) { return (this->leverBYTE[switchBit>>3] & (1 << (switchBit & 0x07))); }
+		__inline const dword_t getAllSwitches() const { return this->lever; }
+		void setSwitch(const word_t switchNum, const dword_t value);
 };
 
 class QuestReply {
@@ -162,15 +162,15 @@ class QuestReply {
 		QuestReply() {}
 		~QuestReply() {}
 	public:
-		const static BYTE ADD_OKAY = 0x01;
-		const static BYTE ADD_FAILED = 0x02;
-		const static BYTE DELETE_OKAY = 0x03;
-		const static BYTE DELETE_FAILED = 0x04;
-		const static BYTE TRIGGER_OKAY = 0x05;
-		const static BYTE TRIGGER_FAILED = 0x06;
+		const static byte_t ADD_OKAY = 0x01;
+		const static byte_t ADD_FAILED = 0x02;
+		const static byte_t DELETE_OKAY = 0x03;
+		const static byte_t DELETE_FAILED = 0x04;
+		const static byte_t TRIGGER_OKAY = 0x05;
+		const static byte_t TRIGGER_FAILED = 0x06;
 };
 
-extern const DWORD makeQuestHash(const char *data);
+extern const dword_t makeQuestHash(const char *data);
 
 class QuestService {
 	private:
@@ -246,15 +246,15 @@ class QuestService {
 		typedef bool (*REWARD_FUNCTION_PTR)(QuestTrans* trans, const AbstractQuestInfo* header, bool isTryout);
 		static const REWARD_FUNCTION_PTR rewards[50];
 
-		static DWORD currentQuestId;
+		static dword_t currentQuestId;
 	public:
 
-		static const DWORD runQuest(Entity* entity, const DWORD questHash);
+		static const dword_t runQuest(Entity* entity, const dword_t questHash);
 
-		template<class _Ty> static _Ty rewardOperation(Entity* entity, const _Ty& basicValue, const BYTE operation);
+		template<class _Ty> static _Ty rewardOperation(Entity* entity, const _Ty& basicValue, const byte_t operation);
 
-		static const char* getAbilityTypeName(BYTE abilityType);
-		static const char* operationName(BYTE operation);
+		static const char* getAbilityTypeName(byte_t abilityType);
+		static const char* operationName(byte_t operation);
 		static std::string conditionToString(const char* data);
 		static std::string actionToString(const char* data);
 };
@@ -264,11 +264,11 @@ struct QuestTrans {
 	//Nothing ever happens during this phase, yet the QSD relies on the aforementioned creation. In order to fix this issue,
 	//this flag will signal whether this step (virtually) occured or not.
 	bool wasPreviouslyEstablishingQuest;
-	DWORD questHash;
+	dword_t questHash;
 	Entity* questTriggerCauser;
 	Entity* questTarget; //e.g. player or npc
 	PlayerQuest* selectedQuest;
-	QuestTrans(const DWORD questHash, Entity* questCauser, Entity* target = nullptr) {
+	QuestTrans(const dword_t questHash, Entity* questCauser, Entity* target = nullptr) {
 		this->questHash = questHash;
 		this->questTriggerCauser = questCauser;
 		this->questTarget = target;
@@ -284,11 +284,11 @@ class QSD {
 
 		template<class FileType> void read(FileType& file);
 		std::map<const DWORD, QuestEntry*> questData;
-		WORD id;
+		word_t id;
 	public:
 #ifdef __ROSE_USE_VFS__
 	#ifdef __ROSE_DEBUG__
-			QSD(WORD newId, VFS* pVFS, const char* filePath);
+			QSD(word_t newId, VFS* pVFS, const char* filePath);
 	#else 
 			QSD(VFS* pVFS, const char* filePath);
 	#endif //__ROSE_DEBUG__
@@ -302,42 +302,42 @@ class QSD {
 
 struct QuestCheckVar {
 	union {
-		DWORD notUsed_CHECKTYPE;
+		dword_t notUsed_CHECKTYPE;
 		struct {
-			WORD varNum;
-			WORD varType;
+			word_t varNum;
+			word_t varType;
 		};
 	};
 	//union {
-	//	DWORD notUsed_AMOUNT;
-	WORD amount;
+	//	dword_t notUsed_AMOUNT;
+	word_t amount;
 	//};
-	BYTE operation;
+	byte_t operation;
 };
 
 struct QuestCheckAbility {
-	DWORD abilityType;
-	DWORD amount;
-	BYTE operation;
+	dword_t abilityType;
+	dword_t amount;
+	byte_t operation;
 };
 
 struct QuestCheckItem {
-	DWORD itemId;
-	DWORD itemSlot;
-	DWORD amount;
-	BYTE operation;
+	dword_t itemId;
+	dword_t itemSlot;
+	dword_t amount;
+	byte_t operation;
 };
 
 typedef QuestCheckVar QuestSetVar;
 
 struct QuestCondition000 {
 	QuestHeaderInfo header;
-	DWORD questId;
+	dword_t questId;
 };
 
 struct QuestCondition001 {
 	QuestHeaderInfo header;
-	DWORD dataCount;
+	dword_t dataCount;
 	QuestCheckVar data[1];
 };
 
@@ -346,115 +346,115 @@ typedef QuestCondition001 QuestCondition002;
 
 struct QuestCondition003 {
 	QuestHeaderInfo header;
-	DWORD dataCount;
+	dword_t dataCount;
 	QuestCheckAbility data[1];
 }; 
 
 struct QuestCondition004 {
 	QuestHeaderInfo header;
-	DWORD dataCount;
+	dword_t dataCount;
 	QuestCheckItem data[1];
 };
 
 //Only trigger if the quest taker is a leader (for instnnce
 struct QuestCondition005 {
 	QuestHeaderInfo header;
-	BYTE isLeader;
-	DWORD level;
-	BYTE reverse;
+	byte_t isLeader;
+	dword_t level;
+	byte_t reverse;
 };
 
 //Trigger within a certain radius (e.g. party teleport)
 struct QuestCondition006 {
 	QuestHeaderInfo header;
-	DWORD mapId;
-	DWORD x;
-	DWORD y;
-	DWORD z;
-	DWORD radius;
+	dword_t mapId;
+	dword_t x;
+	dword_t y;
+	dword_t z;
+	dword_t radius;
 };
 
 struct QuestCondition007 {
 	QuestHeaderInfo header;
-	DWORD startTime;
-	DWORD endTime;
+	dword_t startTime;
+	dword_t endTime;
 };
 
 struct QuestCondition008 {
 	QuestHeaderInfo header;
-	DWORD totalTime;
-	BYTE operation;
+	dword_t totalTime;
+	byte_t operation;
 };
 
 struct QuestCondition009 {
 	QuestHeaderInfo header;
-	DWORD skillIdFirst;
-	DWORD skillIdSecond;
-	BYTE operation;
+	dword_t skillIdFirst;
+	dword_t skillIdSecond;
+	byte_t operation;
 };
 
 //PercentageLow <= RANDOM_CHANGE <= PercentageHigh
 struct QuestCondition010 {
 	QuestHeaderInfo header;
-	BYTE percentageLow;
-	BYTE percentageHigh;
+	byte_t percentageLow;
+	byte_t percentageHigh;
 };
 
 struct QuestCondition011 {
 	QuestHeaderInfo header;
-	BYTE who; //0 = NPC, 1 = Player?
+	byte_t who; //0 = NPC, 1 = Player?
 	union {
-		WORD notUsed_VARNUM;
-		BYTE varNum;
+		word_t notUsed_VARNUM;
+		byte_t varNum;
 	};
-	DWORD amount;
-	BYTE operation;
+	dword_t amount;
+	byte_t operation;
 };
 
 struct QuestCondition012 {
 	QuestHeaderInfo header;
-	WORD mapId;
-	DWORD x;
-	DWORD y;
-	DWORD eventId;
+	word_t mapId;
+	dword_t x;
+	dword_t y;
+	dword_t eventId;
 };
 
 struct QuestCondition013 {
 	QuestHeaderInfo header;
 	union {
-		DWORD notUsed_NPCID;
-		WORD npcId;
+		dword_t notUsed_NPCID;
+		word_t npcId;
 	};
 };
 
 struct QuestCondition014 {
 	QuestHeaderInfo header;
-	WORD switchNum;
-	BYTE isSwitchOn;
+	word_t switchNum;
+	byte_t isSwitchOn;
 };
 
 //If firstNum <= RANDOM_NUM <= secondNum
 struct QuestCondition015 {
 	QuestHeaderInfo header;
-	WORD firstNum;
-	WORD secondNum;
+	word_t firstNum;
+	word_t secondNum;
 };
 
 struct QuestCondition016 {
 	QuestHeaderInfo header;
-	BYTE who; //0 = NPC; 1 = Event (?); 2 = Player
-	DWORD timeStart;
-	DWORD timeEnd;
+	byte_t who; //0 = NPC; 1 = Event (?); 2 = Player
+	dword_t timeStart;
+	dword_t timeEnd;
 };
 
 struct QuestNPCVar {
 	union {
-		DWORD notUsed_NPCID;
-		WORD npcId;
+		dword_t notUsed_NPCID;
+		word_t npcId;
 	};
 	union {
-		WORD notUsed_VARTYPE;
-		BYTE varType;
+		word_t notUsed_VARTYPE;
+		byte_t varType;
 	};
 };
 
@@ -462,32 +462,32 @@ struct QuestCondition017 {
 	QuestHeaderInfo header;
 	QuestNPCVar firstVar;
 	QuestNPCVar secondVar;
-	BYTE operation;
+	byte_t operation;
 };
 
 struct QuestCondition018 {
 	QuestHeaderInfo header;
 
-	BYTE day; //1-31
+	byte_t day; //1-31
 
-	BYTE hourStart;
-	BYTE minuteStart;
+	byte_t hourStart;
+	byte_t minuteStart;
 
-	BYTE hourEnd;
-	BYTE minuteEnd;
+	byte_t hourEnd;
+	byte_t minuteEnd;
 };
 
 
 struct QuestCondition019 {
 	QuestHeaderInfo header;
 
-	BYTE weekDay; //0-6
+	byte_t weekDay; //0-6
 
-	BYTE hourStart;
-	BYTE minuteStart;
+	byte_t hourStart;
+	byte_t minuteStart;
 
-	BYTE hourEnd;
-	BYTE minuteEnd;
+	byte_t hourEnd;
+	byte_t minuteEnd;
 };
 
 //FOR PVP
@@ -495,31 +495,31 @@ typedef QuestCondition015 QuestCondition020;
 
 struct QuestCondition021 {
 	QuestHeaderInfo header;
-	BYTE selectedObjType;
-	DWORD radius;
+	byte_t selectedObjType;
+	dword_t radius;
 };
 
 struct QuestCondition022 {
 	QuestHeaderInfo header;
-	WORD x;
-	WORD y;
+	word_t x;
+	word_t y;
 };
 
 struct QuestCondition023 {
 	QuestHeaderInfo header;
-	BYTE isRegistered;
+	byte_t isRegistered;
 };
 
 struct QuestCondition024 {
 	QuestHeaderInfo header;
 	union {
-		WORD positionType; //Teleport near a point? -- COND 024
-		WORD continueType; //COND 025
-		WORD gradeType; //For Clan -- COND 026
-		WORD pointType; //COND 027
-		WORD memberAmount; //For Party -- COND 029
+		word_t positionType; //Teleport near a point? -- COND 024
+		word_t continueType; //COND 025
+		word_t gradeType; //For Clan -- COND 026
+		word_t pointType; //COND 027
+		word_t memberAmount; //For Party -- COND 029
 	};
-	BYTE operation;
+	byte_t operation;
 };
 
 typedef QuestCondition024 QuestCondition025;
@@ -529,8 +529,8 @@ typedef QuestCondition024 QuestCondition027;
 
 struct QuestCondition028 {
 	QuestHeaderInfo header;
-	DWORD moneyAmount;
-	BYTE operation;
+	dword_t moneyAmount;
+	byte_t operation;
 };
 
 //Check member count (of party?)
@@ -543,28 +543,28 @@ typedef QuestCondition009 QuestCondition030;
 struct QuestReward000 {
 	QuestHeaderInfo header;
 	union {
-		DWORD notUsed_QUESTID; //BASIC
-		WORD questId;
+		dword_t notUsed_QUESTID; //BASIC
+		word_t questId;
 	};
-	BYTE operation;
+	byte_t operation;
 };
 
 struct QuestReward001 {
 	QuestHeaderInfo header;
-	DWORD itemId; //ItemType | itemId
-	BYTE operation;
-	WORD amount;
-	BYTE partyOption;
+	dword_t itemId; //ItemType | itemId
+	byte_t operation;
+	word_t amount;
+	byte_t partyOption;
 };
 
 struct QuestReward002 {
 	QuestHeaderInfo header;
-	DWORD varAmount;
+	dword_t varAmount;
 	QuestSetVar vars[1];
 };
 
 struct QuestReward003 : public QuestReward002 {
-	BYTE partyOption;
+	byte_t partyOption;
 };
 
 typedef QuestReward002 QuestReward004;
@@ -572,54 +572,54 @@ typedef QuestReward002 QuestReward004;
 //Add item to inventory [maybe also for party?]
 struct QuestReward005 {
 	QuestHeaderInfo header;
-	BYTE rewardType;
-	BYTE equate;
-	DWORD amount;
-	DWORD itemId; //ItemType | itemId
-	BYTE partyOption;
-	WORD itemOption; //???
+	byte_t rewardType;
+	byte_t equate;
+	dword_t amount;
+	dword_t itemId; //ItemType | itemId
+	byte_t partyOption;
+	word_t itemOption; //???
 };
 
 //Heal for a certain percentage (also for party)
 struct QuestReward006 {
 	QuestHeaderInfo header;
-	DWORD percentHP;
-	DWORD percentMP;
-	BYTE partyOption;
+	dword_t percentHP;
+	dword_t percentMP;
+	byte_t partyOption;
 };
 
 struct QuestReward007 {
 	QuestHeaderInfo header;
 	union {
-		DWORD notUsed_MAPID;
-		WORD mapId;
+		dword_t notUsed_MAPID;
+		word_t mapId;
 	};
-	DWORD x;
-	DWORD y;
-	BYTE partyOption;
+	dword_t x;
+	dword_t y;
+	byte_t partyOption;
 };
 
 struct QuestReward008 {
 	QuestHeaderInfo header;
-	DWORD monsterId;
-	DWORD amount;
+	dword_t monsterId;
+	dword_t amount;
 
-	BYTE targetType;
+	byte_t targetType;
 
 	union {
-		DWORD notUsed_MAPID;
-		WORD mapId;
+		dword_t notUsed_MAPID;
+		word_t mapId;
 	};
-	DWORD x;
-	DWORD y;
+	dword_t x;
+	dword_t y;
 
-	DWORD radius;
-	DWORD teamId; //e.g. friendly/enemy
+	dword_t radius;
+	dword_t teamId; //e.g. friendly/enemy
 };
 
 struct QuestReward009 {
 	QuestHeaderInfo header;
-	WORD triggerLength;
+	word_t triggerLength;
 	char triggerName[1];
 };
 
@@ -629,54 +629,54 @@ struct QuestReward010 {
 
 struct QuestReward011 {
 	QuestHeaderInfo header;
-	BYTE isTargetSelected;
+	byte_t isTargetSelected;
 	union {
-		WORD notUsed_VARTYPE;
-		BYTE varType;
+		word_t notUsed_VARTYPE;
+		byte_t varType;
 	};
 	union {
-		DWORD notUsed_VALUE;
-		WORD value;
+		dword_t notUsed_VALUE;
+		word_t value;
 	};
-	BYTE operation;
+	byte_t operation;
 };
 
 struct QuestReward012 {
 	QuestHeaderInfo header;
-	BYTE messageType; //whisper/shout/announce
+	byte_t messageType; //whisper/shout/announce
 	union {
-		DWORD stringId; //LTB
+		dword_t stringId; //LTB
 		char message[1];
 	};
 };
 
 struct QuestReward013 {
 	QuestHeaderInfo header;
-	BYTE targetType; //0 = NPC, 1 = Player
-	DWORD seconds;
-	WORD triggerLength;
+	byte_t targetType; //0 = NPC, 1 = Player
+	dword_t seconds;
+	word_t triggerLength;
 	char triggerName[1];
 };
 
 struct QuestReward014 {
 	QuestHeaderInfo header;
-	BYTE operation;
+	byte_t operation;
 	union {
-		DWORD notUsed_SKILLID;
-		WORD skillId;
+		dword_t notUsed_SKILLID;
+		word_t skillId;
 	};
 };
 
 struct QuestReward015 {
 	QuestHeaderInfo header;
-	WORD switchId;
-	BYTE operation;
+	word_t switchId;
+	byte_t operation;
 };
 
 //Clear Switch
 struct QuestReward016 {
 	QuestHeaderInfo header;
-	WORD groupId;
+	word_t groupId;
 };
 
 //Clear Switch
@@ -686,38 +686,38 @@ struct QuestReward017 {
 
 struct QuestReward018 {
 	QuestHeaderInfo header;
-	DWORD stringId;
+	dword_t stringId;
 
-	WORD dataCount;
+	word_t dataCount;
 	char data[1];
 };
 
 struct QuestReward019 {
 	QuestHeaderInfo header;
 
-	WORD mapId;
-	WORD teamId;
-	WORD triggerLength;
+	word_t mapId;
+	word_t teamId;
+	word_t triggerLength;
 	char triggerName[1];
 
-	DWORD hashOfNextTrigger;
+	dword_t hashOfNextTrigger;
 };
 
 struct QuestReward020 {
 	QuestHeaderInfo header;
-	BYTE pvpType;
+	byte_t pvpType;
 };
 
 struct QuestReward021 {
 	QuestHeaderInfo header;
-	DWORD x;
-	DWORD y;
+	dword_t x;
+	dword_t y;
 };
 
 struct QuestReward022 {
 	QuestHeaderInfo header;
-	WORD mapId;
-	BYTE operation; //0 = off, 1 = on, 2 = toggle (?)
+	word_t mapId;
+	byte_t operation; //0 = off, 1 = on, 2 = toggle (?)
 };
 
 struct QuestReward023 {
@@ -726,39 +726,39 @@ struct QuestReward023 {
 
 struct QuestReward024 {
 	QuestHeaderInfo header;
-	DWORD moneyAmount;
-	BYTE operation;
+	dword_t moneyAmount;
+	byte_t operation;
 };
 
 struct QuestReward025 {
 	QuestHeaderInfo header;
-	WORD pointType;
-	BYTE operation;
+	word_t pointType;
+	byte_t operation;
 };
 
 struct QuestReward026 {
 	QuestHeaderInfo header;
-	WORD skillId;
-	BYTE operation;
+	word_t skillId;
+	byte_t operation;
 };
 
 struct QuestReward027 {
 	QuestHeaderInfo header;
-	WORD contType;
-	BYTE operation;
+	word_t contType;
+	byte_t operation;
 };
 
 struct QuestReward028 {
 	QuestHeaderInfo header;
-	DWORD range;
-	WORD mapId;
-	DWORD x;
-	DWORD y;
+	dword_t range;
+	word_t mapId;
+	dword_t x;
+	dword_t y;
 };
 
 struct QuestReward029 {
 	QuestHeaderInfo header;
-	WORD scriptLength;
+	word_t scriptLength;
 	char script[1];
 };
 
@@ -768,26 +768,26 @@ struct QuestReward030 {
 
 struct QuestReward031 {
 	QuestHeaderInfo header;
-	DWORD monsterId;
-	DWORD compareValue;
+	dword_t monsterId;
+	dword_t compareValue;
 	QuestSetVar var;
 };
 
 struct QuestReward032 {
 	QuestHeaderInfo header;
-	DWORD itemId;
-	DWORD compareAmount;
-	BYTE partyOption;
+	dword_t itemId;
+	dword_t compareAmount;
+	byte_t partyOption;
 };
 
 struct QuestReward033 {
 	QuestHeaderInfo header;
-	WORD unknown;
+	word_t unknown;
 };
 
 struct QuestReward034 {
 	QuestHeaderInfo header;
-	BYTE unknown;
+	byte_t unknown;
 };
 
 

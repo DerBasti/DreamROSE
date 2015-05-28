@@ -8,8 +8,8 @@
 class ClientSocket : public BaseSocket {
 	public:
 		Packet packet;
-		WORD bytesReceived;
-		WORD bytesExpected;
+		word_t bytesReceived;
+		word_t bytesExpected;
 		std::string ip;
 		class ServerSocket* serverDelegate;
 		virtual bool handlePacket() { return true; }

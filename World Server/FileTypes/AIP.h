@@ -34,7 +34,7 @@ typedef unsigned long DWORD;
 #define __AIP_CONDITION_CREATION__(id) (__AIP_CONDITION_CODE__ | (id+0x01))
 #define __AIP_ACTION_CREATION__(id) (__AIP_ACTION_CODE__ | (id+0x01))
 
-#define __BASIC_AI_HEADER__ DWORD _size; DWORD type;
+#define __BASIC_AI_HEADER__ dword_t _size; dword_t type;
 
 struct BasicAIP {
 	private:
@@ -44,89 +44,89 @@ struct BasicAIP {
 			_size = 0x00;
 			type = __AIP_CONDITION_CODE__;
 		}
-		BasicAIP(DWORD nSize, DWORD nType) {
+		BasicAIP(dword_t nSize, dword_t nType) {
 			this->_size = nSize;
 			this->type = nType;
 		}
 #pragma region Condition Codes
-		const static DWORD __AIP_CONDITION_00__ = __AIP_CONDITION_CREATION__(0);
-		const static DWORD __AIP_CONDITION_01__ = __AIP_CONDITION_CREATION__(1);
-		const static DWORD __AIP_CONDITION_02__ = __AIP_CONDITION_CREATION__(2);
-		const static DWORD __AIP_CONDITION_03__ = __AIP_CONDITION_CREATION__(3);
-		const static DWORD __AIP_CONDITION_04__ = __AIP_CONDITION_CREATION__(4);
-		const static DWORD __AIP_CONDITION_05__ = __AIP_CONDITION_CREATION__(5);
-		const static DWORD __AIP_CONDITION_06__ = __AIP_CONDITION_CREATION__(6);
-		const static DWORD __AIP_CONDITION_07__ = __AIP_CONDITION_CREATION__(7);
-		const static DWORD __AIP_CONDITION_08__ = __AIP_CONDITION_CREATION__(8);
-		const static DWORD __AIP_CONDITION_09__ = __AIP_CONDITION_CREATION__(9);
-		const static DWORD __AIP_CONDITION_10__ = __AIP_CONDITION_CREATION__(10);
-		const static DWORD __AIP_CONDITION_11__ = __AIP_CONDITION_CREATION__(11);
-		const static DWORD __AIP_CONDITION_12__ = __AIP_CONDITION_CREATION__(12);
-		const static DWORD __AIP_CONDITION_13__ = __AIP_CONDITION_CREATION__(13);
-		const static DWORD __AIP_CONDITION_14__ = __AIP_CONDITION_CREATION__(14);
-		const static DWORD __AIP_CONDITION_15__ = __AIP_CONDITION_CREATION__(15);
-		const static DWORD __AIP_CONDITION_16__ = __AIP_CONDITION_CREATION__(16);
-		const static DWORD __AIP_CONDITION_17__ = __AIP_CONDITION_CREATION__(17);
-		const static DWORD __AIP_CONDITION_18__ = __AIP_CONDITION_CREATION__(18);
-		const static DWORD __AIP_CONDITION_19__ = __AIP_CONDITION_CREATION__(19);
-		const static DWORD __AIP_CONDITION_20__ = __AIP_CONDITION_CREATION__(20);
-		const static DWORD __AIP_CONDITION_21__ = __AIP_CONDITION_CREATION__(21);
-		const static DWORD __AIP_CONDITION_22__ = __AIP_CONDITION_CREATION__(22);
-		const static DWORD __AIP_CONDITION_23__ = __AIP_CONDITION_CREATION__(23);
-		const static DWORD __AIP_CONDITION_24__ = __AIP_CONDITION_CREATION__(24);
-		const static DWORD __AIP_CONDITION_25__ = __AIP_CONDITION_CREATION__(25);
-		const static DWORD __AIP_CONDITION_26__ = __AIP_CONDITION_CREATION__(26);
-		const static DWORD __AIP_CONDITION_27__ = __AIP_CONDITION_CREATION__(27);
-		const static DWORD __AIP_CONDITION_28__ = __AIP_CONDITION_CREATION__(28);
-		const static DWORD __AIP_CONDITION_29__ = __AIP_CONDITION_CREATION__(29);
-		const static DWORD __AIP_CONDITION_30__ = __AIP_CONDITION_CREATION__(30);
-		const static DWORD __AIP_CONDITION_31__ = __AIP_CONDITION_CREATION__(31);
+		const static dword_t __AIP_CONDITION_00__ = __AIP_CONDITION_CREATION__(0);
+		const static dword_t __AIP_CONDITION_01__ = __AIP_CONDITION_CREATION__(1);
+		const static dword_t __AIP_CONDITION_02__ = __AIP_CONDITION_CREATION__(2);
+		const static dword_t __AIP_CONDITION_03__ = __AIP_CONDITION_CREATION__(3);
+		const static dword_t __AIP_CONDITION_04__ = __AIP_CONDITION_CREATION__(4);
+		const static dword_t __AIP_CONDITION_05__ = __AIP_CONDITION_CREATION__(5);
+		const static dword_t __AIP_CONDITION_06__ = __AIP_CONDITION_CREATION__(6);
+		const static dword_t __AIP_CONDITION_07__ = __AIP_CONDITION_CREATION__(7);
+		const static dword_t __AIP_CONDITION_08__ = __AIP_CONDITION_CREATION__(8);
+		const static dword_t __AIP_CONDITION_09__ = __AIP_CONDITION_CREATION__(9);
+		const static dword_t __AIP_CONDITION_10__ = __AIP_CONDITION_CREATION__(10);
+		const static dword_t __AIP_CONDITION_11__ = __AIP_CONDITION_CREATION__(11);
+		const static dword_t __AIP_CONDITION_12__ = __AIP_CONDITION_CREATION__(12);
+		const static dword_t __AIP_CONDITION_13__ = __AIP_CONDITION_CREATION__(13);
+		const static dword_t __AIP_CONDITION_14__ = __AIP_CONDITION_CREATION__(14);
+		const static dword_t __AIP_CONDITION_15__ = __AIP_CONDITION_CREATION__(15);
+		const static dword_t __AIP_CONDITION_16__ = __AIP_CONDITION_CREATION__(16);
+		const static dword_t __AIP_CONDITION_17__ = __AIP_CONDITION_CREATION__(17);
+		const static dword_t __AIP_CONDITION_18__ = __AIP_CONDITION_CREATION__(18);
+		const static dword_t __AIP_CONDITION_19__ = __AIP_CONDITION_CREATION__(19);
+		const static dword_t __AIP_CONDITION_20__ = __AIP_CONDITION_CREATION__(20);
+		const static dword_t __AIP_CONDITION_21__ = __AIP_CONDITION_CREATION__(21);
+		const static dword_t __AIP_CONDITION_22__ = __AIP_CONDITION_CREATION__(22);
+		const static dword_t __AIP_CONDITION_23__ = __AIP_CONDITION_CREATION__(23);
+		const static dword_t __AIP_CONDITION_24__ = __AIP_CONDITION_CREATION__(24);
+		const static dword_t __AIP_CONDITION_25__ = __AIP_CONDITION_CREATION__(25);
+		const static dword_t __AIP_CONDITION_26__ = __AIP_CONDITION_CREATION__(26);
+		const static dword_t __AIP_CONDITION_27__ = __AIP_CONDITION_CREATION__(27);
+		const static dword_t __AIP_CONDITION_28__ = __AIP_CONDITION_CREATION__(28);
+		const static dword_t __AIP_CONDITION_29__ = __AIP_CONDITION_CREATION__(29);
+		const static dword_t __AIP_CONDITION_30__ = __AIP_CONDITION_CREATION__(30);
+		const static dword_t __AIP_CONDITION_31__ = __AIP_CONDITION_CREATION__(31);
 #pragma endregion
 #pragma region Action Codes
-		const static DWORD __AI_ACTION_00__ = __AIP_ACTION_CREATION__(0);
-		const static DWORD __AI_ACTION_01__ = __AIP_ACTION_CREATION__(1);
-		const static DWORD __AI_ACTION_02__ = __AIP_ACTION_CREATION__(2);
-		const static DWORD __AI_ACTION_03__ = __AIP_ACTION_CREATION__(3);
-		const static DWORD __AI_ACTION_04__ = __AIP_ACTION_CREATION__(4);
-		const static DWORD __AI_ACTION_05__ = __AIP_ACTION_CREATION__(5);
-		const static DWORD __AI_ACTION_06__ = __AIP_ACTION_CREATION__(6);
-		const static DWORD __AI_ACTION_07__ = __AIP_ACTION_CREATION__(7);
-		const static DWORD __AI_ACTION_08__ = __AIP_ACTION_CREATION__(8);
-		const static DWORD __AI_ACTION_09__ = __AIP_ACTION_CREATION__(9);
-		const static DWORD __AI_ACTION_10__ = __AIP_ACTION_CREATION__(10);
-		const static DWORD __AI_ACTION_11__ = __AIP_ACTION_CREATION__(11);
-		const static DWORD __AI_ACTION_12__ = __AIP_ACTION_CREATION__(12);
-		const static DWORD __AI_ACTION_13__ = __AIP_ACTION_CREATION__(13);
-		const static DWORD __AI_ACTION_14__ = __AIP_ACTION_CREATION__(14);
-		const static DWORD __AI_ACTION_15__ = __AIP_ACTION_CREATION__(15);
-		const static DWORD __AI_ACTION_16__ = __AIP_ACTION_CREATION__(16);
-		const static DWORD __AI_ACTION_17__ = __AIP_ACTION_CREATION__(17);
-		const static DWORD __AI_ACTION_18__ = __AIP_ACTION_CREATION__(18);
-		const static DWORD __AI_ACTION_19__ = __AIP_ACTION_CREATION__(19);
-		const static DWORD __AI_ACTION_20__ = __AIP_ACTION_CREATION__(20);
-		const static DWORD __AI_ACTION_21__ = __AIP_ACTION_CREATION__(21);
-		const static DWORD __AI_ACTION_22__ = __AIP_ACTION_CREATION__(22);
-		const static DWORD __AI_ACTION_23__ = __AIP_ACTION_CREATION__(23);
-		const static DWORD __AI_ACTION_24__ = __AIP_ACTION_CREATION__(24);
-		const static DWORD __AI_ACTION_25__ = __AIP_ACTION_CREATION__(25);
-		const static DWORD __AI_ACTION_26__ = __AIP_ACTION_CREATION__(26);
-		const static DWORD __AI_ACTION_27__ = __AIP_ACTION_CREATION__(27);
-		const static DWORD __AI_ACTION_28__ = __AIP_ACTION_CREATION__(28);
-		const static DWORD __AI_ACTION_29__ = __AIP_ACTION_CREATION__(29);
-		const static DWORD __AI_ACTION_30__ = __AIP_ACTION_CREATION__(30);
-		const static DWORD __AI_ACTION_31__ = __AIP_ACTION_CREATION__(31);
-		const static DWORD __AI_ACTION_32__ = __AIP_ACTION_CREATION__(32);
-		const static DWORD __AI_ACTION_33__ = __AIP_ACTION_CREATION__(33);
-		const static DWORD __AI_ACTION_34__ = __AIP_ACTION_CREATION__(34);
-		const static DWORD __AI_ACTION_35__ = __AIP_ACTION_CREATION__(35);
-		const static DWORD __AI_ACTION_36__ = __AIP_ACTION_CREATION__(36);
-		const static DWORD __AI_ACTION_37__ = __AIP_ACTION_CREATION__(37);
-		const static DWORD __AI_ACTION_38__ = __AIP_ACTION_CREATION__(38);
+		const static dword_t __AI_ACTION_00__ = __AIP_ACTION_CREATION__(0);
+		const static dword_t __AI_ACTION_01__ = __AIP_ACTION_CREATION__(1);
+		const static dword_t __AI_ACTION_02__ = __AIP_ACTION_CREATION__(2);
+		const static dword_t __AI_ACTION_03__ = __AIP_ACTION_CREATION__(3);
+		const static dword_t __AI_ACTION_04__ = __AIP_ACTION_CREATION__(4);
+		const static dword_t __AI_ACTION_05__ = __AIP_ACTION_CREATION__(5);
+		const static dword_t __AI_ACTION_06__ = __AIP_ACTION_CREATION__(6);
+		const static dword_t __AI_ACTION_07__ = __AIP_ACTION_CREATION__(7);
+		const static dword_t __AI_ACTION_08__ = __AIP_ACTION_CREATION__(8);
+		const static dword_t __AI_ACTION_09__ = __AIP_ACTION_CREATION__(9);
+		const static dword_t __AI_ACTION_10__ = __AIP_ACTION_CREATION__(10);
+		const static dword_t __AI_ACTION_11__ = __AIP_ACTION_CREATION__(11);
+		const static dword_t __AI_ACTION_12__ = __AIP_ACTION_CREATION__(12);
+		const static dword_t __AI_ACTION_13__ = __AIP_ACTION_CREATION__(13);
+		const static dword_t __AI_ACTION_14__ = __AIP_ACTION_CREATION__(14);
+		const static dword_t __AI_ACTION_15__ = __AIP_ACTION_CREATION__(15);
+		const static dword_t __AI_ACTION_16__ = __AIP_ACTION_CREATION__(16);
+		const static dword_t __AI_ACTION_17__ = __AIP_ACTION_CREATION__(17);
+		const static dword_t __AI_ACTION_18__ = __AIP_ACTION_CREATION__(18);
+		const static dword_t __AI_ACTION_19__ = __AIP_ACTION_CREATION__(19);
+		const static dword_t __AI_ACTION_20__ = __AIP_ACTION_CREATION__(20);
+		const static dword_t __AI_ACTION_21__ = __AIP_ACTION_CREATION__(21);
+		const static dword_t __AI_ACTION_22__ = __AIP_ACTION_CREATION__(22);
+		const static dword_t __AI_ACTION_23__ = __AIP_ACTION_CREATION__(23);
+		const static dword_t __AI_ACTION_24__ = __AIP_ACTION_CREATION__(24);
+		const static dword_t __AI_ACTION_25__ = __AIP_ACTION_CREATION__(25);
+		const static dword_t __AI_ACTION_26__ = __AIP_ACTION_CREATION__(26);
+		const static dword_t __AI_ACTION_27__ = __AIP_ACTION_CREATION__(27);
+		const static dword_t __AI_ACTION_28__ = __AIP_ACTION_CREATION__(28);
+		const static dword_t __AI_ACTION_29__ = __AIP_ACTION_CREATION__(29);
+		const static dword_t __AI_ACTION_30__ = __AIP_ACTION_CREATION__(30);
+		const static dword_t __AI_ACTION_31__ = __AIP_ACTION_CREATION__(31);
+		const static dword_t __AI_ACTION_32__ = __AIP_ACTION_CREATION__(32);
+		const static dword_t __AI_ACTION_33__ = __AIP_ACTION_CREATION__(33);
+		const static dword_t __AI_ACTION_34__ = __AIP_ACTION_CREATION__(34);
+		const static dword_t __AI_ACTION_35__ = __AIP_ACTION_CREATION__(35);
+		const static dword_t __AI_ACTION_36__ = __AIP_ACTION_CREATION__(36);
+		const static dword_t __AI_ACTION_37__ = __AIP_ACTION_CREATION__(37);
+		const static dword_t __AI_ACTION_38__ = __AIP_ACTION_CREATION__(38);
 #pragma endregion
 
-		__inline const DWORD getType() const { return this->type; }
-		__inline const DWORD size() const { return this->_size; }
-		const DWORD sizeInFile() const { 
+		__inline const dword_t getType() const { return this->type; }
+		__inline const dword_t size() const { return this->_size; }
+		const dword_t sizeInFile() const { 
 			if(this->_size % 4 == 0)
 				return this->_size;
 			return this->_size + (4 - (this->_size % 4));
@@ -142,7 +142,7 @@ struct AITransfer {
 	class Entity* designatedTarget;
 	class Entity* nearestEntity;
 	class Entity* lastFound;
-	BYTE blockType;
+	byte_t blockType;
 
 	AITransfer() {
 		this->designatedTarget = nearestEntity = lastFound = nullptr;
@@ -155,12 +155,12 @@ class AIService {
 		AIService() {};
 		~AIService() {};
 
-		const static BYTE ABILITY_LEVEL = 0x00;
-		const static BYTE ABILITY_ATTACKPOWER = 0x01;
-		const static BYTE ABILITY_DEFENSE = 0x02;
-		const static BYTE ABILITY_MAGIC_DEFENSE = 0x03;
-		const static BYTE ABILITY_GET_HP = 0x04;
-		const static BYTE ABILITY_CHARM = 0x05;
+		const static byte_t ABILITY_LEVEL = 0x00;
+		const static byte_t ABILITY_ATTACKPOWER = 0x01;
+		const static byte_t ABILITY_DEFENSE = 0x02;
+		const static byte_t ABILITY_MAGIC_DEFENSE = 0x03;
+		const static byte_t ABILITY_GET_HP = 0x04;
+		const static byte_t ABILITY_CHARM = 0x05;
 		
 #pragma region Condition Execution
 		static bool conditionFightOrDelay();
@@ -244,9 +244,9 @@ class AIService {
 		static void actionSetAIVar(class NPC* npc, const struct AIACTION_35* act);
 #pragma endregion
 	public:
-		static WORD getAbilityType(BYTE abilityType, class Entity* entity);
-		static const char* getAbilityTypeName(BYTE abilityType);
-		static bool run(class NPC* npcWithAI, const BYTE blockType, class Entity* target = nullptr, const DWORD damageDealt = 0x00);
+		static word_t getAbilityType(byte_t abilityType, class Entity* entity);
+		static const char* getAbilityTypeName(byte_t abilityType);
+		static bool run(class NPC* npcWithAI, const byte_t blockType, class Entity* target = nullptr, const dword_t damageDealt = 0x00);
 
 		static bool checkConditions( const std::vector<Trackable<char>>& ai, class NPC* monster, AITransfer* trans );
 		static void executeActions( const std::vector<Trackable<char>>& ai, class NPC* monster, AITransfer* trans );
@@ -257,12 +257,12 @@ struct AICOND_00 {
 	private:
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE cFightOrDelay;
+			byte_t cFightOrDelay;
 			char data[0x04];
 		};
 		friend class AIService;
 	public:
-		AICOND_00(BYTE fightOrDelay) {
+		AICOND_00(byte_t fightOrDelay) {
 			this->type = BasicAIP::__AIP_CONDITION_00__;
 			this->_size = 0x08 + sizeof(BYTE);
 
@@ -274,20 +274,20 @@ struct AICOND_00 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->cFightOrDelay );
 			return std::string(buf);
 		}
-		__inline BYTE fightOrDelay() const { return this->cFightOrDelay; }
+		__inline byte_t fightOrDelay() const { return this->cFightOrDelay; }
 };
 
 struct AICOND_01 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD iDamage;
+		dword_t iDamage;
 		union {
 			bool cReceiveOrDeal;
 			char data[0x04];
 		};
 	public:
-		AICOND_01(DWORD damage, BYTE receiveOrDeal) {
+		AICOND_01(dword_t damage, byte_t receiveOrDeal) {
 			this->type = BasicAIP::__AIP_CONDITION_01__;
 			this->_size = 0x08 + sizeof(bool) + sizeof(DWORD);
 
@@ -299,7 +299,7 @@ struct AICOND_01 {
 			sprintf(buf,"Check Damage (0x01)\n%s=====\n%sDamage amount: 0x%x\n%sOnReceive: %i\n", indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDamage(), indent ? "\t\t\t" : "", this->isActionOnReceive() );
 			return std::string(buf);
 		}
-		__inline DWORD getDamage() const { return this->iDamage; }
+		__inline dword_t getDamage() const { return this->iDamage; }
 		__inline bool isActionOnReceive() const { return this->cReceiveOrDeal == false; }
 		__inline bool isActionOnDeal() const { return !this->isActionOnReceive(); }
 };
@@ -308,17 +308,17 @@ struct AICOND_02 {
 	private:
 		__BASIC_AI_HEADER__;
 		friend class AIService;
-		DWORD distance;
+		dword_t distance;
 		union {
 			bool isAlliedEntity; //0 = false (enemy), 1 = true
 			short wIsAlliedEntity;
 		};
 		short levelDiff[2];
-		WORD entityAmount;
+		word_t entityAmount;
 	public:
-		const static BYTE LEVELDIFF_START = 0x00;
-		const static BYTE LEVELDIFF_END = 0x01;
-		AICOND_02( DWORD newDistance, bool needsAllied, short levelDiff_Start, short levelDiff_End, WORD entityAmount) {
+		const static byte_t LEVELDIFF_START = 0x00;
+		const static byte_t LEVELDIFF_END = 0x01;
+		AICOND_02( dword_t newDistance, bool needsAllied, short levelDiff_Start, short levelDiff_End, word_t entityAmount) {
 			this->type = __AIP_CONDITION_CODE__ | 0x03;
 			this->_size = 0x08 + sizeof(bool) + 0x0A;
 			
@@ -339,17 +339,17 @@ struct AICOND_02 {
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		__inline bool isAllyNeeded() const { return this->isAlliedEntity; }
-		__inline short getLevelDiff(BYTE startOrEnd) const {
+		__inline short getLevelDiff(byte_t startOrEnd) const {
 			return this->levelDiff[startOrEnd % 2];
 		}
-		__inline WORD getAmount() const { return this->entityAmount; }
+		__inline word_t getAmount() const { return this->entityAmount; }
 };
 
 struct AICOND_03 {
 	private:
 		__BASIC_AI_HEADER__;
 		friend class AIService;
-		DWORD distance;
+		dword_t distance;
 	public:
 		AICOND_03(int newDist) {
 			this->type = __AIP_CONDITION_CODE__ | 0x04;
@@ -369,10 +369,10 @@ struct AICOND_04 {
 	private:
 		__BASIC_AI_HEADER__;
 		friend class AIService;
-		DWORD distance;
-		BYTE moreOrLess;
+		dword_t distance;
+		byte_t moreOrLess;
 	public:
-		AICOND_04(DWORD newDist, BYTE cMoreOrLess) {
+		AICOND_04(dword_t newDist, byte_t cMoreOrLess) {
 			this->type = __AIP_CONDITION_CODE__ | 0x05;
 			this->_size = 0x08 + 0x05;
 			
@@ -399,13 +399,13 @@ struct AICOND_05 {
 		__BASIC_AI_HEADER__;
 		friend class AIService;
 		union {
-			BYTE abilityType;
-			DWORD notUsed;
+			byte_t abilityType;
+			dword_t notUsed;
 		};
 		long difference;
 		bool moreOrLess;
 	public:
-		AICOND_05(BYTE newAbilityType, long diff, BYTE isMoreOrLess) {
+		AICOND_05(byte_t newAbilityType, long diff, byte_t isMoreOrLess) {
 			this->type = __AIP_CONDITION_CODE__ | 0x06;
 			this->_size = 0x08 + 0x05 + sizeof(bool);
 			
@@ -421,7 +421,7 @@ struct AICOND_05 {
 				indent ? "\t\t\t" : "", this->needsLessDifference());
 			return std::string(buf);
 		}
-		__inline BYTE getAbilityType() const { return this->abilityType; }
+		__inline byte_t getAbilityType() const { return this->abilityType; }
 		__inline long getAllowedDifference() const { return this->difference; }
 #ifdef __MORE_OR_LESS_DEF__
 		__MORE_OR_LESS_DEF__(Difference);
@@ -435,10 +435,10 @@ struct AICOND_06 {
 	private:
 		__BASIC_AI_HEADER__;
 		friend class AIService;
-		DWORD hp;
+		dword_t hp;
 		bool moreOrLess;
 	public:
-		AICOND_06(DWORD HPToCheckFor, BYTE moreOrLess) {
+		AICOND_06(dword_t HPToCheckFor, byte_t moreOrLess) {
 			this->type = __AIP_CONDITION_CODE__ | 0x07;
 			this->_size = 0x08 + 0x04 + sizeof(bool);
 			
@@ -452,7 +452,7 @@ struct AICOND_06 {
 				indent ? "\t\t\t" : "", this->needsLessHP());
 			return std::string(buf);
 		}
-		__inline DWORD getHPCheckMark() const { return this->hp; }
+		__inline dword_t getHPCheckMark() const { return this->hp; }
 #ifdef __MORE_OR_LESS_DEF__
 		__MORE_OR_LESS_DEF__(HP);
 #else
@@ -465,9 +465,9 @@ struct AICOND_07 {
 	private:
 		__BASIC_AI_HEADER__;
 		friend class AIService;
-		BYTE percent;
+		byte_t percent;
 	public:
-		AICOND_07(BYTE newPercent) {
+		AICOND_07(byte_t newPercent) {
 			this->type = __AIP_CONDITION_CODE__ | 0x08;
 			this->_size = 0x08 + 0x01;
 			
@@ -478,20 +478,20 @@ struct AICOND_07 {
 			sprintf(buf,"Check Percentage (0x07)\n%s=====\n%sRandom Percentage: %i%\n", indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getPercentage());
 			return std::string(buf);
 		}
-		__inline BYTE getPercentage() const { return this->percent; }
+		__inline byte_t getPercentage() const { return this->percent; }
 };
 
 struct AICOND_08 {
 	private:
 		__BASIC_AI_HEADER__;
 		friend class AIService;
-		DWORD distance;
+		dword_t distance;
 		short levelDifference[2];
 		bool isAllied;
 	public:
-		const static BYTE LEVELDIFF_START = 0x00;
-		const static BYTE LEVELDIFF_END = 0x01;
-		AICOND_08(DWORD newDistance, short levelDiff_min, short levelDiff_max, BYTE isAllied) {
+		const static byte_t LEVELDIFF_START = 0x00;
+		const static byte_t LEVELDIFF_END = 0x01;
+		AICOND_08(dword_t newDistance, short levelDiff_min, short levelDiff_max, byte_t isAllied) {
 			this->type = __AIP_CONDITION_CODE__ | 0x09;
 			this->_size = 0x08 + 0x08 + sizeof(bool);
 			
@@ -509,7 +509,7 @@ struct AICOND_08 {
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		__inline short getLevelDifference(BYTE startOrEnd) const { return this->levelDifference[startOrEnd % 2]; }
+		__inline short getLevelDifference(byte_t startOrEnd) const { return this->levelDifference[startOrEnd % 2]; }
 		__inline short isAllyNeeded() const { return this->isAllied; }
 };
 
@@ -529,10 +529,10 @@ struct AICOND_10 {
 	private:
 		__BASIC_AI_HEADER__;
 		friend class AIService;
-		BYTE abilityType;
+		byte_t abilityType;
 		bool moreOrLess;
 	public:
-		AICOND_10(BYTE _abilityType, BYTE _moreOrLess) {
+		AICOND_10(byte_t _abilityType, byte_t _moreOrLess) {
 			this->type = __AIP_CONDITION_CODE__ | 0x0B;
 			this->_size = 0x08 + 0x01 + sizeof(bool);
 			
@@ -546,7 +546,7 @@ struct AICOND_10 {
 				indent ? "\t\t\t" : "", this->needsLessAbility());
 			return std::string(buf);
 		}
-		__inline BYTE getAbilityType() const { return this->abilityType; }
+		__inline byte_t getAbilityType() const { return this->abilityType; }
 #ifdef __MORE_OR_LESS_DEF__
 		__MORE_OR_LESS_DEF__(Ability);
 #else //__MORE_OR_LESS_DEF__
@@ -559,13 +559,13 @@ struct AICOND_11 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE abilityType;
-			DWORD notUsed;
+			byte_t abilityType;
+			dword_t notUsed;
 		};
 		long value;
 		bool moreOrLess;
 	public:
-		AICOND_11(BYTE _abilityType, long _value, BYTE _moreOrLess) {
+		AICOND_11(byte_t _abilityType, long _value, byte_t _moreOrLess) {
 			this->type = __AIP_CONDITION_CODE__ | 0x0C;
 			this->_size = 0x08 + 0x05 + sizeof(bool);
 
@@ -581,7 +581,7 @@ struct AICOND_11 {
 				indent ? "\t\t\t" : "", this->needsLessValue());
 			return std::string(buf);
 		}
-		__inline BYTE getAbilityType() const { return this->abilityType; }
+		__inline byte_t getAbilityType() const { return this->abilityType; }
 		__inline long getAbilityValue() const { return this->value; }
 #ifdef __MORE_OR_LESS_DEF__
 		__MORE_OR_LESS_DEF__(Value);
@@ -594,9 +594,9 @@ struct AICOND_12 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		BYTE when;
+		byte_t when;
 	public:
-		AICOND_12(BYTE _when) {
+		AICOND_12(byte_t _when) {
 			this->type = __AIP_CONDITION_CODE__ | 0x0D;
 			this->_size = 0x08 + 0x01;
 
@@ -608,18 +608,18 @@ struct AICOND_12 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getWhen());
 			return std::string(buf);
 		}
-		__inline BYTE getWhen() const { return this->when; }
+		__inline byte_t getWhen() const { return this->when; }
 };
 
 struct AICOND_13 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		BYTE checkTarget;
-		BYTE statusType;
+		byte_t checkTarget;
+		byte_t statusType;
 		bool hasIt;
 	public:
-		AICOND_13(BYTE check, BYTE status, BYTE hasItOrNot) {
+		AICOND_13(byte_t check, byte_t status, byte_t hasItOrNot) {
 			this->type = __AIP_CONDITION_CODE__ | 0x0E;
 			this->_size = 0x08 + 0x02 + sizeof(bool);
 
@@ -635,8 +635,8 @@ struct AICOND_13 {
 				indent ? "\t\t\t" : "", this->needsStatusType());
 			return std::string(buf);
 		}
-		__inline BYTE getTargetCheckType() const { return this->checkTarget; }
-		__inline BYTE getStatusType() const { return this->statusType; }
+		__inline byte_t getTargetCheckType() const { return this->checkTarget; }
+		__inline byte_t getStatusType() const { return this->statusType; }
 		__inline bool needsStatusType() const { return this->hasIt; }
 };
 
@@ -645,14 +645,14 @@ struct AICOND_14 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE variableIdx;
-			DWORD notUsed;
+			byte_t variableIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 		AICOND_14() {}
 	public:
-		AICOND_14(BYTE varIdx, int newValue, BYTE op) {
+		AICOND_14(byte_t varIdx, int newValue, byte_t op) {
 			this->type = __AIP_CONDITION_CODE__ | 0x0F;
 			this->_size = 0x08 + 0x07;
 			
@@ -668,9 +668,9 @@ struct AICOND_14 {
 				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
-		__inline BYTE getVariableIndex() const { return this->variableIdx; }
+		__inline byte_t getVariableIndex() const { return this->variableIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 };
 
 struct AICOND_15 {	
@@ -678,13 +678,13 @@ struct AICOND_15 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE variableIdx;
-			DWORD notUsed;
+			byte_t variableIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 	public:
-		AICOND_15(BYTE varIdx, int newValue, BYTE op) {
+		AICOND_15(byte_t varIdx, int newValue, byte_t op) {
 			this->type = __AIP_CONDITION_CODE__ | 0x10;
 			this->_size = 0x08 + 0x07;
 			
@@ -700,9 +700,9 @@ struct AICOND_15 {
 				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
-		__inline BYTE getVariableIndex() const { return this->variableIdx; }
+		__inline byte_t getVariableIndex() const { return this->variableIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 
 };
 
@@ -711,13 +711,13 @@ struct AICOND_16 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE variableIdx;
-			DWORD notUsed;
+			byte_t variableIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 	public:
-		AICOND_16(BYTE varIdx, int newValue, BYTE op) {
+		AICOND_16(byte_t varIdx, int newValue, byte_t op) {
 			this->type = __AIP_CONDITION_CODE__ | 0x11;
 			this->_size = 0x08 + 0x07;
 			
@@ -733,9 +733,9 @@ struct AICOND_16 {
 				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
-		__inline BYTE getVariableIndex() const { return this->variableIdx; }
+		__inline byte_t getVariableIndex() const { return this->variableIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 
 };
 
@@ -743,9 +743,9 @@ struct AICOND_17 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD npcId;
+		dword_t npcId;
 	public:
-		AICOND_17(DWORD npcType) {
+		AICOND_17(dword_t npcType) {
 			this->type = __AIP_CONDITION_CODE__ | 0x12;
 			this->_size = 0x08 + 0x06;
 
@@ -757,17 +757,17 @@ struct AICOND_17 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getNpcId());
 			return std::string(buf);
 		}
-		__inline DWORD getNpcId() const { return this->npcId; }
+		__inline dword_t getNpcId() const { return this->npcId; }
 };
 
 struct AICOND_18 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
-		BYTE operation;
+		dword_t distance;
+		byte_t operation;
 	public:
-		AICOND_18(DWORD dist, BYTE op) {
+		AICOND_18(dword_t dist, byte_t op) {
 			this->type = __AIP_CONDITION_CODE__ | 0x13;
 			this->_size = 0x08 + 0x05;
 
@@ -782,18 +782,18 @@ struct AICOND_18 {
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 };
 
 struct AICOND_19 {
 	protected:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD startTime;
-		DWORD endTime;
+		dword_t startTime;
+		dword_t endTime;
 		AICOND_19() {}
 	public:
-		AICOND_19(DWORD _startTime, DWORD _endTime) {
+		AICOND_19(dword_t _startTime, dword_t _endTime) {
 			this->type = __AIP_CONDITION_CODE__ | 0x14;
 			this->_size = 0x08 + 0x08;
 
@@ -806,8 +806,8 @@ struct AICOND_19 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStartTime(), this->getEndTime());
 			return std::string(buf);
 		}
-		__inline DWORD getStartTime() const { return this->startTime; }
-		__inline DWORD getEndTime() const { return this->endTime; }
+		__inline dword_t getStartTime() const { return this->startTime; }
+		__inline dword_t getEndTime() const { return this->endTime; }
 };
 
 struct AICOND_20 {
@@ -815,13 +815,13 @@ struct AICOND_20 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE abilityType;
-			DWORD notUsed;
+			byte_t abilityType;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 	public:
-		AICOND_20(BYTE ability, int val, BYTE op) {
+		AICOND_20(byte_t ability, int val, byte_t op) {
 			this->type = __AIP_CONDITION_CODE__ | 0x15;
 			this->_size = 0x08 + 0x06;
 
@@ -837,9 +837,9 @@ struct AICOND_20 {
 				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
-		__inline BYTE getAbilityType() const { return this->abilityType; }
+		__inline byte_t getAbilityType() const { return this->abilityType; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 };
 
 struct AICOND_21 {
@@ -868,10 +868,10 @@ struct AICOND_23 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD startTime;
-		DWORD endTime;
+		dword_t startTime;
+		dword_t endTime;
 	public:
-		AICOND_23(DWORD startTime, DWORD endTime) {
+		AICOND_23(dword_t startTime, dword_t endTime) {
 			this->type = __AIP_CONDITION_CODE__ | 0x18;
 			this->_size = 0x08 + 0x08;
 
@@ -884,23 +884,23 @@ struct AICOND_23 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStartTime(), this->getEndTime());
 			return std::string(buf);
 		}
-		__inline DWORD getStartTime() const { return this->startTime; }
-		__inline DWORD getEndTime() const { return this->endTime; }
+		__inline dword_t getStartTime() const { return this->startTime; }
+		__inline dword_t getEndTime() const { return this->endTime; }
 };
 
 struct AICOND_24 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		BYTE day; //1-31
-		BYTE start[2];
-		BYTE end[2];
+		byte_t day; //1-31
+		byte_t start[2];
+		byte_t end[2];
 		char notUsed[3];
 	public:
-		const static BYTE HOUR_TIME = 0x00;
-		const static BYTE MINUTE_TIME = 0x01;
+		const static byte_t HOUR_TIME = 0x00;
+		const static byte_t MINUTE_TIME = 0x01;
 
-		AICOND_24(BYTE dayNo, BYTE hourStart, BYTE minuteStart, BYTE hourEnd, BYTE minuteEnd) {
+		AICOND_24(byte_t dayNo, byte_t hourStart, byte_t minuteStart, byte_t hourEnd, byte_t minuteEnd) {
 			this->type = __AIP_CONDITION_CODE__ | 0x19;
 			this->_size = 0x08 + 0x05;
 		}
@@ -911,26 +911,26 @@ struct AICOND_24 {
 				indent ? "\t\t\t" : "", this->getHourEnd(), this->getMinuteEnd());
 			return std::string(buf);
 		}
-		__inline BYTE getDay() const { return this->day; }
-		__inline BYTE getHourStart() const { return this->start[AICOND_24::HOUR_TIME]; }
-		__inline BYTE getHourEnd() const { return this->end[AICOND_24::HOUR_TIME]; }
-		__inline BYTE getMinuteStart() const { return this->start[AICOND_24::MINUTE_TIME]; }
-		__inline BYTE getMinuteEnd() const { return this->end[AICOND_24::MINUTE_TIME]; }
+		__inline byte_t getDay() const { return this->day; }
+		__inline byte_t getHourStart() const { return this->start[AICOND_24::HOUR_TIME]; }
+		__inline byte_t getHourEnd() const { return this->end[AICOND_24::HOUR_TIME]; }
+		__inline byte_t getMinuteStart() const { return this->start[AICOND_24::MINUTE_TIME]; }
+		__inline byte_t getMinuteEnd() const { return this->end[AICOND_24::MINUTE_TIME]; }
 };
 
 struct AICOND_25 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		BYTE weekDay; //0-6
-		BYTE start[2];
-		BYTE end[2];
+		byte_t weekDay; //0-6
+		byte_t start[2];
+		byte_t end[2];
 		char notUsed[3];
 	public:
-		const static BYTE HOUR_TIME = 0x00;
-		const static BYTE MINUTE_TIME = 0x01;
+		const static byte_t HOUR_TIME = 0x00;
+		const static byte_t MINUTE_TIME = 0x01;
 
-		AICOND_25(BYTE dayNo, BYTE hourStart, BYTE minuteStart, BYTE hourEnd, BYTE minuteEnd) {
+		AICOND_25(byte_t dayNo, byte_t hourStart, byte_t minuteStart, byte_t hourEnd, byte_t minuteEnd) {
 			this->type = __AIP_CONDITION_CODE__ | 0x1A;
 			this->_size = 0x08 + 0x05;
 			
@@ -948,11 +948,11 @@ struct AICOND_25 {
 				indent ? "\t\t\t" : "", this->getHourEnd(), this->getMinuteEnd());
 			return std::string(buf);
 		}
-		__inline BYTE getWeekday() const { return this->weekDay; }
-		__inline BYTE getHourStart() const { return this->start[AICOND_25::HOUR_TIME]; }
-		__inline BYTE getHourEnd() const { return this->end[AICOND_25::HOUR_TIME]; }
-		__inline BYTE getMinuteStart() const { return this->start[AICOND_25::MINUTE_TIME]; }
-		__inline BYTE getMinuteEnd() const { return this->end[AICOND_25::MINUTE_TIME]; }
+		__inline byte_t getWeekday() const { return this->weekDay; }
+		__inline byte_t getHourStart() const { return this->start[AICOND_25::HOUR_TIME]; }
+		__inline byte_t getHourEnd() const { return this->end[AICOND_25::HOUR_TIME]; }
+		__inline byte_t getMinuteStart() const { return this->start[AICOND_25::MINUTE_TIME]; }
+		__inline byte_t getMinuteEnd() const { return this->end[AICOND_25::MINUTE_TIME]; }
 };
 
 
@@ -960,10 +960,10 @@ struct AICOND_26 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD x;
-		WORD y;
+		word_t x;
+		word_t y;
 	public:
-		AICOND_26(WORD _x, WORD _y) {
+		AICOND_26(word_t _x, word_t _y) {
 			this->type = __AIP_CONDITION_CODE__ | 0x1B;
 			this->_size = 0x08 + 0x04;
 			this->x = _x;
@@ -975,26 +975,26 @@ struct AICOND_26 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getX(), this->getY());
 			return std::string(buf);
 		}
-		__inline WORD getX() const { return this->x; }
-		__inline WORD getY() const { return this->y; }
+		__inline word_t getX() const { return this->x; }
+		__inline word_t getY() const { return this->y; }
 };
 
 struct AICOND_27 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
+		dword_t distance;
 		union {
 			bool isAllied;
-			WORD wIsAllied;
+			word_t wIsAllied;
 		};
 		short levelDiff[2];
-		WORD amount;
-		BYTE operation;
+		word_t amount;
+		byte_t operation;
 	public:	
-		const static BYTE LEVEL_DIFF_START = 0x00;
-		const static BYTE LEVEL_DIFF_END = 0x00;
-		AICOND_27(DWORD dist, BYTE allyFlag, short levelDiffStart, short levelDiffEnd, WORD count, BYTE op) {
+		const static byte_t LEVEL_DIFF_START = 0x00;
+		const static byte_t LEVEL_DIFF_END = 0x00;
+		AICOND_27(dword_t dist, byte_t allyFlag, short levelDiffStart, short levelDiffEnd, word_t count, byte_t op) {
 			this->type = __AIP_CONDITION_CODE__ | 0x1C;
 			this->_size = 0x08 + 0x0C;
 
@@ -1017,23 +1017,23 @@ struct AICOND_27 {
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		__inline bool needsAlly() const { return this->isAllied; }
-		__inline short getLevelDiff(BYTE pos) const { return this->levelDiff[pos % 2]; }
-		__inline WORD getAmount() const { return this->amount; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline short getLevelDiff(byte_t pos) const { return this->levelDiff[pos % 2]; }
+		__inline word_t getAmount() const { return this->amount; }
+		__inline byte_t getOperationType() const { return this->operation; }
 };
 
 struct AICOND_28 {
 	private:
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE varIdx;
-			DWORD notUsed;
+			byte_t varIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 		friend class AIService;
 	public:
-		AICOND_28(BYTE idx, int val, BYTE op) { 
+		AICOND_28(byte_t idx, int val, byte_t op) { 
 			this->type = __AIP_CONDITION_CODE__ | 0x1D;
 			this->_size = 0x08 + 0x07;
 
@@ -1049,18 +1049,18 @@ struct AICOND_28 {
 				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
-		__inline BYTE getVarIndex() const { return this->varIdx; }
+		__inline byte_t getVarIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 };
 
 struct AICOND_29 {
 	private:
 		__BASIC_AI_HEADER__;
-		BYTE targetType;
+		byte_t targetType;
 		friend class AIService;
 	public:
-		AICOND_29(BYTE target_Type) { 
+		AICOND_29(byte_t target_Type) { 
 			this->type = __AIP_CONDITION_CODE__ | 0x1E;
 			this->_size = 0x08 + 0x01;
 
@@ -1072,16 +1072,16 @@ struct AICOND_29 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getTargetType());
 			return std::string(buf);
 		}
-		__inline BYTE getTargetType() const { return this->targetType; }
+		__inline byte_t getTargetType() const { return this->targetType; }
 };
 
 struct AICOND_30 {
 	private:
 		__BASIC_AI_HEADER__;
-		DWORD unknown;
+		dword_t unknown;
 		friend class AIService;
 	public:
-		AICOND_30(DWORD unknownSoFar) { 
+		AICOND_30(dword_t unknownSoFar) { 
 			this->type = __AIP_CONDITION_CODE__ | 0x1F;
 			this->_size = 0x08 + 0x04;
 
@@ -1094,12 +1094,12 @@ struct AICOND_30 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getVariable());
 			return std::string(buf);
 		}
-		__inline DWORD getVariable() const { return this->unknown; }
+		__inline dword_t getVariable() const { return this->unknown; }
 };
 
 struct AIConditions {
 	union {
-		const BYTE *ptr;
+		const byte_t *ptr;
 		const BasicAIP* header;
 		const struct AICOND_00* cond00;
 		const struct AICOND_01* cond01;
@@ -1228,9 +1228,9 @@ struct AIACTION_01 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		BYTE action;
+		byte_t action;
 	public:
-		AIACTION_01(BYTE actionId) {
+		AIACTION_01(byte_t actionId) {
 			this->type = __AIP_ACTION_CODE__ | 0x02;
 			this->_size = 0x08 + 0x01;
 
@@ -1242,15 +1242,15 @@ struct AIACTION_01 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getAction());
 			return std::string(buf);
 		}
-		__inline BYTE getAction() const { return this->action; }
+		__inline byte_t getAction() const { return this->action; }
 };
 struct AIACTION_02 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD stringId;
+		dword_t stringId;
 	public:
-		AIACTION_02(DWORD strId) {
+		AIACTION_02(dword_t strId) {
 			this->type = __AIP_ACTION_CODE__ | 0x03;
 			this->_size = 0x08 + 0x04;
 
@@ -1262,18 +1262,18 @@ struct AIACTION_02 {
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getStringID());
 			return std::string(buf);
 		}
-		__inline DWORD getStringID() const { return this->stringId; }
+		__inline dword_t getStringID() const { return this->stringId; }
 };
 
 struct AIACTION_03 {
 	protected:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
-		BYTE stance;
+		dword_t distance;
+		byte_t stance;
 		AIACTION_03() {}
 	public:
-		AIACTION_03(DWORD dist, BYTE _stance) {
+		AIACTION_03(dword_t dist, byte_t _stance) {
 			this->type = __AIP_ACTION_CODE__ | 0x04;
 			this->_size = 0x08 + 0x05;
 
@@ -1282,23 +1282,23 @@ struct AIACTION_03 {
 		}
 		std::string toString(bool indent = true) const { 
 			char buf[0x60] = {0x00};
-			sprintf(buf, "Move to random position (0x03)\n%s=====\n%sMaxDistance: %f\n%sStance: %i\n", 
+			sprintf(buf, "Move to random position_t (0x03)\n%s=====\n%sMaxDistance: %f\n%sStance: %i\n", 
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getDistance(), 
 				indent ? "\t\t\t" : "", this->getStance());
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		__inline BYTE getStance() const { return this->stance; }
+		__inline byte_t getStance() const { return this->stance; }
 };
 
 struct AIACTION_04 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
-		BYTE stance;
+		dword_t distance;
+		byte_t stance;
 	public:
-		AIACTION_04(DWORD dist, BYTE _stance) {
+		AIACTION_04(dword_t dist, byte_t _stance) {
 			this->type = __AIP_ACTION_CODE__ | 0x05;
 			this->_size = 0x08 + 0x05;
 
@@ -1313,22 +1313,22 @@ struct AIACTION_04 {
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		__inline BYTE getStance() const { return this->stance; }
+		__inline byte_t getStance() const { return this->stance; }
 };
 
 struct AIACTION_05 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		BYTE stance;
+		byte_t stance;
 	public:
-		AIACTION_05(BYTE newStance) {
+		AIACTION_05(byte_t newStance) {
 			this->type = __AIP_ACTION_CODE__ | 0x06;
 			this->_size = 0x08 + 0x01;
 
 			this->stance = newStance;
 		}
-		__inline BYTE getStance() const { return this->stance; }
+		__inline byte_t getStance() const { return this->stance; }
 
 		std::string toString(bool indent = true) const {
 			char buf[0x100] = {0x00};
@@ -1342,11 +1342,11 @@ struct AIACTION_06 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
-		BYTE abilityType;
+		dword_t distance;
+		byte_t abilityType;
 		bool moreOrLess;
 	public:
-		AIACTION_06(DWORD dist, BYTE ability, BYTE isMoreOrLess) {
+		AIACTION_06(dword_t dist, byte_t ability, byte_t isMoreOrLess) {
 			this->type = __AIP_ACTION_CODE__ | 0x07;
 			this->_size = 0x08 + 0x05 + sizeof(bool);
 
@@ -1363,7 +1363,7 @@ struct AIACTION_06 {
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		__inline BYTE getAbilityType() const { return this->abilityType; }
+		__inline byte_t getAbilityType() const { return this->abilityType; }
 #ifdef __MORE_OR_LESS_DEF__
 		__MORE_OR_LESS_DEF__(Ability);
 #else
@@ -1388,10 +1388,10 @@ struct AIACTION_08 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
-		BYTE stance;
+		dword_t distance;
+		byte_t stance;
 	public:
-		AIACTION_08(DWORD dist, BYTE _stance) {
+		AIACTION_08(dword_t dist, byte_t _stance) {
 			this->type = __AIP_ACTION_CODE__ | 0x09;
 			this->_size = 0x08 + 0x05;
 
@@ -1406,23 +1406,23 @@ struct AIACTION_08 {
 			return std::string(buf);
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		__inline BYTE getStance() const { return this->stance; }
+		__inline byte_t getStance() const { return this->stance; }
 };
 
 struct AIACTION_09 {
 	protected:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD monsterId;
+		word_t monsterId;
 		AIACTION_09() { }
 	public:
-		AIACTION_09(WORD monId) {
+		AIACTION_09(word_t monId) {
 			this->type = __AIP_ACTION_CODE__ | 0x0A;
 			this->_size = 0x08 + 0x02;
 
 			this->monsterId = monId;
 		}
-		__inline WORD getMonsterId() const { return this->monsterId; }
+		__inline word_t getMonsterId() const { return this->monsterId; }
 		
 		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
@@ -1436,15 +1436,15 @@ struct AIACTION_10 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD monsterId;
+		word_t monsterId;
 	public:
-		AIACTION_10(WORD monId) { 
+		AIACTION_10(word_t monId) { 
 			this->type = __AIP_ACTION_CODE__ | 0x0B; 
 			this->_size = 0x08 + 0x02;
 			
 			this->monsterId = monId;
 		}
-		__inline WORD getMonsterId() const { return this->monsterId; }
+		__inline word_t getMonsterId() const { return this->monsterId; }
 		
 		std::string toString(bool indent = true) const {
 			char buf[0x40] = {0x00};
@@ -1458,10 +1458,10 @@ struct AIACTION_11 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
-		DWORD numOfMonsters;
+		dword_t distance;
+		dword_t numOfMonsters;
 	public:
-		AIACTION_11(DWORD dist, DWORD numberOfMonsters) { 
+		AIACTION_11(dword_t dist, dword_t numberOfMonsters) { 
 			this->type = __AIP_ACTION_CODE__ | 0x0C;
 			this->_size = 0x08 + 0x08;
 
@@ -1469,7 +1469,7 @@ struct AIACTION_11 {
 			this->numOfMonsters = numberOfMonsters;
 		}
 		__inline float getDistance() const { return this->distance * 100.0f; }
-		__inline DWORD getMonsterAmount() const { return this->numOfMonsters; }
+		__inline dword_t getMonsterAmount() const { return this->numOfMonsters; }
 		
 		std::string toString(bool indent = true) const {
 			char buf[0x50] = {0x00};
@@ -1510,10 +1510,10 @@ struct AIACTION_14 {
 	protected:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
+		dword_t distance;
 		AIACTION_14() {}
 	public:
-		AIACTION_14(DWORD dist) {
+		AIACTION_14(dword_t dist) {
 			this->type = __AIP_ACTION_CODE__ | 0x0F;
 			this->_size = 0x08 + 0x04;
 			this->distance = dist;
@@ -1547,9 +1547,9 @@ struct AIACTION_16 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		DWORD distance;
+		dword_t distance;
 	public:
-		AIACTION_16(DWORD dist) {
+		AIACTION_16(dword_t dist) {
 			this->type = __AIP_ACTION_CODE__ + 0x11;
 			this->_size = 0x08 + 0x04;
 			this->distance = dist;
@@ -1569,17 +1569,17 @@ struct AIACTION_17 {
 		__BASIC_AI_HEADER__;
 		union {
 			struct {
-				WORD itemNo0;
-				WORD itemNo1;
-				WORD itemNo2;
-				WORD itemNo3;
-				WORD itemNo4;
+				word_t itemNo0;
+				word_t itemNo1;
+				word_t itemNo2;
+				word_t itemNo3;
+				word_t itemNo4;
 			};
-			WORD items[5];
+			word_t items[5];
 		};
-		DWORD itemOwner;
+		dword_t itemOwner;
 	public:
-		AIACTION_17(WORD item0, WORD item1, WORD item2, WORD item3, WORD item4) {
+		AIACTION_17(word_t item0, word_t item1, word_t item2, word_t item3, word_t item4) {
 			this->type = __AIP_ACTION_CODE__ | 0x12;
 			this->_size = 0x08 + 0x0A;
 
@@ -1591,7 +1591,7 @@ struct AIACTION_17 {
 
 			this->itemOwner = 0x00;
 		}
-		AIACTION_17(WORD items[5]) {
+		AIACTION_17(word_t items[5]) {
 			this->type = __AIP_ACTION_CODE__ | 0x12;
 			this->_size = 0x08 + 0x0A;
 			for(unsigned int i=0;i<5;i++) {
@@ -1608,21 +1608,21 @@ struct AIACTION_17 {
 			}
 			return std::string(buf);
 		}
-		__inline WORD getItem(const BYTE itemOutOfFive) {
+		__inline word_t getItem(const byte_t itemOutOfFive) {
 			return this->items[itemOutOfFive % 5];
 		}
-		__inline DWORD getItemOwner() const { return this->itemOwner; }
+		__inline dword_t getItemOwner() const { return this->itemOwner; }
 };
 
 struct AIACTION_18 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD monId;
-		WORD monAmount;
-		DWORD distance;
+		word_t monId;
+		word_t monAmount;
+		dword_t distance;
 	public:
-		AIACTION_18(WORD monsterId, WORD monsterAmount, DWORD dist) {
+		AIACTION_18(word_t monsterId, word_t monsterAmount, dword_t dist) {
 			this->type = __AIP_ACTION_CODE__ | 0x13;
 			this->_size = 0x08 + 0x08;
 
@@ -1630,8 +1630,8 @@ struct AIACTION_18 {
 			this->monAmount = monAmount;
 			this->distance = dist;
 		}
-		__inline WORD getMonsterId() const { return this->monId; }
-		__inline WORD getMonsterAmount() const { return this->monAmount; }
+		__inline word_t getMonsterId() const { return this->monId; }
+		__inline word_t getMonsterAmount() const { return this->monAmount; }
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		
 		std::string toString(bool indent = true) const {
@@ -1664,17 +1664,17 @@ struct AIACTION_20 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD monId;
+		word_t monId;
 		union {
-			BYTE positionType;
-			WORD notUsed;
+			byte_t positionType;
+			word_t notUsed;
 		};
-		DWORD distance;
+		dword_t distance;
 	public:
-		const static BYTE CURRENT_POSITION = 0x00;
-		const static BYTE DESIGNATED_TARGET_POSITION = 0x01;
-		const static BYTE TARGET_POSITION = 0x02;
-		AIACTION_20(WORD monsterId, BYTE posType, DWORD dist) {
+		const static byte_t CURRENT_POSITION = 0x00;
+		const static byte_t DESIGNATED_TARGET_POSITION = 0x01;
+		const static byte_t TARGET_POSITION = 0x02;
+		AIACTION_20(word_t monsterId, byte_t posType, dword_t dist) {
 			this->type = __AIP_ACTION_CODE__ | 0x15;
 			this->_size = 0x08 + 0x08;
 
@@ -1682,12 +1682,12 @@ struct AIACTION_20 {
 			this->positionType = posType;
 			this->distance = dist;
 		}
-		__inline WORD getMonsterId() const { return this->monId; }
-		__inline WORD getPositionType() const { return this->positionType; }
+		__inline word_t getMonsterId() const { return this->monId; }
+		__inline word_t getPositionType() const { return this->positionType; }
 		__inline float getDistance() const { return this->distance * 100.0f; }
 		std::string toString(bool indent = true) const {
 			char buf[0xA0] = {0x00};
-			sprintf(buf, "Spawn Slave at Position (0x14)\n%s=====\n%sMonTypeId: %i\n%sPositionType: %i\n%sMaxDistance: %f\n",
+			sprintf(buf, "Spawn Slave at position_t (0x14)\n%s=====\n%sMonTypeId: %i\n%sPositionType: %i\n%sMaxDistance: %f\n",
 				indent ? "\t\t\t" : "", indent ? "\t\t\t" : "", this->getMonsterId(), 
 				indent ? "\t\t\t" : "", this->getPositionType(),
 				indent ? "\t\t\t" : "", this->getDistance());
@@ -1740,19 +1740,19 @@ struct AIACTION_24 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE targetType;
-			WORD notUsed;
+			byte_t targetType;
+			word_t notUsed;
 		};
-		WORD skillId;
+		word_t skillId;
 		union {
-			WORD motion;
-			DWORD notUsed2;
+			word_t motion;
+			dword_t notUsed2;
 		};
 	public:
-		const static BYTE FOUND_TARGET = 0x00;
-		const static BYTE PREVIOUS_TARGET = 0x01;
-		const static BYTE SELF_TARGET = 0x02;
-		AIACTION_24(BYTE targetType, WORD skillID, WORD motionId) {
+		const static byte_t FOUND_TARGET = 0x00;
+		const static byte_t PREVIOUS_TARGET = 0x01;
+		const static byte_t SELF_TARGET = 0x02;
+		AIACTION_24(byte_t targetType, word_t skillID, word_t motionId) {
 			this->type = __AIP_ACTION_CODE__ | 0x19;
 			this->_size = 0x08 + 0x05;
 
@@ -1760,9 +1760,9 @@ struct AIACTION_24 {
 			this->skillId = skillID;
 			this->motion = motionId;
 		}
-		__inline BYTE getTargetType() const { return this->targetType; }
-		__inline WORD getSkillId() const { return this->skillId; }
-		__inline WORD getMotion() const { return this->motion; }
+		__inline byte_t getTargetType() const { return this->targetType; }
+		__inline word_t getSkillId() const { return this->skillId; }
+		__inline word_t getMotion() const { return this->motion; }
 		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
 			sprintf(buf, "Cast Skill (0x18)\n%s=====\n%sTargetType: %i\n%sSkillId: %i\n%sMotion: %i\n",
@@ -1777,13 +1777,13 @@ struct AIACTION_25 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE varIdx;
-			DWORD notUsed;
+			byte_t varIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 	public:
-		AIACTION_25(BYTE varIndex, int val, BYTE op) { 
+		AIACTION_25(byte_t varIndex, int val, byte_t op) { 
 			this->type = __AIP_ACTION_CODE__ | 0x1A; 
 			this->_size = 0x08 + 0x07;
 			
@@ -1791,9 +1791,9 @@ struct AIACTION_25 {
 			this->value = val;
 			this->operation = op;
 		}
-		__inline BYTE getVariableIndex() const { return this->varIdx; }
+		__inline byte_t getVariableIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
 			sprintf(buf, "Set NPC Variable (0x19)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
@@ -1808,13 +1808,13 @@ struct AIACTION_26 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE varIdx;
-			DWORD notUsed;
+			byte_t varIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 	public:
-		AIACTION_26(BYTE varIndex, int val, BYTE op) { 
+		AIACTION_26(byte_t varIndex, int val, byte_t op) { 
 			this->type = __AIP_ACTION_CODE__ | 0x1B; 
 			this->_size = 0x08 + 0x07;
 			
@@ -1822,9 +1822,9 @@ struct AIACTION_26 {
 			this->value = val;
 			this->operation = op;
 		}
-		__inline BYTE getVariableIndex() const { return this->varIdx; }
+		__inline byte_t getVariableIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
 			sprintf(buf, "Set World Variable (0x1A)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
@@ -1839,13 +1839,13 @@ struct AIACTION_27 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE varIdx;
-			DWORD notUsed;
+			byte_t varIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 	public:
-		AIACTION_27(BYTE varIndex, int val, BYTE op) { 
+		AIACTION_27(byte_t varIndex, int val, byte_t op) { 
 			this->type = __AIP_ACTION_CODE__ | 0x1B; 
 			this->_size = 0x08 + 0x07;
 			
@@ -1853,9 +1853,9 @@ struct AIACTION_27 {
 			this->value = val;
 			this->operation = op;
 		}
-		__inline BYTE getVariableIndex() const { return this->varIdx; }
+		__inline byte_t getVariableIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
 			sprintf(buf, "Set Economy Variable (0x1B)\n%s=====\n%sVarIdx: %i\n%sValue: %i\n%sOperation: %s\n",
@@ -1871,23 +1871,23 @@ struct AIACTION_28 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE messageType; //0 = normal, 1 = shout, 2 = announce (?)
-			DWORD notUsed;
+			byte_t messageType; //0 = normal, 1 = shout, 2 = announce (?)
+			dword_t notUsed;
 		};
-		DWORD messageId;
+		dword_t messageId;
 	public:
-		const static BYTE LOCAL_CHAT = 0x00;
-		const static BYTE SHOUT_CHAT = 0x01;
-		const static BYTE ANNOUNCE_CHAT = 0x02;
-		AIACTION_28(BYTE msgType, DWORD msgId) { 
+		const static byte_t LOCAL_CHAT = 0x00;
+		const static byte_t SHOUT_CHAT = 0x01;
+		const static byte_t ANNOUNCE_CHAT = 0x02;
+		AIACTION_28(byte_t msgType, dword_t msgId) { 
 			this->type = __AIP_ACTION_CODE__ | 0x1D;
 			this->_size = 0x08 + 0x05;
 
 			this->messageType = msgType;
 			this->messageId = msgId;
 		}
-		__inline BYTE getMessageType() const { return this->messageType; }
-		__inline DWORD getMessageId() const { return this->messageId; }
+		__inline byte_t getMessageType() const { return this->messageType; }
+		__inline dword_t getMessageId() const { return this->messageId; }
 		std::string toString(bool indent = true) const {
 			char buf[0x60] = {0x00};
 			sprintf(buf, "Say Message (0x1C)\n%s=====\n%sMessageType: %i\n%sMessageId: %i\n",
@@ -1918,8 +1918,8 @@ struct AIACTION_30 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE length;
-			WORD len;
+			byte_t length;
+			word_t len;
 		};
 		char triggerName[128];
 	public:
@@ -1961,17 +1961,17 @@ struct AIACTION_32 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD mapId;
+		word_t mapId;
 		bool offOrOn;
 	public:
-		AIACTION_32(WORD map, BYTE setOffOrOn) {
+		AIACTION_32(word_t map, byte_t setOffOrOn) {
 			this->type = __AIP_ACTION_CODE__ | 0x21;
 			this->_size = 0x08 + 0x02 + sizeof(bool);
 
 			this->mapId = map;
 			this->offOrOn = (setOffOrOn > 0 ? true : false);
 		}
-		__inline WORD getMapId() const { return this->mapId; }
+		__inline word_t getMapId() const { return this->mapId; }
 		__inline bool setOn() const { return this->offOrOn; }
 		__inline bool setOff() const { return !this->setOn(); }
 
@@ -2001,10 +2001,10 @@ struct AIACTION_34 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD itemNum;
-		WORD amount;
+		word_t itemNum;
+		word_t amount;
 	public:
-		AIACTION_34(WORD itemNo, WORD count) {
+		AIACTION_34(word_t itemNo, word_t count) {
 			this->type = __AIP_ACTION_CODE__ | 0x23;
 			this->_size = 0x08 + 0x04;
 
@@ -2018,8 +2018,8 @@ struct AIACTION_34 {
 				indent ? "\t\t\t" : "", this->getAmount());
 			return std::string(buf);
 		}
-		__inline WORD getItemNum() const { return this->itemNum; }
-		__inline WORD getAmount() const { return this->amount; }
+		__inline word_t getItemNum() const { return this->itemNum; }
+		__inline word_t getAmount() const { return this->amount; }
 };
 
 struct AIACTION_35 {
@@ -2027,13 +2027,13 @@ struct AIACTION_35 {
 		friend class AIService;
 		__BASIC_AI_HEADER__;
 		union {
-			BYTE varIdx;
-			DWORD notUsed;
+			byte_t varIdx;
+			dword_t notUsed;
 		};
 		int value;
-		BYTE operation;
+		byte_t operation;
 	public:
-		AIACTION_35(BYTE idx, int val, BYTE op) {
+		AIACTION_35(byte_t idx, int val, byte_t op) {
 			this->type = __AIP_ACTION_CODE__ | 0x24;
 			this->_size = 0x08 + 0x07;
 
@@ -2049,19 +2049,19 @@ struct AIACTION_35 {
 				indent ? "\t\t\t" : "", OperationService::operationName(this->getOperationType()));
 			return std::string(buf);
 		}
-		__inline BYTE getVariableIndex() const { return this->varIdx; }
+		__inline byte_t getVariableIndex() const { return this->varIdx; }
 		__inline int getValue() const { return this->value; }
-		__inline BYTE getOperationType() const { return this->operation; }
+		__inline byte_t getOperationType() const { return this->operation; }
 };
 
 struct AIACTION_36 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD monId;
-		BYTE assignMaster;
+		word_t monId;
+		byte_t assignMaster;
 	public:
-		AIACTION_36(WORD monId, BYTE assign) {
+		AIACTION_36(word_t monId, byte_t assign) {
 			this->type = __AIP_ACTION_CODE__ | 0x25;
 			this->_size = 0x08 + 0x03;
 
@@ -2075,20 +2075,20 @@ struct AIACTION_36 {
 				indent ? "\t\t\t" : "", this->getAssignMaster());
 			return std::string(buf);
 		}
-		__inline WORD getMonsterId() const { return this->monId; }
-		__inline BYTE getAssignMaster() const { return this->assignMaster; }
+		__inline word_t getMonsterId() const { return this->monId; }
+		__inline byte_t getAssignMaster() const { return this->assignMaster; }
 };
 
 struct AIACTION_37 {
 	private:
 		friend class AIService;
 		__BASIC_AI_HEADER__;
-		WORD monId;
-		WORD positionType;
-		DWORD distance;
-		BYTE assignMaster;
+		word_t monId;
+		word_t positionType;
+		dword_t distance;
+		byte_t assignMaster;
 	public:
-		AIACTION_37(WORD monId, WORD posType, DWORD dist, BYTE assign) {
+		AIACTION_37(word_t monId, word_t posType, dword_t dist, byte_t assign) {
 			this->type = __AIP_ACTION_CODE__ | 0x26;
 			this->_size = 0x08 + 0x03;
 
@@ -2106,15 +2106,15 @@ struct AIACTION_37 {
 				indent ? "\t\t\t" : "", this->getAssignMaster());
 			return std::string(buf);
 		}
-		__inline WORD getMonsterId() const { return this->monId; }
-		__inline BYTE getAssignMaster() const { return this->assignMaster; }
-		__inline WORD getPositionType() const { return this->positionType; }
+		__inline word_t getMonsterId() const { return this->monId; }
+		__inline byte_t getAssignMaster() const { return this->assignMaster; }
+		__inline word_t getPositionType() const { return this->positionType; }
 		__inline float getDistance() const { return this->distance * 100.0f; }
 };
 
 struct AIActions {
 	union {
-		const BYTE *ptr;
+		const byte_t *ptr;
 		const BasicAIP* header;
 		const AIACTION_00* act00;
 		const AIACTION_01* act01;
@@ -2248,7 +2248,7 @@ struct AIActions {
 
 class AIP {
 	public:
-		const static BYTE MAX_BLOCKS = 0x06;
+		const static byte_t MAX_BLOCKS = 0x06;
 		struct Record {
 			private:
 				friend class AIP;
@@ -2272,25 +2272,25 @@ class AIP {
 				__inline const Trackable<char>& getAction(const size_t pos) const {
 					return this->actions.at(pos);
 				}
-				__inline const DWORD getConditionCount() const { return this->conditions.size(); }
-				__inline const DWORD getActionCount() const { return this->actions.size(); }
+				__inline const dword_t getConditionCount() const { return this->conditions.size(); }
+				__inline const dword_t getActionCount() const { return this->actions.size(); }
 		};
 	private:
 		struct Block {
 			std::vector<AIP::Record> records;
 		} blocks[MAX_BLOCKS];
-		WORD id;
+		word_t id;
 		std::string filePath;
-		DWORD checkInterval;
-		DWORD damageAmountTrigger; //Or Damage dealt/received?
+		dword_t checkInterval;
+		dword_t damageAmountTrigger; //Or Damage dealt/received?
 		template<class FileType> void loadFrom(FileType& file);
 	public:
-		const static BYTE ON_SPAWN = 0x00;
-		const static BYTE ON_IDLE = 0x01;
-		const static BYTE ON_ATTACK = 0x02;
-		const static BYTE ON_DAMAGED = 0x03;
-		const static BYTE ON_ENEMY_DEATH = 0x04;
-		const static BYTE ON_SELF_DEATH = 0x05;
+		const static byte_t ON_SPAWN = 0x00;
+		const static byte_t ON_IDLE = 0x01;
+		const static byte_t ON_ATTACK = 0x02;
+		const static byte_t ON_DAMAGED = 0x03;
+		const static byte_t ON_ENEMY_DEATH = 0x04;
+		const static byte_t ON_SELF_DEATH = 0x05;
 
 		AIP() {
 			this->checkInterval = 0x00;
@@ -2299,21 +2299,21 @@ class AIP {
 			this->id = 0x00;
 		}
 #ifdef __ROSE_USE_VFS__
-		AIP(const WORD id, VFSData& data);
+		AIP(const word_t id, VFSData& data);
 #else
-		AIP(const WORD id, const char* fileName);
+		AIP(const word_t id, const char* fileName);
 #endif
 		~AIP();
 
-		__inline WORD getId() const { return this->id; }
-		__inline BYTE getBlockCount() const { return AIP::MAX_BLOCKS; }
-		__inline DWORD getRecordCount(BYTE blockId) const { return this->blocks[blockId % this->getBlockCount()].records.size(); }
-		__inline const std::vector<AIP::Record>& getRecords(const BYTE blockId) const {
+		__inline word_t getId() const { return this->id; }
+		__inline byte_t getBlockCount() const { return AIP::MAX_BLOCKS; }
+		__inline dword_t getRecordCount(byte_t blockId) const { return this->blocks[blockId % this->getBlockCount()].records.size(); }
+		__inline const std::vector<AIP::Record>& getRecords(const byte_t blockId) const {
 			return this->blocks[blockId % this->getBlockCount()].records;
 		}
 		__inline std::string getFilePath() const { return std::string(this->filePath); }
-		__inline DWORD getCheckInterval() const { return this->checkInterval; }
-		__inline DWORD getTriggerDamageAmount() const { return this->damageAmountTrigger; }
+		__inline dword_t getCheckInterval() const { return this->checkInterval; }
+		__inline dword_t getTriggerDamageAmount() const { return this->damageAmountTrigger; }
 };
 
 #endif //__ROSE_AIP__

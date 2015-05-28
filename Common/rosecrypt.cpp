@@ -29,7 +29,7 @@ struct CryptBuffer
 };
 
 //-------------------------------------------------------------------------
-// This table is used to calculate a checksum (size of 256 bytes)
+// This table is used to calculate a checksum (size of 256 byte_ts)
 //-------------------------------------------------------------------------
 const unsigned char CheckSumTable[] =
 "\x00\x5E\xBC\xE2\x61\x3F\xDD\x83\xC2\x9C\x7E\x20\xA3\xFD\x1F\x41"
@@ -275,8 +275,8 @@ void FreeCryptTables(CryptTable* &CryptTables)
 }
 
 //-------------------------------------------------------------------------
-// This function decrypts a received 6-byte buffer and returns the full
-// size of the incoming packet (including this 6-byte header).
+// This function decrypts a received 6-byte_t buffer and returns the full
+// size of the incoming packet (including this 6-byte_t header).
 // If the buffer is incorrect, this function returns a zero.
 //-------------------------------------------------------------------------
 int DecryptBufferHeader(CryptStatus *ri, CryptTable *CryptTables, unsigned char *Buffer)
@@ -370,7 +370,7 @@ bool DecryptBufferData(CryptTable *CryptTables, unsigned char *Buffer)
 
 //-------------------------------------------------------------------------
 // This functions will encrypt a buffer. The buffer must have at least a
-// size of 6 bytes. The first two bytes must be the size of the buffer.
+// size of 6 byte_ts. The first two byte_ts must be the size of the buffer.
 //-------------------------------------------------------------------------
 void EncryptBuffer(CryptTable *CryptTables, unsigned char *Buffer)
 {
@@ -448,7 +448,7 @@ bool CryptISCPak(unsigned char* pak)
 int buildChecksum(char* csum, char* path)
 {
 	char buf[0x200];
-	int bytesread = 0;
+	int byte_tsread = 0;
 	FILE* fh;
 
 	if (path == 0) path = "TRose.exe";
@@ -456,10 +456,10 @@ int buildChecksum(char* csum, char* path)
 	if (fh == nullptr) return -1;
 
 	fseek(fh, -512, SEEK_END);
-	bytesread = fread(buf, 1, 0x200, fh);
+	byte_tsread = fread(buf, 1, 0x200, fh);
 	fclose(fh);
 
-	if (bytesread != 0x200) return -2;
+	if (byte_tsread != 0x200) return -2;
 
 	short keylen = buf[0x0f];
 	char* key = new char[keylen + 1];
@@ -558,7 +558,7 @@ struct CryptBuffer
 };
 
 //-------------------------------------------------------------------------
-// This table is used to calculate a checksum (size of 256 bytes)
+// This table is used to calculate a checksum (size of 256 byte_ts)
 //-------------------------------------------------------------------------
 const unsigned char CheckSumTable[] =
   "\x00\x5E\xBC\xE2\x61\x3F\xDD\x83\xC2\x9C\x7E\x20\xA3\xFD\x1F\x41"
@@ -804,8 +804,8 @@ void FreeCryptTables( CryptTable* &CryptTables )
 }
 
 //-------------------------------------------------------------------------
-// This function decrypts a received 6-byte buffer and returns the full
-// size of the incoming packet (including this 6-byte header).
+// This function decrypts a received 6-byte_t buffer and returns the full
+// size of the incoming packet (including this 6-byte_t header).
 // If the buffer is incorrect, this function returns a zero.
 //-------------------------------------------------------------------------
 int DecryptBufferHeader( CryptStatus *ri, CryptTable *CryptTables, unsigned char *Buffer )
@@ -899,7 +899,7 @@ bool DecryptBufferData( CryptTable *CryptTables, unsigned char *Buffer )
 
 //-------------------------------------------------------------------------
 // This functions will encrypt a buffer. The buffer must have at least a
-// size of 6 bytes. The first two bytes must be the size of the buffer.
+// size of 6 byte_ts. The first two byte_ts must be the size of the buffer.
 //-------------------------------------------------------------------------
 void EncryptBuffer( CryptTable *CryptTables, unsigned char *Buffer )
 {
@@ -977,7 +977,7 @@ bool CryptISCPak( unsigned char* pak )
 int buildChecksum(char* csum, char* path)
 {
 	char buf[0x200];
-	int bytesread=0;
+	int byte_tsread=0;
 	FILE* fh;
 
 	if (path==0) path = "TRose.exe";
@@ -985,10 +985,10 @@ int buildChecksum(char* csum, char* path)
 	if ( fh == nullptr ) return -1;
 
 	fseek(fh, -512, SEEK_END);
-	bytesread = fread(buf, 1, 0x200, fh);
+	byte_tsread = fread(buf, 1, 0x200, fh);
 	fclose(fh);
 
-	if (bytesread!=0x200) return -2;
+	if (byte_tsread!=0x200) return -2;
 
 	short keylen = buf[0x0f];
 	char* key = new char[keylen+1];

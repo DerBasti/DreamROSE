@@ -4,6 +4,7 @@
 #define __ROSE_CHAR_CLIENT__
 
 #include "..\Common\ClientSocket.h"
+#include "D:\Programmieren\QuickInfos\LinkedList.h"
 
 struct Item {
 	DWORD owner;

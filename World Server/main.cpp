@@ -4,29 +4,43 @@
 #include "FileTypes\ZMO.h"
 #include "FileTypes\VFS.h"
 #include "FileTypes\QSD.h"
+#include "D:\Programmieren\GlobalLogger\GlobalLogger.h"
+#include "D:\Programmieren\Better_GUI\GUILabel.h"
+#include "D:\Programmieren\Better_GUI\GUIButton.h"
 
 #pragma comment(lib, "DbgHelp.lib")
 
-int main() {
+void startServer() {
 	MYSQL mySQL;
+	clock_t startTime = clock();
 	WorldServer server(29200, &mySQL);
+	GlobalLogger& logger = GlobalLogger::getLogger();
 	server.loadEncryption();
-	
-	if(config->getValueBool("DumpQuests")) {
-		std::cout << "Dumping Quests...\r";
-		server.dumpQuest((::workingPath + "\\QUEST_DUMP\\").c_str(), config->getValueBool("UseQuestNames") );
-		std::cout << "Dumping Quests finished!\n";
+	logger.info("Startup took %i seconds\n", (clock() - startTime) / 1000);
+	if (config->getValueBool("DumpQuests")) {
+		logger.info("Dumping Quests...\n");
+		logger.debug("Output folder: %s", (::workingPath + "\\QUEST_DUMP\\").c_str());
+		server.dumpQuest((::workingPath + "\\QUEST_DUMP\\").c_str(), config->getValueBool("UseQuestNames"));
+		logger.info("Dumping Quests finished!\n");
 	}
 	if (config->getValueBool("DumpAI")) {
-		std::cout << "Dumping AI...\r";
+		logger.info("Dumping AI...\n");
+		logger.debug("Output folder: %s", (::workingPath + "\\AI\\").c_str());
 		server.dumpAISeparated((::workingPath + "\\AI\\"));
-		std::cout << "Dumping AI finished!\n";
+		logger.info("Dumping AI finished!\n");
 	}
 	if (config->getValueBool("DumpTelegates")) {
-		std::cout << "Dumping Telegates...\r";
+		logger.info("Dumping Telegates...\n");
+		logger.debug("Output folder: %s", (::workingPath + "\\Telegates.log").c_str());
 		server.dumpTelegates((::workingPath + "\\Telegates.log").c_str());
-		std::cout << "Dumping Telegates finished!\n";
+		logger.info("Dumping Telegates finished!\n");
 	}
-	server.start();
-	return 0x00;
+	if (!server.start()) {
+		logger.fatal("Could not start the server!\n");
+	}
+}
+
+int main() {
+	startServer();
+	return 0;
 }

@@ -4,6 +4,9 @@
 #define __ROSE_ENTITY__
 
 #include "..\Structures.h"
+#include "..\Map.h"
+
+#undef max
 
 class Monster;
 class NPC;
@@ -15,18 +18,41 @@ private:
 	EntitySpawnsVisually();
 	~EntitySpawnsVisually();
 public:
-	const static BYTE IS_MOVING = 0x01;
-	const static BYTE IS_ATTACKING = 0x02;
-	const static BYTE IS_DEAD = 0x03;
-	const static BYTE IS_STANDING = 0x00;
+	const static byte_t IS_MOVING = 0x01;
+	const static byte_t IS_ATTACKING = 0x02;
+	const static byte_t IS_DEAD = 0x03;
+	const static byte_t IS_STANDING = 0x00;
 
-	const static BYTE STANCE_WALKING = 0x00;
-	const static BYTE STANCE_RUNNING = 0x01;
-	const static BYTE STANCE_DRIVING = 0x02;
-	const static BYTE STANCE_HITCHHIKER = 0x04;
+	const static byte_t STANCE_WALKING = 0x00;
+	const static byte_t STANCE_RUNNING = 0x01;
+	const static byte_t STANCE_DRIVING = 0x02;
+	const static byte_t STANCE_HITCHHIKER = 0x04;
 
-	const static BYTE IS_FRIENDLY = 0x02;
-	const static BYTE IS_ENEMY = 0x51;
+	const static byte_t IS_FRIENDLY = 0x02;
+	const static byte_t IS_ENEMY = 0x51;
+};
+
+struct _entityInfo {
+	word_t id;
+	bool ingame;
+	word_t mapId;
+	Map::Sector* nearestSector;		//not in use, yet
+	bool needsVisualityUpdate;
+	byte_t type;
+	_entityInfo() {
+		this->id = this->mapId = 0x00;
+		this->ingame = false;
+		this->needsVisualityUpdate = false;
+		this->nearestSector = nullptr;
+		this->type = std::numeric_limits<BYTE>::max();
+	}
+	__inline word_t getId() const { return this->id; }
+	__inline bool isIngame() const { return this->ingame; }
+	__inline word_t getMapId() const { return this->mapId; }
+	__inline void setMapId(const word_t newId) { this->mapId = newId; }
+	__inline Map::Sector* getSector() const { return this->nearestSector; }
+	void setSector(Map::Sector* newSector) { this->nearestSector = newSector; }
+	__inline byte_t getType() const { return this->type; }
 };
 
 class Entity {
@@ -34,9 +60,9 @@ class Entity {
 		Stats stats;
 		Status status;
 		struct _posStruct {
-			Position current;
-			Position destination;
-			Position source;
+			position_t current;
+			position_t destination;
+			position_t source;
 			clock_t lastCheckTime;
 			clock_t lastSectorCheckTime;
 
@@ -47,22 +73,31 @@ class Entity {
 		} position;
 		_entityInfo entityInfo;
 		Combat combat;
+		Animation animation;
 
-		UniqueSortedList<DWORD, MapSector*> visibleSectors;
-		virtual bool setPositionVisually(const Position& pos) { return true; }
+		UniqueSortedList<DWORD, Map::Sector*> visibleSectors;
+		virtual bool setPositionVisually(const position_t& pos) { return true; }
 
-		virtual void addSectorVisually(MapSector* newSector);
-		virtual void removeSectorVisually(MapSector* toRemove);
+		virtual void addSectorVisually(Map::Sector* newSector);
+		virtual void removeSectorVisually(Map::Sector* toRemove);
 		
 		virtual void addEntityVisually(Entity* entity) { }
 		virtual void removeEntityVisually(Entity* entity) { if(this->getTarget() == entity) this->setTarget(nullptr); }
 
 		virtual bool attackEnemy();
 	public:
-		const static BYTE TYPE_PLAYER = 0x00;
-		const static BYTE TYPE_NPC = 0x01;
-		const static BYTE TYPE_MONSTER = 0x02;
-		const static BYTE TYPE_DROP = 0x03;
+		const static byte_t TYPE_PLAYER = 0x00;
+		const static byte_t TYPE_NPC = 0x01;
+		const static byte_t TYPE_MONSTER = 0x02;
+		const static byte_t TYPE_DROP = 0x03;
+
+		class Movement {
+			public:
+				const static byte_t IDLE = 0x00;
+				const static byte_t IS_MOVING = 0x01;
+				const static byte_t INITIAL_ATTACK = 0x02;
+				const static byte_t TARGET_REACHED = 0x04;
+		};
 		
 		Entity();
 		virtual ~Entity();
@@ -87,45 +122,49 @@ class Entity {
 			this->updateCritrate();
 			this->updateMovementSpeed();
 		}
-		__inline virtual BYTE getEntityType() const { return this->entityInfo.getType(); }
+		__inline virtual byte_t getEntityType() const { return this->entityInfo.getType(); }
+		void runAnimationUpToCurrentTime();
 
-		__inline UniqueSortedList<DWORD, MapSector*> getVisibleSectors() const { return this->visibleSectors; }
+		__inline UniqueSortedList<DWORD, Map::Sector*> getVisibleSectors() const { return this->visibleSectors; }
+		bool isVisible(const word_t localId) const;
+		bool isVisible(const Entity* entity) const;
+		Entity* getVisibleEntity(const word_t localId) const;
 		
-		__inline virtual WORD getCurrentHP() const { return this->stats.getCurrentHP(); }
-		__inline virtual WORD getCurrentMP() const { return this->stats.getCurrentMP(); }
-		__inline virtual void setCurrentHP(DWORD newHP) { this->stats.curHP = static_cast<WORD>(std::min(newHP, this->stats.getMaxHP())); }
-		__inline virtual void setCurrentMP(DWORD newMP) { this->stats.curMP = static_cast<WORD>(std::min(newMP, this->stats.getMaxMP())); }
+		__inline virtual word_t getCurrentHP() const { return this->stats.getCurrentHP(); }
+		__inline virtual word_t getCurrentMP() const { return this->stats.getCurrentMP(); }
+		__inline virtual void setCurrentHP(dword_t newHP) { this->stats.curHP = static_cast<WORD>(newHP < this->stats.getMaxHP() ? newHP : this->stats.getMaxHP()); }
+		__inline virtual void setCurrentMP(dword_t newMP) { this->stats.curMP = static_cast<WORD>(newMP < this->stats.getMaxMP() ? newMP : this->stats.getMaxMP()); }
 
-		__inline virtual DWORD getMaxHP() const { return this->stats.getMaxHP(); }
-		__inline virtual DWORD getMaxMP() const { return this->stats.getMaxMP(); }
+		__inline virtual dword_t getMaxHP() const { return this->stats.getMaxHP(); }
+		__inline virtual dword_t getMaxMP() const { return this->stats.getMaxMP(); }
 		
-		__inline virtual BYTE getPercentHP() { return static_cast<BYTE>(static_cast<float>(this->getCurrentHP() * 100.0f) / static_cast<float>(this->getMaxHP())); }		
+		__inline virtual byte_t getPercentHP() { return static_cast<BYTE>(static_cast<float>(this->getCurrentHP() * 100.0f) / static_cast<float>(this->getMaxHP())); }		
 
-		__inline virtual WORD getAttackPower() const { return this->stats.getAttackPower(); }
-		__inline virtual WORD getAttackSpeed() const { return this->stats.getAttackSpeed(); }
-		virtual float getAttackRange() { return 100.0f; } //1meter
-		__inline virtual WORD getDefensePhysical() const { return this->stats.getDefensePhysical(); }
-		__inline virtual WORD getDefenseMagical() const { return this->stats.getDefenseMagical(); }
-		__inline virtual WORD getHitrate() const { return this->stats.getHitrate(); }
-		__inline virtual WORD getDodgerate() const { return this->stats.getDodgerate(); }
-		__inline virtual WORD getMovementSpeed() const { return this->stats.getMovementSpeed(); }
-		__inline virtual WORD getStamina() const { return this->stats.getStamina(); }
+		__inline virtual word_t getAttackPower() const { return this->stats.getAttackPower(); }
+		__inline virtual word_t getAttackSpeed() const { return this->stats.getAttackSpeed(); }
+		virtual float getAttackRange() const { return 100.0f; } //1meter
+		__inline virtual word_t getDefensePhysical() const { return this->stats.getDefensePhysical(); }
+		__inline virtual word_t getDefenseMagical() const { return this->stats.getDefenseMagical(); }
+		__inline virtual word_t getHitrate() const { return this->stats.getHitrate(); }
+		__inline virtual word_t getDodgerate() const { return this->stats.getDodgerate(); }
+		__inline virtual word_t getMovementSpeed() const { return this->stats.getMovementSpeed(); }
+		__inline virtual word_t getStamina() const { return this->stats.getStamina(); }
 
 		__inline virtual Stance getStance() const { return this->status.getStance(); }
-		__inline virtual void setStance(const BYTE newStance) { 
+		__inline virtual void setStance(const byte_t newStance) { 
 			this->status.setStance(newStance); 
 			this->updateMovementSpeed();
 		}
 
-		__inline virtual BYTE getLevel() const { return 0; }
+		__inline virtual byte_t getLevel() const { return 0; }
 
-		__inline virtual WORD getStrength() const { return 0; }
-		__inline virtual WORD getDexterity() const { return 0; }
-		__inline virtual WORD getIntelligence() const { return 0; }
-		__inline virtual WORD getConcentration() const { return 0; }		
-		__inline virtual WORD getCharm() const { return 0; }
-		__inline virtual WORD getSensibility() const { return 0; }
-		template<class _Ty> _Ty getStatType(const WORD statType) {
+		__inline virtual word_t getStrength() const { return 0; }
+		__inline virtual word_t getDexterity() const { return 0; }
+		__inline virtual word_t getIntelligence() const { return 0; }
+		__inline virtual word_t getConcentration() const { return 0; }		
+		__inline virtual word_t getCharm() const { return 0; }
+		__inline virtual word_t getSensibility() const { return 0; }
+		template<class _Ty> _Ty getStatType(const word_t statType) {
 			_Ty result = 0;
 			switch (statType) {
 				case StatType::ATTACK_POWER:
@@ -175,7 +214,7 @@ class Entity {
 				return result;
 			return _Ty(this->getSpecialStatType(statType));
 		}
-		virtual DWORD getSpecialStatType(const WORD statType) { return 0; }
+		virtual dword_t getSpecialStatType(const word_t statType) { return 0; }
 
 		__inline virtual float getCurrentX() const { return this->position.current.x; }
 		__inline virtual float getCurrentY() const { return this->position.current.y; }
@@ -185,23 +224,20 @@ class Entity {
 
 		__inline virtual std::string getName() const { return std::string(""); }
 
-		__inline virtual void setLocalId(WORD newId) { this->entityInfo.id = newId; }
-		__inline virtual WORD getLocalId() const { return this->entityInfo.getId(); }
+		__inline virtual void setLocalId(word_t newId) { this->entityInfo.id = newId; }
+		__inline virtual word_t getLocalId() const { return this->entityInfo.getId(); }
 		__inline virtual bool isIngame() const { return this->entityInfo.isIngame(); }
 
-		__inline virtual WORD getMapId() const { return this->entityInfo.getMapId(); }
-		__inline virtual void setMapId(const WORD newId) { this->entityInfo.setMapId(newId); }
-
-		__inline virtual MapSector* getSector() const { return this->entityInfo.getSector(); }
-		virtual LinkedList<Entity*>::Node* setSector(class MapSector* newSector);
+		__inline virtual word_t getMapId() const { return this->entityInfo.getMapId(); }
+		__inline virtual void setMapId(const word_t newId) { this->combat.clear(); this->entityInfo.setMapId(newId); }
 
 		__inline virtual Entity* getTarget() const { return this->combat.getTarget(); }
 		virtual void setTarget(Entity* target);
 
-		virtual bool castSkill(const WORD skillId) { return true; }
+		virtual bool castSkill(const word_t skillId) { return true; }
 
-		virtual bool addDamage(Entity* enemy, const WORD amount, WORD& flag);
-		virtual bool onDamageReceived(Entity* enemy, const WORD damage) { return true; };
+		virtual bool addDamage(Entity* enemy, const word_t amount, WORD& flag);
+		virtual bool onDamageReceived(Entity* enemy, const word_t damage) { return true; };
 		virtual void onTargetDead() { };
 		virtual void onDeath() { };
 
@@ -215,29 +251,30 @@ class Entity {
 		__inline virtual bool isDrop() const { return this->getEntityType() == Entity::TYPE_DROP; }
 		__inline virtual bool isMonster() const { return this->getEntityType() == Entity::TYPE_MONSTER; }
 	
-		__inline virtual DWORD getBuffStatus(const BYTE type) {	return this->status.buffs.getVisuality(type); }
-		__inline virtual WORD getBuffAmount(const BYTE type) {	return this->status.buffs.getStatusAmount(type); }
-		__inline virtual const DWORD getBuffsVisuality(const BYTE buffType = 0x00) { return this->status.getBuffsVisuality(buffType); }
+		__inline virtual dword_t getBuffStatus(const byte_t type) {	return this->status.buffs.getVisuality(type); }
+		__inline virtual word_t getBuffAmount(const byte_t type) { return this->status.buffs.getStatusAmount(type); }
+		__inline virtual const dword_t getBuffsVisuality(const byte_t buffType = 0x00) { return this->status.getBuffsVisuality(buffType); }
 		__inline virtual bool checkBuffs() { return this->status.checkBuffs(); }
 
-		__inline virtual Position getPositionCurrent() const { return Position(this->position.current); }
-		__inline virtual Position getPositionDest() const { return Position(this->position.destination); }
+		__inline virtual position_t getPositionCurrent() const { return position_t(this->position.current); }
+		__inline virtual position_t getPositionDest() const { return position_t(this->position.destination); }
 
-		virtual void setPositionCurrent(const Position& newPos);
-		virtual void setPositionDest(const Position& newPos);
+		virtual void setPositionCurrent(const position_t& newPos);
+		virtual void setPositionDest(const position_t& newPos);
 
-		virtual MapSector* checkForNewSector();
+		virtual Map::Sector* checkForNewSector();
 		virtual void checkVisuality();
-		virtual __inline DWORD getLastSectorCheckTime() const { return clock() - this->position.lastSectorCheckTime; }
+		virtual __inline dword_t getLastSectorCheckTime() const { return clock() - this->position.lastSectorCheckTime; }
+		
+		__inline Map::Sector* getSector() const { return this->entityInfo.getSector(); }
+		LinkedList<Entity*>::Node* setSector(Map::Sector* newSector);
 
-		bool movementRoutine();
-		bool attackRoutine();
+		bool playAnimation();
+		byte_t movementRoutine();
 		virtual bool getAttackAnimation() {
 			return false;
 		}
-		virtual WORD getNextAttackTime() const;
-		virtual WORD getTotalAttackAnimationTime();
-
+		
 		bool sendToVisible(class Packet& pak, Entity* exceptThis = nullptr);
 		bool sendToMap(class Packet& pak);
 };

@@ -21,49 +21,49 @@
 
 class CHR {
 	private:
-		const static BYTE WARNING_MOTION = 0;
-		const static BYTE WALK_MOTION = 1;
-		const static BYTE ATTACK_MOTION = 2;
-		const static BYTE HIT_MOTION = 3;
-		const static BYTE DIE_MOTION = 4;
-		const static BYTE RUN_MOTION = 5;
-		const static BYTE STOP_MOTION = 6;
-		const static BYTE SKILL_MOTION = 7;
-		const static BYTE CASTING_MOTION = 8;
+		const static byte_t WARNING_MOTION = 0;
+		const static byte_t WALK_MOTION = 1;
+		const static byte_t ATTACK_MOTION = 2;
+		const static byte_t HIT_MOTION = 3;
+		const static byte_t DIE_MOTION = 4;
+		const static byte_t RUN_MOTION = 5;
+		const static byte_t STOP_MOTION = 6;
+		const static byte_t SKILL_MOTION = 7;
+		const static byte_t CASTING_MOTION = 8;
 		struct NPCInfos {
 			NPCInfos(bool isEnabled) {
 				this->isEnabled = isEnabled;
 			}
 			bool isEnabled;
-			WORD id;
+			word_t id;
 			std::string name;
-			std::vector<WORD> objects;
+			std::vector<word_t> objects;
 			struct Animation {
-				WORD type;
-				WORD animationId;
+				word_t type;
+				word_t animationId;
 			};
 			std::vector<Animation> animations;
 			struct Effect {
-				WORD bone;
-				WORD effect;
+				word_t bone;
+				word_t effect;
 			};
 			std::vector<Effect> effects;
 		};
 		std::string filePath;
 		std::vector<NPCInfos> chars;
-		std::vector<ZMO> animations;
+		std::vector<ZMO*> animations;
 		template<class FileType> void loadInfos(VFS* pVFS, FileType& file);
 	public:
 #ifdef __ROSE_USE_VFS__
 		CHR(VFS* pVFS, const char* pathInVFS);
 #endif
 		~CHR();
-		ZMO* getWarningMotion(const WORD npcId);
-		ZMO* getWalkMotion(const WORD npcId);
-		ZMO* getAttackMotion(const WORD npcId);
-		ZMO* getHitMotion(const WORD npcId);
-		ZMO* getDieMotion(const WORD npcId);
-		ZMO* getRunMotion(const WORD npcId);
+		ZMO* getWarningMotion(const word_t npcId) const;
+		ZMO* getWalkMotion(const word_t npcId) const;
+		ZMO* getAttackMotion(const word_t npcId) const;
+		ZMO* getHitMotion(const word_t npcId) const;
+		ZMO* getDieMotion(const word_t npcId) const;
+		ZMO* getRunMotion(const word_t npcId) const;
 };
 
 #endif //__ROSE_CHR__

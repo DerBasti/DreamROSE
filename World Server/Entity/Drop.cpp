@@ -1,7 +1,7 @@
 #include "Drop.h"
 #include "..\WorldServer.h"
 
-void Drop::construct(Entity* giver, const Position& pos, bool isPublicDomain) {
+void Drop::construct(Entity* giver, const position_t& pos, bool isPublicDomain) {
 	if(!isPublicDomain)
 		this->owner = giver;
 	else
@@ -11,16 +11,16 @@ void Drop::construct(Entity* giver, const Position& pos, bool isPublicDomain) {
 	this->position.current = pos;
 	this->position.destination = pos;
 
-	mainServer->getMap(this->getMapId())->assignClientID(this);
+	mainServer->getMap(this->getMapId())->assignLocalId(this);
 
 	this->entityInfo.type = Entity::TYPE_DROP;
 
-	MapSector *sector = giver->getSector();
+	Map::Sector *sector = giver->getSector();
 	this->setSector(sector);
 	this->checkVisuality();
 }
 
-Drop::Drop(Entity* dropGiver, DWORD zulyAmount, bool isPublicDomain) {
+Drop::Drop(Entity* dropGiver, dword_t zulyAmount, bool isPublicDomain) {
 	this->item.id = 0xCCCC;
 	this->item.type = ItemType::MONEY;
 	this->item.amount = zulyAmount;
@@ -33,7 +33,7 @@ Drop::Drop(Entity* dropGiver, const Item& item, bool isPublicDomain) {
 	this->construct(dropGiver, dropGiver->getPositionCurrent().calcNewPositionWithinRadius(500), isPublicDomain);
 }
 
-Drop::Drop(Entity* dropGiver, const Position& pos, DWORD zulyAmount, bool isPublicDomain) {
+Drop::Drop(Entity* dropGiver, const position_t& pos, dword_t zulyAmount, bool isPublicDomain) {
 	this->item.id = 0xCCCC;
 	this->item.type = ItemType::MONEY;
 	this->item.amount = zulyAmount;
@@ -41,13 +41,14 @@ Drop::Drop(Entity* dropGiver, const Position& pos, DWORD zulyAmount, bool isPubl
 	this->construct(dropGiver, pos, isPublicDomain);
 }
 
-Drop::Drop(Entity* dropGiver, const Position& pos, const Item& itemToDrop, bool isPublicDomain) {
+Drop::Drop(Entity* dropGiver, const position_t& pos, const Item& itemToDrop, bool isPublicDomain) {
 	this->item = itemToDrop;
 	this->construct(dropGiver, pos, isPublicDomain);
 }
 
 Drop::~Drop() {
+
 	for(unsigned int i=0;i<this->visibleSectors.size();i++) {
-		this->removeSectorVisually(this->visibleSectors.getValue(i));
+		this->removeSectorVisually(this->visibleSectors.getValueAtPosition(i));
 	}
 }

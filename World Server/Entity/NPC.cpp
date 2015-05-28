@@ -5,7 +5,7 @@
 
 long NPC_ATTACK_INTERVAL = 250000;
 
-void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId, const Position& pos) {
+void NPC::constructor(const NPCData* newData, const AIP* newAi, const word_t mapId, const position_t& pos) {
 	this->data = newData;
 	this->ai = newAi;
 	this->spawn = nullptr;
@@ -17,7 +17,7 @@ void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId
 	this->setPositionCurrent(pos);
 	this->setPositionDest(pos);
 
-	mainServer->getMap(mapId)->assignClientID(this);
+	mainServer->getMap(mapId)->assignLocalId(this);
 
 	this->lastAICheck = 0x00;
 
@@ -31,14 +31,14 @@ void NPC::constructor(const NPCData* newData, const AIP* newAi, const WORD mapId
 	if(this->data != nullptr && this->ai != nullptr) {
 		this->stats.maxHP = this->stats.curHP = this->data->getHPPerLevel() * this->data->getLevel();
 		Map* map = mainServer->getMap(this->getMapId());
-		MapSector* sector = map->getSector(this->getPositionCurrent());
+		Map::Sector* sector = map->getSector(this->getPositionCurrent());
 		this->setSector(sector);
 		this->checkVisuality();
 		AIService::run(this, AIP::ON_SPAWN);
 	}
 }
 
-bool NPC::convertTo(const WORD newType) {
+bool NPC::convertTo(const word_t newType) {
 	this->ai = mainServer->getAIData(newType);
 	this->data = mainServer->getNPCData(newType);
 
@@ -51,32 +51,8 @@ bool NPC::convertTo(const WORD newType) {
 }
 
 bool NPC::getAttackAnimation() { 
-	this->combat.attackAnimation = mainServer->getAttackMotionNPC(this->getTypeId()); 
-	return this->combat.attackAnimation != nullptr; 
-}
-
-WORD NPC::getNextAttackTime() const {
-	if (this->combat.attackAnimation != nullptr) {
-		WORD nextTime = this->combat.attackAnimation->getTotalAnimationTime() + 500; //safe value to make sure nothing else happens during this time.
-		if (this->combat.nextAttackId < this->combat.attackAnimation->getAttackTimerCount()) {
-			nextTime = this->combat.attackAnimation->getAttackTimer(this->combat.nextAttackId) * this->data->getAttackspeed() / this->getAttackSpeed();
-		}
-		return nextTime;
-	}
-	return 0;
-}
-
-WORD NPC::getTotalAttackAnimationTime() {
-	if (this->combat.attackAnimation != nullptr) {
-		//return this->combat.attackAnimation->getTotalAnimationTime() * this->data->getAttackspeed() / this->getAttackSpeed();
-#ifdef __ROSE_DEBUG__
-		WORD animationTime = this->combat.attackAnimation->getTotalAnimationTime() * 100 / this->getAttackSpeed();
-		return animationTime;
-#else
-		return this->combat.attackAnimation->getTotalAnimationTime() * 100 / this->getAttackSpeed();
-#endif //__ROSE_DEBUG__
-	}
-	return 0;
+	this->animation = mainServer->getAttackMotionNPC(this->getTypeId()); 
+	return this->animation != nullptr;
 }
 
 void NPC::updateAttackpower() {
@@ -115,7 +91,7 @@ void NPC::updateDodgerate() {
 	}
 }
 
-void NPC::setStance(const BYTE newStance) {
+void NPC::setStance(const byte_t newStance) {
 	this->status.stance = newStance;
 
 	this->updateMovementSpeed();
@@ -137,11 +113,11 @@ void NPC::updateMovementSpeed() {
 	}
 }
 
-bool NPC::onDamageReceived(Entity* enemy, const WORD damage) {
+bool NPC::onDamageReceived(Entity* enemy, const word_t damage) {
 	AIService::run(this, AIP::ON_DAMAGED, enemy, damage);
 
 	if (this->damageDealers.containsKey(enemy->getLocalId())) {
-		WORD id = enemy->getLocalId();
+		word_t id = enemy->getLocalId();
 		this->damageDealers.getValueByKey(id) += damage;
 	}
 	else {
@@ -151,19 +127,30 @@ bool NPC::onDamageReceived(Entity* enemy, const WORD damage) {
 	return true;
 }
 
-float NPC::getAttackRange() {
-	if(this->data) {
+float NPC::getAttackRange() const {
+	if (this->combat.type == Combat::SKILL) {
+		if (this->combat.skill) {
 #ifdef __ROSE_DEBUG__
-		float attackRange = this->data->getAttackRange();
-		return attackRange;
+			dword_t initRange = this->combat.skill->getInitRange();
+			return static_cast<float>(initRange);
 #else
-		return this->data->getAttackRange();
+			return this->combat.skill->getInitRange();
 #endif
+		}
+	} else if(this->combat.type == Combat::NORMAL) {
+		if (this->data) {
+#ifdef __ROSE_DEBUG__
+			float attackRange = this->data->getAttackRange();
+			return static_cast<float>(attackRange);
+#else
+			return this->data->getAttackRange();
+#endif
+		}
 	}
 	return 100.0f; //1m
 }
 
-bool NPC::setPositionVisually(const Position& pos) {
+bool NPC::setPositionVisually(const position_t& pos) {
 	Entity* target = this->combat.getTarget();
 
 	Packet pak(PacketID::World::Response::MOVEMENT_MONSTER);
@@ -179,7 +166,7 @@ bool NPC::setPositionVisually(const Position& pos) {
 	return true;
 }
 
-void NPC::setObjVar(BYTE idx, WORD newVal) { 
+void NPC::setObjVar(byte_t idx, word_t newVal) { 
 	if(idx == 0x00) {
 		int before = this->getObjVar(idx);
 		this->objVar[idx] = newVal;
