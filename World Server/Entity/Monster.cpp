@@ -3,8 +3,9 @@
 #include "Drop.h"
 #include "..\WorldServer.h"
 
-Monster::Monster(const NPCData* newData, const AIP* newAi, const word_t mapId, const position_t& pos) {
+Monster::Monster(const NPCData* newData, const AIP* newAi, const word_t mapId, const position_t& pos, IFOSpawn* spawn) {
 	this->constructor(newData, newAi, mapId, pos);
+	this->spawn = spawn;
 	this->entityInfo.type = Entity::TYPE_MONSTER;
 	this->updateStats();
 
@@ -13,6 +14,10 @@ Monster::Monster(const NPCData* newData, const AIP* newAi, const word_t mapId, c
 
 Monster::~Monster() {
 	if(this->spawn != nullptr) {
+		//In case there wasn't any updates yet
+		if (this->spawn->getCurrentlySpawned() == this->spawn->getMaxSimultanouslySpawned()) {
+			this->spawn->updateLastCheckTime();
+		}
 		this->spawn->setCurrentlySpawned( this->spawn->getCurrentlySpawned()-1 );
 	}
 	this->data = nullptr;

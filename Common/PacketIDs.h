@@ -122,6 +122,7 @@ class PacketID {
 						const static word_t MOVEMENT_PLAYER = 0x79A;
 						const static word_t UPDATE_EXPERIENCE = 0x79B;
 						const static word_t LEVEL_UP = 0x79E;
+						const static word_t SHOW_MONSTER_HP = 0x79F;
 						const static word_t USE_CONSUMABLE = 0x7A3;
 						const static word_t DROP_FROM_INVENTORY = 0x7A4;
 						const static word_t EQUIPMENT_CHANGE = 0x7A5;

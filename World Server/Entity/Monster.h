@@ -12,7 +12,7 @@ class Monster : public NPC {
 	private:
 		Entity* owner;
 	public:		
-		Monster(const NPCData* newData, const AIP* newAi, const word_t mapId, const position_t& pos);
+		Monster(const NPCData* newData, const AIP* newAi, const word_t mapId, const position_t& pos, class IFOSpawn* spawn = nullptr);
 		~Monster();
 
 		__inline bool isAllied( NPC* npc ) { return true; }

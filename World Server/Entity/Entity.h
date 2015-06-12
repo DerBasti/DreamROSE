@@ -63,12 +63,10 @@ class Entity {
 			position_t current;
 			position_t destination;
 			position_t source;
-			clock_t lastCheckTime;
-			clock_t lastSectorCheckTime;
+			ChronoTimer lastCheckTime;
+			ChronoTimer lastSectorCheckTime;
 
 			_posStruct() {
-				lastCheckTime = clock();
-				lastSectorCheckTime = clock();
 			}
 		} position;
 		_entityInfo entityInfo;
@@ -85,6 +83,9 @@ class Entity {
 		virtual void removeEntityVisually(Entity* entity) { if(this->getTarget() == entity) this->setTarget(nullptr); }
 
 		virtual bool attackEnemy();
+
+		void addAttacker(Entity* enemy);
+		void removeAttacker(Entity* enemy);
 	public:
 		const static byte_t TYPE_PLAYER = 0x00;
 		const static byte_t TYPE_NPC = 0x01;
@@ -264,7 +265,7 @@ class Entity {
 
 		virtual Map::Sector* checkForNewSector();
 		virtual void checkVisuality();
-		virtual __inline dword_t getLastSectorCheckTime() const { return clock() - this->position.lastSectorCheckTime; }
+		virtual __inline long long getLastSectorCheckTime() const { return this->position.lastSectorCheckTime.getDuration(); }
 		
 		__inline Map::Sector* getSector() const { return this->entityInfo.getSector(); }
 		LinkedList<Entity*>::Node* setSector(Map::Sector* newSector);
@@ -277,6 +278,8 @@ class Entity {
 		
 		bool sendToVisible(class Packet& pak, Entity* exceptThis = nullptr);
 		bool sendToMap(class Packet& pak);
+		bool sendToList(class Packet& pak, const std::map<const word_t, Entity*>& list, bool includeThisEntity = false);
+		bool sendToList(class Packet& pak, const std::vector<Entity*>& list, bool includeThisEntity = false);
 };
 
 #endif //__ROSE_ENTITY__

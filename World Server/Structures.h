@@ -10,33 +10,19 @@
 #include "..\Common\Definitions.h"
 #include "D:\Programmieren\Exceptions\CustomExceptions.h"
 #include "D:\Programmieren\GlobalLogger\GlobalLogger.h"
+#include "D:\Programmieren\QuickInfos\ChronoTimer.h"
+#include "D:\Programmieren\QuickInfos\StringBuilder.h"
 
-class TimeDifference {
-private:
-	TimeDifference() { }
-	~TimeDifference() { }
-
-public:
-	static clock_t of(const clock_t value) {
-		return clock() - value;
-	}
-	static bool passed(const clock_t timeStamp, const dword_t difference) {
-		if (static_cast<dword_t>(clock() - timeStamp) >= difference) {
-			return true;
-		}
-		return false;
-	}
-};
 
 class Buffs {
 	private:
 		const static byte_t TOTAL_COUNT = 0x20;
 		struct buffEntry {
-			clock_t endTime;
+			ChronoTimer endTime; //ChronoTimer.now()
 			word_t amount;
 		};
 		buffEntry buffs[Buffs::TOTAL_COUNT];
-		clock_t currentTime;
+		ChronoTimer currentTime;
 
 		const byte_t _getActiveBuffCount() const;
 		void internalClear(dword_t clearFlags);
@@ -104,7 +90,7 @@ class Buffs {
 
 		Buffs& operator=(const Buffs& rhs);
 		void clearBuff(byte_t clearType = 0xFF);
-		bool addBuff(byte_t bitFromVisuality, word_t amount, dword_t durationInMilliseconds);
+		bool addBuff(const byte_t bitFromVisuality, const word_t amount, const long long durationInMilliseconds);
 		__inline void removeBuff(const size_t pos);
 
 		//Returns true if a buff was deleted
@@ -124,7 +110,6 @@ struct Stats {
 
 	word_t attackPower;
 	word_t attackSpeed;
-	clock_t attackDelay;
 	word_t defensePhysical;
 	word_t defenseMagical;
 	word_t movementSpeed;
@@ -250,7 +235,7 @@ struct position_t {
 		float preComma[2] = { RADIUS_CALCULATION, RADIUS_CALCULATION };
 		float afterComma[2] = { static_cast<float>(rand() / static_cast<float>(RAND_MAX)), static_cast<float>(rand() / static_cast<float>(RAND_MAX)) };
 #undef RADIUS_CALCULATION
-		return position_t(preComma[0] + afterComma[0], preComma[1] + afterComma[1]);
+		return position_t(this->x + preComma[0] + afterComma[0], this->y + preComma[1] + afterComma[1]);
 	}
 
 	__inline position_t copy() {
@@ -440,10 +425,16 @@ struct Item {
 		this->durability = 0x30;
 		this->lifespan = 1000;
 	}
-	bool isValid() {
+	bool isValid() const {
 		if((this->type > 0 && this->type < ItemType::PAT) || this->type == ItemType::MONEY) {
 			if(this->amount>0)
 				return true;
+		}
+		return false;
+	}
+	bool isSingleSlot() const {
+		if (this->type != ItemType::CONSUMABLES &&  this->type != ItemType::JEWELS && this->type != ItemType::OTHER && this->type != ItemType::QUEST) {
+			return true;
 		}
 		return false;
 	}
@@ -546,24 +537,24 @@ class PlayerInventory {
 
 class Animation {
 	private:
-		clock_t initTimeStamp;
+		ChronoTimer initTimeStamp;
 		word_t framesPlayed;
 		ZMO* animation;
 	public:
 		Animation() {
 			this->animation = nullptr;
-			this->initTimeStamp = 0;
+			this->initTimeStamp.stop();
 			this->framesPlayed = 0;
 		}
 		~Animation() {
 			this->animation = nullptr;
-			this->initTimeStamp = 0;
+			this->initTimeStamp.stop();
 			this->framesPlayed = 0;
 		}
 		const ZMO* operator=(ZMO* newAnim) {
 			this->animation = newAnim;
 			this->framesPlayed = 0;
-			this->initTimeStamp = clock();
+			this->initTimeStamp.start();
 			return this->animation;
 		}
 		bool operator==(std::nullptr_t) {
@@ -604,7 +595,7 @@ class Animation {
 			return this->framesPlayed;
 		}
 		const word_t getFramesToPlay(const word_t speed = 100) const {
-			clock_t timeDiff = clock() - this->initTimeStamp;
+			long long timeDiff = this->initTimeStamp.getDuration();
 			word_t framesInTotal = static_cast<word_t>(timeDiff / this->getTimePerFrame(speed));
 			return framesInTotal;
 		}
@@ -614,11 +605,11 @@ class Animation {
 		void reset(const word_t speed, const word_t framesPlayed) {
 			word_t frameOverflow = framesPlayed - this->getFrameAmount();
 			this->framesPlayed = 0;
-			this->initTimeStamp = clock() - static_cast<clock_t>(frameOverflow * this->getTimePerFrame(speed));
+			this->initTimeStamp.start(static_cast<long long>(frameOverflow * this->getTimePerFrame(speed)));
 		}
 		const word_t getFrameType(const word_t frame) {
 			if (this->animation != nullptr) {
-				return this->animation->getTimingInfo().getFrameType(frame);
+				return this->animation->getFrameType(frame);
 			}
 			return (std::numeric_limits<word_t>::max)();
 		}
@@ -630,9 +621,9 @@ struct Combat {
 	const static byte_t SKILL = 2; //A single targeted skill
 
 	class Entity* target;
+	std::map<const word_t, class Entity*> myAttackers;
 public:
 	byte_t type; //Type of Combat -- see static bytes
-	clock_t animationStartDelay;
 
 	//SkillEntry* = Skill* (typedef of it)
 	class SkillEntry* skill;

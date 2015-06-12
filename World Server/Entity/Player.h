@@ -99,14 +99,13 @@ class Player : public Entity, public ClientSocket {
 			dword_t valueConsumed;
 			dword_t valuePerSecond;
 			word_t influencedAbility;
-			clock_t timeStamp;
+			ChronoTimer timeStamp;
 
 			ConsumedItem(const word_t abilityType, const dword_t max, const dword_t valueEachSecond) {
 				this->influencedAbility = abilityType;
 				this->maxRate = max;
 				this->valueConsumed = 0x00;
 				this->valuePerSecond = valueEachSecond;
-				this->timeStamp = clock();
 			}
 		};
 
@@ -165,7 +164,8 @@ class Player : public Entity, public ClientSocket {
 		bool pakRespawnAfterDeath();
 		bool pakTerrainCollision();
 		bool pakSetEmotion();
-		bool pakInitBasicAttack();
+		bool pakInitBasicAttack(); 
+		bool pakShowMonsterHP();
 		bool pakShowMonsterHP(Monster *mon);
 		bool pakMoveCharacter();
 		bool pakIncreaseAttribute();

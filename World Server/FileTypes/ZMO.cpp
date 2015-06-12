@@ -42,8 +42,10 @@ template<class FileType> void ZMO::init(FileType& file) {
 #ifdef __ROSE_ZMO_OUTPUT__
 	std::cout << "[" << this->filePath.c_str() << "] Total time: " << this->animationInfo.defaultTime << "\n";
 #endif
+	word_t *newContent = new word_t[this->animationInfo.framesInTotal];
 	for (unsigned int i = 0; i < this->animationInfo.framesInTotal; i++) {
 		word_t currentType = file.read<word_t>();
+		newContent[i] = currentType;
 		if (i > 0 && (currentType >= 21 && currentType <= 29)) { //Dunno what this means, but it seems to be a valid indicator?
 
 			/* current frame - 3, because the server may need up to 100ms to perform the actual action. 
@@ -65,6 +67,11 @@ template<class FileType> void ZMO::init(FileType& file) {
 #endif
 		}
 	}
+	this->content.init(newContent, this->animationInfo.framesInTotal);
+
+	delete[] newContent;
+	newContent = nullptr;
+
 	this->animationInfo.framesInTotal--;
 #ifdef __ROSE_ZMO_OUTPUT__
 		std::cout << "\n";

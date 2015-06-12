@@ -20,11 +20,11 @@
 
 class ZMO {
 	public:
-		const static word_t MOTION_MELEE_ATTACK = 31;
-		const static word_t MOTION_RANGED_ATTACK = 32;
-		const static word_t MOTION_MAGIC_ATTACK = 33;
-		const static word_t MOTION_SKILL_MELEE = 34;
-		const static word_t MOTION_SKILL_RANGED = 36;
+		const static word_t MOTION_MELEE_ATTACK = 21;
+		const static word_t MOTION_RANGED_ATTACK = 22;
+		const static word_t MOTION_MAGIC_ATTACK = 23;
+		const static word_t MOTION_SKILL_MELEE = 24;
+		const static word_t MOTION_SKILL_RANGED = 26;
 
 		class AnimationInfo {
 			private:
@@ -57,7 +57,7 @@ class ZMO {
 					word_t timeToReach;
 					word_t motionType;
 				};
-				/* Maps a given frame with a time span which is necessary to reach it*/
+				/* FOR DEBUG: Maps a given frame with a time span which is necessary to reach it*/
 				std::map<word_t, struct Frame> attacksAtFrames;
 				friend class ZMO;
 			public:
@@ -77,8 +77,8 @@ class ZMO {
 					}
 					return std::numeric_limits<word_t>::max();
 				}
-				/* Returns the read motion type (>= 20 && <= 40)*/
-				const word_t getFrameType(const word_t frame) const {
+				/* DEBUG: Returns the read motion type (>= 20 && <= 40)*/
+				const word_t getFrameType_DEBUG(const word_t frame) const {
 					for (auto i : this->attacksAtFrames) {
 						if (i.first == frame) {
 							return i.second.motionType;
@@ -103,6 +103,7 @@ class ZMO {
 
 		AnimationInfo animationInfo;
 		TimingInfo timingInfo;
+		Trackable<word_t> content;
 
 		template<class FileType> void init(FileType& file);
 	public:
@@ -114,6 +115,13 @@ class ZMO {
 #endif
 		~ZMO();
 
+		/* Returns the read motion type (>= 20 && <= 40)*/
+		const word_t getFrameType(const word_t frame) const {
+			if (frame >= this->content.size())
+				return 0;
+
+			return this->content[frame];
+		}
 		__inline const TimingInfo& getTimingInfo() const { return this->timingInfo; }
 		__inline const AnimationInfo& getInfo() const { return this->animationInfo; }
 };

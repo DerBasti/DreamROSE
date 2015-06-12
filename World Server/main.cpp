@@ -12,11 +12,11 @@
 
 void startServer() {
 	MYSQL mySQL;
-	clock_t startTime = clock();
+	ChronoTimer timer;
 	WorldServer server(29200, &mySQL);
 	GlobalLogger& logger = GlobalLogger::getLogger();
 	server.loadEncryption();
-	logger.info("Startup took %i seconds\n", (clock() - startTime) / 1000);
+	logger.info("Startup took %i seconds\n", timer.getDuration() / 1000);
 	if (config->getValueBool("DumpQuests")) {
 		logger.info("Dumping Quests...\n");
 		logger.debug("Output folder: %s", (::workingPath + "\\QUEST_DUMP\\").c_str());

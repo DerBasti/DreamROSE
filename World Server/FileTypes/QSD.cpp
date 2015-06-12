@@ -979,7 +979,7 @@ bool QuestService::rewardAbility(QuestTrans* trans, const AbstractQuestInfo* hea
 	bool success = true;
 	for (unsigned int i = 0; i < reward->varAmount; i++) {
 		const QuestSetVar* abilityVar = reinterpret_cast<const QuestSetVar*>(&reward->vars[i]);
-		success &= player->changeAbility(abilityVar->varNum, static_cast<DWORD>(abilityVar->amount), abilityVar->operation);
+		success &= player->changeAbility(abilityVar->varNum, static_cast<DWORD>(abilityVar->amount), (abilityVar->operation == 0 ? reward->partyOption : abilityVar->operation));
 	}
 	return success;
 }

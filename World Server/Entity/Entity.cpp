@@ -8,7 +8,7 @@ Entity::Entity() {
 	this->combat.target = nullptr;
 	this->status.buffs.clearBuff();
 	this->visibleSectors.clear();
-	this->position.lastSectorCheckTime = 0x00;
+	this->position.lastSectorCheckTime.start();
 	this->updateStats();
 	this->entityInfo.nearestSector = nullptr;
 	this->entityInfo.ingame = true;
@@ -31,6 +31,17 @@ void Entity::setPositionDest(const position_t& newPos) {
 	this->setPositionVisually(newPos);
 }
 
+void Entity::addAttacker(Entity* enemy) {
+	if (enemy != nullptr) {
+		this->combat.myAttackers.insert(std::pair<const word_t, Entity*>(enemy->getLocalId(), enemy));
+	}
+}
+void Entity::removeAttacker(Entity* enemy) {
+	if (enemy != nullptr) {
+		this->combat.myAttackers.erase(enemy->getLocalId());
+	}
+}
+
 void Entity::setTarget(Entity* target) { 
 	if (target && target->getCurrentHP()>0) {
 
@@ -45,8 +56,14 @@ void Entity::setTarget(Entity* target) {
 		pak.addFloat( target->getCurrentY() );
 
 		this->sendToVisible(pak);
+		target->addAttacker(this);
 	}
 	this->combat.type = Combat::NORMAL;
+
+	//Remove previous target
+	if (this->getTarget() != nullptr) {
+		this->getTarget()->removeAttacker(this);
+	}
 	this->combat.setTarget(target); 
 }
 
@@ -141,7 +158,7 @@ bool Entity::playAnimation() {
 
 byte_t Entity::movementRoutine() {
 	if (this->animation != nullptr) {
-		this->position.lastCheckTime = clock();
+		this->position.lastCheckTime.update();
 		if (this->isPlayer() && dynamic_cast<Player*>(this)->isInDebugMode()) {
 			ChatService::sendDebugMessage(dynamic_cast<Player*>(this), "Still in attack animation...\n");
 		}
@@ -149,6 +166,9 @@ byte_t Entity::movementRoutine() {
 	}
 	byte_t result = Movement::IDLE;
 	bool isAttacking = this->getTarget() != nullptr;
+	if (isAttacking) {
+		this->position.destination = this->getTarget()->getPositionCurrent();
+	}
 	float distance = this->position.current.distanceTo(this->position.destination);
 	float threshold = isAttacking ? this->getAttackRange() : 10;
 	if (distance <= threshold) {
@@ -159,27 +179,43 @@ byte_t Entity::movementRoutine() {
 			else {
 				result = Movement::TARGET_REACHED;
 			}
+#ifdef __ROSE_DEBUG__
+			if (this->isPlayer() && dynamic_cast<Player*>(this)->isInDebugMode()) {
+				ChatService::sendDebugMessage(dynamic_cast<Player*>(this), "isAttacking: %i, Distance: %f, Distance-Threshold: %f", isAttacking, distance, threshold);
+			}
+#endif
 		}
 		this->position.current = this->position.destination;
-		this->position.lastCheckTime = clock();
+		this->position.lastCheckTime.update();
 		return result;
 	}
 	float xDiff = this->position.destination.x - this->position.current.x;
 	float yDiff = this->position.destination.y - this->position.current.y;
 
-	clock_t timePassed = clock() - this->position.lastCheckTime;
+	long long timePassed = this->position.lastCheckTime.getDuration();
 	float timeNecessary = (distance / static_cast<float>(this->getMovementSpeed()) * 1000.0f);
 	if (timePassed >= timeNecessary) {
+#ifdef __ROSE_DEBUG__
+		if (this->isPlayer() && dynamic_cast<Player*>(this)->isInDebugMode()) {
+			ChatService::sendDebugMessage(dynamic_cast<Player*>(this), "Distance: %f, Time passed: %ims, Time necessary: %ims", distance, timePassed, timeNecessary);
+		}
+#endif
 		this->position.current = this->position.destination;
-		this->position.lastCheckTime = clock();
+		this->position.lastCheckTime.update();
 		return result;
 	}
 	float percentage = timePassed / timeNecessary;
 	position_t newPos((percentage * xDiff) + this->position.current.x,
 		(percentage * yDiff) + this->position.current.y);
 
+#ifdef __ROSE_DEBUG__
+	if (this->isPlayer() && dynamic_cast<Player*>(this)->isInDebugMode()) {
+		ChatService::sendDebugMessage(dynamic_cast<Player*>(this), "New Position: %.2f, %.2f", newPos.x, newPos.y);
+	}
+#endif
+
 	this->position.current = newPos;
-	this->position.lastCheckTime = clock();
+	this->position.lastCheckTime.update();
 	return Movement::IS_MOVING;
 }
 
@@ -208,10 +244,11 @@ bool Entity::attackEnemy() {
 	
 	bool success = enemy->addDamage(this, damage, flag);
 	if (flag & 0x8000 && enemy->getEntityType() != Entity::TYPE_PLAYER) {
+		this->setTarget(nullptr);
+
 		delete enemy;
 		enemy = nullptr;
 
-		this->setTarget(nullptr);
 		//this->setPositionDest(this->getPositionCurrent());
 	}
 	return success;
@@ -219,6 +256,10 @@ bool Entity::attackEnemy() {
 
 bool Entity::addDamage(Entity* damageDealer, const word_t damage, word_t& flag) {
 
+	//Just in case...
+	if (this->isNPC()) {
+		return false;
+	}
 	this->onDamageReceived(damageDealer, damage);
 	if (damage >= this->getCurrentHP()) {
 		this->stats.curHP = 0x00;
@@ -249,16 +290,22 @@ bool Entity::addDamage(Entity* damageDealer, const word_t damage, word_t& flag) 
 	pak.addWord(damageDealer->getLocalId());
 	pak.addWord(this->getLocalId());
 	pak.addWord((damage & 0x7FF) | flag);
-	return this->sendToVisible(pak);
+	if (flag & 0x8000) {
+		//in case the monster dies, send it to everybody
+		return this->sendToVisible(pak);
+	}
+	this->sendToList(pak, this->combat.myAttackers, true);
+	return true;
 }
 
 Map::Sector* Entity::checkForNewSector() {
-	if (this->getLastSectorCheckTime() >= Map::Sector::DEFAULT_CHECK_TIME) {
+	long long lastCheckTime = this->getLastSectorCheckTime();
+	if (lastCheckTime >= Map::Sector::DEFAULT_CHECK_TIME) {
 		Map::Sector* nearestSector =  mainServer->getMap(this->getMapId())->getSector(this->getPositionCurrent());
 		if(nearestSector != this->entityInfo.getSector()) {
 			return nearestSector;
 		}
-		this->position.lastSectorCheckTime = clock() + Map::Sector::DEFAULT_CHECK_TIME; 
+		this->position.lastSectorCheckTime.update();
 	}
 	return nullptr;
 }
@@ -421,17 +468,60 @@ bool Entity::sendToMap(Packet& pak) {
 #endif
 }
 
+bool Entity::sendToList(Packet& pak, const std::map<const word_t, Entity*>& list, bool includeThisEntity) {
+	bool result = true;
+	auto it = list.begin();
+	for (; it != list.end(); it++) {
+		Entity* current = it->second;
+		if (!current || !current->isPlayer()) {
+			continue;
+		}
+		result &= dynamic_cast<Player*>(current)->sendData(pak);
+	}
+	if (includeThisEntity && this->isPlayer()) {
+		result &= dynamic_cast<Player*>(this)->sendData(pak);
+	}
+	return result;
+}
+
+bool Entity::sendToList(Packet& pak, const std::vector<Entity*>& list, bool includeThisEntity) {
+	bool result = true;
+	auto it = list.begin();
+	for (; it != list.end(); it++) {
+		Entity* current = (*it);
+		if (!current || !current->isPlayer()) {
+			continue;
+		}
+		result &= dynamic_cast<Player*>(current)->sendData(pak);
+	}
+	if (includeThisEntity && this->isPlayer()) {
+		result &= dynamic_cast<Player*>(this)->sendData(pak);
+	}
+	return result;
+}
+
 LinkedList<Entity*>::Node* Entity::setSector(Map::Sector* newSector) {
 #ifdef __MAPSECTOR_LL__
 	LinkedList<Entity*>::Node* returnNode = nullptr;
-	if(this->entityInfo.getSector() != nullptr) {
-		returnNode = this->entityInfo.getSector()->removeEntity(this);
+	try {
+#ifdef __ROSE_MULTI_THREADED__
+		sectorMutex.lock();
+#endif
+		if (this->entityInfo.getSector() != nullptr) {
+			returnNode = this->entityInfo.getSector()->removeEntity(this);
+		}
+		if (newSector) {
+			newSector->addEntity(this);
+			this->entityInfo.needsVisualityUpdate = true;
+		}
+		this->entityInfo.setSector(newSector);
+#ifdef __ROSE_MULTI_THREADED__
+		sectorMutex.unlock();
+#endif
 	}
-	if(newSector) {
-		newSector->addEntity(this);
-		this->entityInfo.needsVisualityUpdate = true;
+	catch (std::exception& ex) {
+		GlobalLogger::fatal("EXCEPTION: %s", ex.what());
 	}
-	this->entityInfo.setSector(newSector);
 	return returnNode;
 #else
 	this->entityInfo.sector = newSector;

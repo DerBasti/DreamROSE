@@ -174,10 +174,12 @@ class IFOSpawn : public _basicIFOEntry {
 		float allowedSpawnDistance;
 		dword_t tacPoints;
 		dword_t currentSpawnId;
+		time_t lastCheckTime;
 public:
 		IFOSpawn() {
 			this->currentlySpawned = 0x00;
 			this->currentSpawnId = 0x00;
+			this->lastCheckTime = time(nullptr);
 		}
 		IFOSpawn(const IFOSpawn& spawn) {
 			this->setBasicInfos(spawn);
@@ -204,8 +206,9 @@ public:
 				entry.mobName = spawn.tacticalSpawn[i].mobName;
 				this->tacticalSpawn.push_back(entry);
 			}
+			this->lastCheckTime = time(nullptr);
 		}
-		IFOSpawn(_basicIFOEntry& newEntry) {
+		IFOSpawn(_basicIFOEntry& newEntry) : IFOSpawn() {
 			this->setBasicInfos(newEntry);
 		}
 		~IFOSpawn() {
@@ -229,26 +232,8 @@ public:
 		}
 		__inline dword_t getMaxSimultanouslySpawned() const { return this->limit; }
 		__inline float getAllowedSpawnDistance() const { return this->allowedSpawnDistance; }
-		/*
-		bool operator==(const IFOSpawn& ifo) {
-			return (this->id == ifo.id);
-		}
-		bool operator!=(const IFOSpawn& ifo) {
-			return !(this->operator==(ifo));
-		}
-		bool operator<(const IFOSpawn& ifo) {
-			return (this->id < ifo.id);
-		}
-		bool operator<=(const IFOSpawn& ifo) {
-			return (this->id <= ifo.id);
-		}
-		bool operator>=(const IFOSpawn& ifo) {
-			return !(this->operator<(ifo));
-		}
-		bool operator>(const IFOSpawn& ifo) {
-			return !(this->operator<=(ifo));
-		}
-		*/
+		__inline time_t getLastCheckTime() const { return this->lastCheckTime; }
+		__inline void updateLastCheckTime() { this->lastCheckTime = time(nullptr); }
 };
 
 class IFOTelegate : public _basicIFOEntry {

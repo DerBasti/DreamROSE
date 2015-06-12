@@ -41,6 +41,8 @@ public:
 
 	operator unsigned char*() { return reinterpret_cast<unsigned char*>(this); }
 
+	const unsigned char* fromConst() const { return reinterpret_cast<const unsigned char*>(this); }
+
 	void newPacket(word_t command, word_t newSize = Packet::DEFAULT_HEADER_OFFSET) {
 		this->command = command;
 		this->length = newSize;

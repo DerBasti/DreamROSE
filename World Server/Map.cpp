@@ -413,7 +413,8 @@ bool Map::checkSpawns() {
 	for (unsigned int i = 0; i<this->getSpawnCount(); i++) {
 		IFOSpawn* curSpawn = this->getSpawn(i);
 		//As long as we didn't reach the allowed max, keep spawning monsters
-		while (curSpawn->getCurrentlySpawned() < curSpawn->getMaxSimultanouslySpawned()) {
+		time_t lastCheckTime = time(nullptr) - curSpawn->getLastCheckTime();
+		while (curSpawn->getCurrentlySpawned() < curSpawn->getMaxSimultanouslySpawned() && lastCheckTime >= curSpawn->getRespawnInterval()) {
 			dword_t curSpawnId = curSpawn->getCurrentSpawnId();
 			IFOSpawnEntry* selectedSpawn = nullptr;
 			//Calculate the wanted spawnId and select the fitting spawnEntry
@@ -430,7 +431,7 @@ bool Map::checkSpawns() {
 			for (unsigned int i = 0; i<selectedSpawn->getAmount(); i++) {
 				position_t spawnPos(curSpawn->getPosition().x + QuickInfo::fRand(curSpawn->getAllowedSpawnDistance(), true),
 					curSpawn->getPosition().y + QuickInfo::fRand(curSpawn->getAllowedSpawnDistance(), true));
-				new Monster(npcData, mainServer->getAIData(npcData->getAIId()), this->getId(), spawnPos);
+				new Monster(npcData, mainServer->getAIData(selectedSpawn->getMobId()), this->getId(), spawnPos, curSpawn);
 			}
 			//Add the amount of spawned monsters to the total size of the spawn
 			curSpawn->setCurrentlySpawned(curSpawn->getCurrentlySpawned() + selectedSpawn->getAmount());

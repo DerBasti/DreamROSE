@@ -76,7 +76,7 @@ bool Player::setPositionVisually(const position_t& newPos) {
 	pak.addFloat( newPos.y );
 	pak.addWord( 0xcdcd ); //Z
 	
-	this->position.lastCheckTime = clock();
+	this->position.lastCheckTime.update();
 
 	return this->sendToVisible(pak);
 }
@@ -207,10 +207,11 @@ void Player::checkRegeneration() {
 	if (this->consumedItems.size() > 0) {
 		for (unsigned int i = 0; i < this->consumedItems.size(); i++) {
 			ConsumedItem& item = this->consumedItems.at(i);
-			clock_t mod = (clock() - item.timeStamp);
-			dword_t amount = static_cast<dword_t>(item.valuePerSecond * mod / 1000.0f); //100% / 1000ms
+			long long lastTick = item.timeStamp.getDuration();
+			dword_t amount = static_cast<dword_t>(item.valuePerSecond * lastTick / 1000.0f); //100% / 1000ms
 			if (amount == 0x00)
 				continue;
+			item.timeStamp.update();
 			bool eraseFlag = false;
 			if (amount + item.valueConsumed >= item.maxRate) {
 				amount = item.maxRate - item.valueConsumed;
@@ -220,7 +221,6 @@ void Player::checkRegeneration() {
 			ChatService::sendDebugMessage(this, "Regenerated %i [%i] out of %i [%i per second] to a total of %i", amount, item.valueConsumed + amount, item.maxRate, item.valuePerSecond, this->getStatType<word_t>(item.influencedAbility) + amount);
 #endif
 			item.valueConsumed += amount;
-			item.timeStamp = clock();
 			this->changeAbility(item.influencedAbility, amount, OperationService::OPERATION_ADDITION, false);
 			if (eraseFlag) {
 				Packet pak(PacketID::World::Response::BUFFS);
@@ -447,7 +447,7 @@ bool Player::addItemToInventory(const Item& item, byte_t itemSlot) {
 	if (itemSlot == std::numeric_limits<byte_t>::max())
 		itemSlot = this->getFreeInventorySlot(item);
 	if (itemSlot < PlayerInventory::Slots::MAXIMUM) {
-		if (this->inventory[itemSlot].isValid()) {
+		if (this->inventory[itemSlot].isValid() && !item.isSingleSlot()) {
 			this->inventory[itemSlot].amount += item.amount;
 		}
 		else {
@@ -1853,20 +1853,14 @@ bool Player::pakAssignID() {
 	pak.addByte(this->getStance().asBYTE());
 	pak.addWord(this->getMovementSpeed());
 
-	this->position.lastCheckTime = clock();
+	this->position.lastCheckTime.update();
 	this->status.updateLastRegen();
 	this->entityInfo.ingame = true;
 	bool result = this->sendToVisible(pak);
 
 	this->visibleSectors.clear();
 	this->checkVisuality();
-#ifdef __ROSE_MULTI_THREADED__
-	sectorMutex.lock();
-#endif
 	this->setSector(mainServer->getMap(this->getMapId())->getSector(this->getPositionCurrent()));
-#ifdef __ROSE_MULTI_THREADED__
-	sectorMutex.unlock();
-#endif
 	return result;
 }
 
@@ -2124,6 +2118,28 @@ bool Player::pakSpawnMonster(Monster* monster) {
 	pak.addWord(monster->getTypeId());
 	pak.addWord(0x00); //Quest?
 	return this->sendData(pak);
+}
+
+bool Player::pakShowMonsterHP() {
+	const word_t localMonId = this->packet.getWord(0x00);
+	Entity *entity = mainServer->getMap(this->getMapId())->getEntity(localMonId);
+	if (!entity) {
+		GlobalLogger::fatal("Selected monster was NOT found.\n");
+		return false;
+	}
+	if (entity->getEntityType() != Entity::TYPE_MONSTER) {
+		GlobalLogger::warning("Entity of type %i was selected!\n", entity->getEntityType());
+		return true;
+	}
+	Monster *mon = dynamic_cast<Monster*>(entity);
+	if (this->isInDebugMode()) {
+		ChatService::sendDebugMessage(this, "[%s] Map: %i, Position: %f, %f", mon->getName().c_str(), mon->getMapId(), mon->getPositionCurrent().x, mon->getPositionCurrent().y);
+		if (mon->getSpawn() != nullptr) {
+			const IFOSpawn* spawn = mon->getSpawn();
+			ChatService::sendDebugMessage(this, "[%s] SpawnInfo(%f, %f) - Mobs spawned: %i/%i, Current Cycle: %i", mon->getName().c_str(), spawn->getPosition().x, spawn->getPosition().y, spawn->getCurrentlySpawned(), spawn->getMaxSimultanouslySpawned(), spawn->getCurrentSpawnId());
+		}
+	}
+	return this->pakShowMonsterHP(mon);
 }
 
 bool Player::pakShowMonsterHP(Monster* mon) {
@@ -2599,6 +2615,9 @@ bool Player::handlePacket() {
 
 		case PacketID::World::Request::SHOUT_CHAT:
 			return this->pakShoutChat();
+
+		case PacketID::World::Request::SHOW_MONSTER_HP:
+			return this->pakShowMonsterHP();
 
 		case PacketID::World::Request::SKILL_ATTACK:
 			return this->pakExecuteSkill();

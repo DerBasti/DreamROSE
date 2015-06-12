@@ -179,18 +179,13 @@ void WorldServer::executeRequests() {
 	for(unsigned int i=0;i<this->mapData.size();i++) {
 		Map* curMap = this->mapData[i];
 		this->runMap(curMap);
-		curMap->checkSpawns();
 	}
 #endif
 }
 
 void WorldServer::onClientDisconnect(ClientSocket* client) {
-#ifdef __ROSE_MULTI_THREADED__
 	Player* player = dynamic_cast<Player*>(client);
-	sectorMutex.lock();
 	player->setSector(nullptr);
-	sectorMutex.unlock();
-#endif
 }
 
 void WorldServer::checkWorldTime() {
@@ -204,9 +199,6 @@ void WorldServer::changeToMap(Entity* entity, const word_t newMapId) {
 	if(!entity || newMapId >= this->mapData.size())
 		return;
 	Map* oldMap = this->getMap(entity->getMapId());
-#ifdef __ROSE_MULTI_THREADED__
-	sectorMutex.lock();
-#endif
 	oldMap->freeLocalId(entity);
 
 	//Assign the new mapId and the nearest sector on the new map
@@ -214,9 +206,6 @@ void WorldServer::changeToMap(Entity* entity, const word_t newMapId) {
 	Map* newMap = this->getMap(entity->getMapId());
 	entity->setSector(newMap->getSector(entity->getPositionCurrent()));
 	newMap->assignLocalId(entity);
-#ifdef __ROSE_MULTI_THREADED__
-	sectorMutex.unlock();
-#endif
 }
 
 #ifndef __ROSE_MULTI_THREADED__
@@ -261,9 +250,7 @@ void runMap(Map* curMap) {
 				bool isProcFrameReached = curEntity->playAnimation();
 			}
 			if ((newSector = curEntity->checkForNewSector()) != nullptr) {
-				sectorMutex.lock();
 				entityNode = curEntity->setSector(newSector);
-				sectorMutex.unlock();
 				curEntity->checkVisuality();
 				if (entityNode) {//in case we have a valid succeeding node
 					updateNextNode = false;
@@ -288,15 +275,17 @@ void runMap(Map* curMap) {
 					} else {
 						//In case it's walking and has no target
 						//i.e. walking around/away
-						if(curEntity->getTarget() == NULL)
+						if (curEntity->getTarget() == NULL) {
 							curNPC->setTimeAICheck();
-						else
+						} else {
 							AIService::run(curNPC, AIP::ON_ATTACK);
+						}
 					}
 				break;
 			}
 		}
 	}
+	curMap->checkSpawns();
 #ifdef __ROSE_MULTI_THREADED__
 	} while (true);
 #endif
@@ -1023,11 +1012,15 @@ void WorldServer::dumpAISeparated(std::string basicFilePath) {
 		AIP* aip = &this->aiData.getValue(npcData->getAIId());
 		if (aip == nullptr)
 			continue;
-		CMyFileWriter<char> file( (basicFilePath + npcData->getName() + ".log").c_str(), "a+");
+		std::string fileName = (basicFilePath + npcData->getName());
+		if (i >= 800 && i < 1000) {
+			fileName += " (Summon)";
+		}
+		CMyFileWriter<char> file((fileName + ".log").c_str(), "a+");
 		file.clear();
 		if(aip->getCheckInterval() == 0x00)
 			continue;
-		file.putStringWithVar("%s [%i]:\n", aip->getFilePath().c_str(), i);
+		file.putStringWithVar("%s [MonID: %i | AI-ID: %i]:\n", aip->getFilePath().c_str(), i, aip->getId());
 		file.putStringWithVar("CheckInterval: %i | DmgTrigger: %i\n", aip->getCheckInterval(), aip->getTriggerDamageAmount());
 		file.putStringWithVar("BlockCount: %i\n", aip->getBlockCount());
 		for(unsigned int j=0;j<aip->getBlockCount();j++) {

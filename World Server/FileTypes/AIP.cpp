@@ -11,7 +11,7 @@ AIP::AIP(const word_t id, VFSData& vfsData) {
 	CMyBufferedFileReader<char> reader(vfsData.data, vfsData.data.size());
 	this->id = id;
 	this->checkInterval = this->damageAmountTrigger = 0x00;
-	this->filePath = std::string("");
+	this->filePath = vfsData.filePath;
 	this->loadFrom(reader);
 }
 #else
@@ -829,12 +829,12 @@ void AIService::actionSpecialAttack(NPC* npc) {
 }
 
 void AIService::actionMoveToTarget(NPC * npc, const AIACTION_08 *act, AITransfer* trans) {
-	if(npc->getTarget() == nullptr)
+	if(npc->getTarget() != nullptr || trans->lastFound == nullptr)
 		return;
 
-	float fX = npc->getTarget()->getCurrentX() - npc->getCurrentX();
-	float fY = npc->getTarget()->getCurrentY() - npc->getCurrentY();
-	float dist = npc->getPositionCurrent().distanceTo(npc->getTarget()->getPositionCurrent());
+	float fX = trans->lastFound->getCurrentX() - npc->getCurrentX();
+	float fY = trans->lastFound->getCurrentY() - npc->getCurrentY();
+	float dist = npc->getPositionCurrent().distanceTo(trans->lastFound->getPositionCurrent());
 	
 	npc->setStance(act->stance);
 	npc->setPositionDest(position_t(npc->getCurrentX() - (act->getDistance() * fX / dist),
@@ -862,7 +862,7 @@ void AIService::actionCallAlliesForAttack(NPC* npc, const AIACTION_11 *act) {
 	while(eNode) {
 		ally = eNode->getValue();
 		eNode = eNode->getNextNode();
-		if( ally->isAllied( npc ) && ally->getTarget() == nullptr || ally->getEntityType() == Entity::TYPE_MONSTER) {
+		if( ally->isAllied( npc ) && ally->getTarget() == nullptr && ally->getEntityType() == Entity::TYPE_MONSTER) {
 			ally->setTarget( target );
 
 			numOfAttackers++;

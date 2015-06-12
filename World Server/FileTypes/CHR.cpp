@@ -1,6 +1,7 @@
 #include "CHR.h"
 #include "D:\Programmieren\CMyFile\MyFile.h"
 #include "D:\Programmieren\GlobalLogger\GlobalLogger.h"
+#include "D:\Programmieren\QuickInfos\ChronoTimer.h"
 
 CHR::CHR(VFS* pVFS, const char* pathInVFS) {
 	this->filePath = pathInVFS;
@@ -21,7 +22,7 @@ CHR::~CHR() {
 template<class FileType> void CHR::loadInfos(VFS* pVFS, FileType& file) {
 	GlobalLogger* logger = &GlobalLogger::getLogger();
 	logger->info("Starting to read NPC animation infos...\n");
-	clock_t startTime = clock();
+	ChronoTimer timer;
 	word_t skelFileCount = file.read<WORD>();
 	std::vector<std::string> skelFiles;
 	for (unsigned int i = 0; i < skelFileCount; i++) {
@@ -78,7 +79,7 @@ template<class FileType> void CHR::loadInfos(VFS* pVFS, FileType& file) {
 		}
 		this->chars.push_back(newChar);
 	}
-	logger->info("Finished reading NPC animation infos after %i ms...\n", clock() - startTime);
+	logger->info("Finished reading NPC animation infos after %i ms...\n", timer.getDuration());
 }
 
 #define GET_ZMO(MOTION) NPCInfos npc = this->chars.at(npcId);\
