@@ -14,6 +14,7 @@ class LoginClient : public ClientSocket {
 			std::string password;
 		} accountInfo;
 
+		bool pakIdentifyCharServer();
 		bool pakEncryptionRequest();
 		bool pakRequestChannelList();
 		bool pakUserLogin();

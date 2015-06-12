@@ -25,13 +25,18 @@ bool LoginClient::pakRequestChannelList() {
 	
 	Packet pak(PacketID::Login::Response::GET_SERVERLIST);
 	pak.addDWord(requestedServer);
-	pak.addByte(0x01);
+	if (mainServer->isCharServerConnected()) {
+		pak.addByte(0x01); //Amount
 
-	pak.addWord(0x01); //ID
-	pak.addByte(0x00); //?
-	pak.addWord(0x00); //STATUS
-	pak.addString(::config->getValueString("ChannelName")); //NAME
-	pak.addByte(0x00);
+		pak.addWord(0x01); //ID
+		pak.addByte(0x00); //?
+		pak.addWord(0x00); //STATUS
+		pak.addString(::config->getValueString("ChannelName")); //NAME
+		pak.addByte(0x00);
+	}
+	else {
+		pak.addByte(0x00);
+	}
 	/*
 	Iterate through all the channel
 	LoginServer* server = dynamic_cast<LoginServer*>(this->serverDelegate);
@@ -57,21 +62,17 @@ bool LoginClient::pakUserLogin() {
 	this->accountInfo.password = std::string(this->packet.getData(), 0x00, 0x20);
 	this->accountInfo.userName = std::string(this->packet.getData(), 0x20, this->packet.getLength() - Packet::DEFAULT_HEADER_OFFSET - 0x20);
 
-	if(!mainServer->sqlRequest("SELECT id, accesslevel, isonline FROM accounts WHERE name='%s'", this->accountInfo.userName.c_str(), this->accountInfo.password.c_str())) {
-		if (config->getValueString("CreateOnLogin") && mainServer->sqlGetRowCount() == 0) {
-			mainServer->sqlInsert("INSERT INTO accounts (name, password, accesslevel, isonline) VALUES('%s', '%s', 1, 1)", this->accountInfo.userName.c_str(), this->accountInfo.password.c_str());
+	if(!mainServer->sqlRequest("SELECT id, password, accesslevel, isonline FROM accounts WHERE name='%s'", this->accountInfo.userName.c_str())) {
+		if (mainServer->sqlGetRowCount() == 0) {
+			if (config->getValueString("CreateOnLogin")) {
+				mainServer->sqlInsert("INSERT INTO accounts (name, password, accesslevel, isonline) VALUES('%s', '%s', 1, 1)", this->accountInfo.userName.c_str(), this->accountInfo.password.c_str());
+			}
 			Packet pak(PacketID::Login::Response::USER_LOGIN);
 			pak.addByte(0x02);
 			pak.addDWord(0x00);
 			return this->sendData(pak);
 		} else {
-			if(!mainServer->sqlRequest("SELECT password FROM accounts WHERE name='%s'", this->accountInfo.userName)) {
-				Packet pak(PacketID::Login::Response::USER_LOGIN);
-				pak.addByte(0x02);
-				pak.addDWord(0x00);
-				return this->sendData(pak);
-			}
-			if(_stricmp(mainServer->sqlGetNextRow()[0], this->accountInfo.password.c_str())!=0) {
+			if(_stricmp(mainServer->sqlGetNextRow()[1], this->accountInfo.password.c_str())!=0) {
 				Packet pak(PacketID::Login::Response::USER_LOGIN);
 				pak.addByte(0x02);
 				pak.addDWord(0x00);
@@ -118,9 +119,16 @@ bool LoginClient::pakRequestChannelIP() {
 	return this->sendData(pak);
 }
 
+bool LoginClient::pakIdentifyCharServer() {
+	mainServer->
+}
+
 bool LoginClient::handlePacket() {
 	std::cout << "New Packet: " << std::hex << this->packet.getCommand() << " with Length " << std::dec << this->packet.getLength() << "\n";
 	switch (this->packet.getCommand()) {
+		case PacketID::Login::Request::CHARSERVER_IDENTIFY:
+			return this->pakIdentifyCharServer();
+
 		case PacketID::Login::Request::ENCRYPTION:
 			return this->pakEncryptionRequest();
 
