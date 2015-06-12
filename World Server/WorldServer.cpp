@@ -566,7 +566,7 @@ bool WorldServer::loadAttackTimings() {
 	this->playerAttackAnimations.reserve(fileMotionSTB.getRowCount());
 	GlobalLogger::debug("Reading %i animations...\n", fileMotionSTB.getRowCount());
 	for (unsigned int j = 0; j < fileMotionSTB.getRowCount(); j++) {
-		const std::string& currentMotion = fileMotionSTB.getRow(j).getColumn(1);
+		const std::string& currentMotion = fileMotionSTB.getRow(j).getColumn(0);
 		this->playerAttackAnimations.addValue(ZMO(this->vfs, currentMotion.c_str()));
 	}
 #endif
