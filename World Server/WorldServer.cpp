@@ -15,6 +15,12 @@ std::map<DWORD, QuestEntry*> questData;
 std::mutex sectorMutex;
 #endif
 
+const char *ItemType::typeNames[] = {
+	"Unknown", "Face", "Headgear", "Armor", "Gloves", "Shoes",
+	"Back", "Jewelry", "Weapon", "Shield", "Consumables",
+	"Jewels", "ETC", "Quest", "PAT"
+};
+
 WorldServer::WorldServer(word_t port, MYSQL* mysql) {
 	this->port = port;
 	this->sqlDataBase.init(__DATABASE_HOST__, __DATABASE_USERNAME__, __DATABASE_PASSWORD__, __DATABASE_DBNAME__, __DATABASE_PORT__, mysql);
@@ -25,7 +31,7 @@ WorldServer::WorldServer(word_t port, MYSQL* mysql) {
 	this->WorldTime.lastCheck = time(NULL);
 	this->WorldTime.currentTime = 0x00;
 #ifdef __ROSE_MULTI_THREADED__
-	GlobalLogger::info("Starting up as multi threaded world server.\n");
+	GlobalLogger::info("Starting up as multi threaded world server.");
 #endif
 #ifdef __ROSE_USE_VFS__
 	this->vfs = new VFS(config->getValueString("GameFolder"));
@@ -51,7 +57,7 @@ WorldServer::WorldServer(word_t port, MYSQL* mysql) {
 		this->mapData[i]->checkSpawns();
 		num = i * 100.0f / static_cast<float>(this->mapData.size());
 	}
-	std::cout << "Finished loading all map information!\n";
+	std::cout << "Finished loading all map information!";
 }
 
 WorldServer::~WorldServer() {
@@ -61,7 +67,7 @@ WorldServer::~WorldServer() {
 	this->charServer.socket = SOCKET_ERROR;
 
 #ifdef __ROSE_MULTI_THREADED__
-	GlobalLogger::info("Closing all map threads...\n");
+	GlobalLogger::info("Closing all map threads...");
 	for (unsigned int i = 0; i < this->mapThreads.capacity(); i++) {
 		this->mapThreads[i]->join();
 	}
@@ -123,13 +129,14 @@ WorldServer::~WorldServer() {
 
 ClientSocket* WorldServer::createClient(SOCKET sock) {
 	Player* newPlayer = new Player(sock, this);
+	this->globalPlayers.push_back(newPlayer);
 	return newPlayer;
 }
 
 bool WorldServer::checkForServer(ClientSocket* client, std::string& ip) {
 	if (this->charServer.clientHandle == nullptr && _stricmp(::config->getValueString("ChannelIp"), ip.c_str()) == 0) {
 		this->charServer.clientHandle = client;
-		std::cout << "CharServer fully connected: " << ip.c_str() << "\n";
+		GlobalLogger::info("CharServer fully connected: %s", this->charServer.ip.c_str());
 		return true;
 	}
 	return false;
@@ -185,7 +192,14 @@ void WorldServer::executeRequests() {
 
 void WorldServer::onClientDisconnect(ClientSocket* client) {
 	Player* player = dynamic_cast<Player*>(client);
-	player->setSector(nullptr);
+
+	//Remove the player from the global list
+	for (int i = 0; i < this->globalPlayers.size(); i++) {
+		if (this->globalPlayers.at(i) == player) {
+			this->globalPlayers.erase(this->globalPlayers.begin() + i);
+			break;
+		}
+	}
 }
 
 void WorldServer::checkWorldTime() {
@@ -216,8 +230,14 @@ void WorldServer::runMap(Map* curMap) {
 void runMap(Map* curMap) {
 	if (!curMap)
 		return;
+	ChronoTimer t;
+	dword_t timePerFrame = (1000 / 60);
 	do {
-		Sleep(10);
+		long long timeDiff = timePerFrame - (t.getDuration());
+		t.update();
+		if (timeDiff > 0) {
+			Sleep(timeDiff);
+		}
 		if (!curMap->hasActivePlayers()) {
 			continue;
 		}
@@ -306,6 +326,7 @@ bool WorldServer::loadSTBs() {
 	this->statusFile = new StatusSTB(this->vfs, "3DDATA\\STB\\LIST_STATUS.STB");
 	this->motionFile = new STBFile(this->vfs, "3DDATA\\STB\\TYPE_MOTION.STB", false);
 
+	this->equipmentFile[0x00] = nullptr;
 	this->equipmentFile[ItemType::HEADGEAR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_CAP.STB");
 	this->equipmentFile[ItemType::ARMOR] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_BODY.STB");
 	this->equipmentFile[ItemType::GLOVES] = new STBFile(this->vfs, "3DDATA\\STB\\LIST_ARMS.STB");
@@ -398,7 +419,7 @@ bool WorldServer::loadZones() {
 #ifdef __ROSE_USE_VFS__
 		VFSData currentZONFile;
 
-		//Remove the trailing '\', because otherwise getting the .ZON filename is artificially high.
+		//Remove the trailing '\', because otherwise the difficulty of getting the .ZON filename is artificially high.
 		//Once the name was retrieved, the removed slash is easy to reappend.
 		std::string zonFileName = folderPath.substr(0, folderPath.find_last_of("\\"));
 		zonFileName = zonFileName + std::string("\\") + zonFileName.substr(zonFileName.find_last_of("\\") + 1) + std::string(".zon");
@@ -684,6 +705,32 @@ const word_t WorldServer::getMotionId(const word_t basicMotionId, const byte_t m
 	return entry.getColumn<word_t>(motionType);
 }
 
+const dword_t WorldServer::getSellPrice(const Item& itemToSell) const {
+	//Equipment and CarParts
+	if (!itemToSell.isValid()) {
+		return (std::numeric_limits<word_t>::max)();
+	}
+	if ((itemToSell.type < ItemType::CONSUMABLES && itemToSell.type != ItemType::JEWELRY) || itemToSell.type == ItemType::PAT) {
+		float basicPrice = 0.35714285f * mainServer->getEquipmentEntry(itemToSell.type, itemToSell.id).getColumn<float>(EquipmentSTB::PRICE);
+		basicPrice *= (itemToSell.durability + 200) * 40;
+		basicPrice *= 102; //
+		basicPrice /= 10000.0f;
+
+		float finalPrice = (float)floor(basicPrice) * itemToSell.amount;
+		return static_cast<word_t>(finalPrice);
+	}
+	//Consumables or ETC
+	else if (itemToSell.type == ItemType::CONSUMABLES || itemToSell.type == ItemType::OTHER) {
+	}
+	else if (itemToSell.type == ItemType::JEWELRY || itemToSell.type == ItemType::JEWELS) {
+
+	}
+	else {
+		GlobalLogger::warning("[ITEMSELLING]: Invalid item [%i;%i]", itemToSell.type, itemToSell.id);
+	}
+	return 1;
+}
+
 QuestEntry* WorldServer::getQuestById(const dword_t questId) {
 	std::map<const DWORD, QuestEntry*>::iterator i = this->questData.begin();
 	while (i != this->questData.end()) {
@@ -864,6 +911,36 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 		}
 		SPLIT();
 	}
+	else if (WANTED_COMMAND("eq_at")) {
+		byte_t slot = static_cast<byte_t>(atoi(curValue.c_str())); 
+		if (slot <= ItemType::PAT) {
+			STBFile *file = mainServer->getEquipmentSTB(slot);
+			for (word_t i = 0; i < file->getRowCount(); i++) {
+				if (mainServer->isValidItem(slot, i)) {
+					STBEntry& entry = file->getRow(i);
+					gm->addItemToInventory(Item(slot, i), PlayerInventory::fromItemType(slot));
+					ChatService::sendWhisper("Server", gm, "Equipped '%s' (Name: '%s', Type %i) in slot %i", ItemType::toString(slot), entry.getColumn(0x00).c_str(), i, PlayerInventory::fromItemType(slot));
+					break;
+				}
+			}
+		}
+	}
+	else if (WANTED_COMMAND("goto")) {
+		bool success = false;
+		if (curValue.length() > 2) {
+			Player *player = nullptr;
+			for (int i = 0; i < mainServer->getPlayerAmount();i++) {
+				Player* p = mainServer->getGlobalPlayer(i);
+				if (p != nullptr && p->getName().find(curValue) >= 0) {
+					success = gm->pakTelegate(player->getMapId(), player->getPositionCurrent());
+					
+				}
+			}
+		}
+		if (!success) {
+			ChatService::sendWhisper("Server", gm, "Player '%s' cannot be found across the server.", curValue.c_str());
+		}
+	}
 	else if(WANTED_COMMAND("drop")) {
 		unsigned long itemType = static_cast<unsigned long>(atoi(curValue.c_str())); SPLIT();
 		if(curValue.length() == 0) {
@@ -876,13 +953,7 @@ void GMService::executeCommand(Player* gm, Packet& chatCommand) {
 				return;
 			word_t amount = curValue.length() == 0 ? 0x01 : atoi(curValue.c_str());
 
-			Item item; 
-			item.type = static_cast<BYTE>(itemType);
-			item.id = itemNum;
-			item.amount = amount;
-			item.durability = 120;
-			item.isAppraised = true;
-			item.lifespan = 1000;
+			Item item(static_cast<byte_t>(itemType), itemNum, 120, amount);
 			if(mainServer->isValidItem(item.type, item.id))
 				new Drop(gm, item, false);
 		}

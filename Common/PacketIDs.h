@@ -69,6 +69,7 @@ class PacketID {
 						const static word_t GET_WORLDSERVER_IP = 0x715;
 						const static word_t CLAN_MANAGER = 0x7E0;
 						const static word_t MESSAGE_MANAGER = 0x7E1;
+						const static word_t UNKNOWN = 0x7E5;
 				};
 				class Response {
 					private:
@@ -84,6 +85,7 @@ class PacketID {
 
 						const static word_t CLAN_MANAGER = 0x7E0;
 						const static word_t MESSAGE_MANAGER = 0x7E1;
+						const static word_t UNKNOWN = 0x7E5;
 				};
 				class Custom {
 					private:
@@ -106,12 +108,13 @@ class PacketID {
 						const static word_t PING = 0x700;
 						const static word_t EXIT = 0x707;
 						const static word_t IDENFITY = 0x70B;
+						const static word_t NPC_TRADE = 0x717;
 						const static word_t RETURN_TO_CHARSERVER = 0x71C;
 						const static word_t QUEST = 0x730;
 						const static word_t GET_ID = 0x753;
 						const static word_t RESPAWN_AFTER_DEATH = 0x755;
 						const static word_t RESPAWN_TOWN = 0x756;
-						const static word_t TERRAIN_COLLISION = 0x770;
+						const static word_t TERRAIN_COLLISION = 0x771;
 						const static word_t SET_EMOTION = 0x781;
 						const static word_t CHANGE_STANCE = 0x782;
 						const static word_t LOCAL_CHAT = 0x783;
@@ -149,6 +152,7 @@ class PacketID {
 						const static word_t IDENFITY = 0x70C;
 						const static word_t PLAYER_INFOS = 0x715;
 						const static word_t PLAYER_INVENTORY = 0x716;
+						const static word_t NPC_TRADE = 0x717;
 						const static word_t UPDATE_INVENTORY = 0x718;
 						const static word_t QUEST_DATA = 0x71B;
 						const static word_t RETURN_TO_CHARSERVER = 0x71C;
@@ -162,7 +166,7 @@ class PacketID {
 						const static word_t ASSIGN_ID = 0x753;
 						const static word_t RESPAWN_AFTER_DEATH = 0x755;
 						const static word_t WEIGHT = 0x762;
-						const static word_t TERRAIN_COLLISION = 0x770;
+						const static word_t TERRAIN_COLLISION = 0x771;
 						const static word_t CONVERT_MONSTER = 0x774;
 						const static word_t SET_EMOTION = 0x781;
 						const static word_t CHANGE_STANCE = 0x782;
@@ -172,7 +176,7 @@ class PacketID {
 						const static word_t SPAWN_NPC = 0x791;
 						const static word_t SPAWN_MONSTER = 0x792;
 						const static word_t SPAWN_PLAYER = 0x0793;
-						const static word_t REMOVE_VISIBLE_PLAYER = 0x794;
+						const static word_t REMOVE_VISIBLE_ENTITY = 0x794;
 						const static word_t MOVEMENT_MONSTER = 0x797;
 						const static word_t INIT_BASIC_ATTACK = 0x798;
 						const static word_t BASIC_ATTACK = 0x799;

@@ -5,6 +5,7 @@
 
 #include "..\Structures.h"
 #include "..\Map.h"
+#include "..\FileTypes\STB.h"
 
 #undef max
 
@@ -39,12 +40,14 @@ struct _entityInfo {
 	Map::Sector* nearestSector;		//not in use, yet
 	bool needsVisualityUpdate;
 	byte_t type;
+	word_t pkFlagId; //"Player Kill Level"
 	_entityInfo() {
 		this->id = this->mapId = 0x00;
 		this->ingame = false;
 		this->needsVisualityUpdate = false;
 		this->nearestSector = nullptr;
 		this->type = std::numeric_limits<BYTE>::max();
+		this->pkFlagId = 0x100;
 	}
 	__inline word_t getId() const { return this->id; }
 	__inline bool isIngame() const { return this->ingame; }
@@ -53,6 +56,7 @@ struct _entityInfo {
 	__inline Map::Sector* getSector() const { return this->nearestSector; }
 	void setSector(Map::Sector* newSector) { this->nearestSector = newSector; }
 	__inline byte_t getType() const { return this->type; }
+	__inline const word_t getPlayerKillFlag() const { return this->pkFlagId; }
 };
 
 class Entity {
@@ -82,10 +86,11 @@ class Entity {
 		virtual void addEntityVisually(Entity* entity) { }
 		virtual void removeEntityVisually(Entity* entity) { if(this->getTarget() == entity) this->setTarget(nullptr); }
 
-		virtual bool attackEnemy();
+		virtual bool attackEnemy(Entity* overrideTarget = nullptr);
 
 		void addAttacker(Entity* enemy);
 		void removeAttacker(Entity* enemy);
+		byte_t changeMovementResultForAttacks(float distance);
 	public:
 		const static byte_t TYPE_PLAYER = 0x00;
 		const static byte_t TYPE_NPC = 0x01;
@@ -130,6 +135,8 @@ class Entity {
 		bool isVisible(const word_t localId) const;
 		bool isVisible(const Entity* entity) const;
 		Entity* getVisibleEntity(const word_t localId) const;
+		std::vector<Entity*> getAllVisibleEntities() const;
+		std::vector<Entity*> getAllVisibleEntitiesWithinDistance(const float distance, bool includeDrops = true) const;
 		
 		__inline virtual word_t getCurrentHP() const { return this->stats.getCurrentHP(); }
 		__inline virtual word_t getCurrentMP() const { return this->stats.getCurrentMP(); }
@@ -235,6 +242,10 @@ class Entity {
 		__inline virtual Entity* getTarget() const { return this->combat.getTarget(); }
 		virtual void setTarget(Entity* target);
 
+		__inline const word_t getPlayerKillFlag() const { return this->entityInfo.getPlayerKillFlag(); }
+		__inline void setPlayerKillFlag(const word_t newPkFlag) { this->entityInfo.pkFlagId = newPkFlag; }
+
+		virtual Skill* getCurrentSkill() const { return this->combat.skill; }
 		virtual bool castSkill(const word_t skillId) { return true; }
 
 		virtual bool addDamage(Entity* enemy, const word_t amount, WORD& flag);
@@ -263,6 +274,9 @@ class Entity {
 		virtual void setPositionCurrent(const position_t& newPos);
 		virtual void setPositionDest(const position_t& newPos);
 
+		bool isSectorVisible(Map::Sector* sector) const;
+		void refreshVisuality();
+		void refreshSector(Map::Sector* sectorToRefresh);
 		virtual Map::Sector* checkForNewSector();
 		virtual void checkVisuality();
 		virtual __inline long long getLastSectorCheckTime() const { return this->position.lastSectorCheckTime.getDuration(); }
@@ -272,6 +286,7 @@ class Entity {
 
 		bool playAnimation();
 		byte_t movementRoutine();
+		bool isInMovementStopRange(float givenDistance);
 		virtual bool getAttackAnimation() {
 			return false;
 		}

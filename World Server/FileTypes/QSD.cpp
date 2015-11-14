@@ -1699,7 +1699,6 @@ std::string QuestService::actionToString(const char* data) {
 			sprintf(&buffer[strlen(buffer)], "\n");
 		}
 		break;
-		/*
 		case 0x13:
 		{
 					 const QuestCondition019* cond = reinterpret_cast<const QuestCondition019*>(data);
@@ -1711,7 +1710,7 @@ std::string QuestService::actionToString(const char* data) {
 					 const QuestCondition020* cond = reinterpret_cast<const QuestCondition020*>(data);
 					 sprintf(&buffer[strlen(buffer)], "Check if teamId >= %i && <= %i\n", cond->firstNum, cond->secondNum);
 		}
-			break;
+		break;
 		case 0x15:
 		{
 					 const QuestCondition021* cond = reinterpret_cast<const QuestCondition021*>(data);
@@ -1744,8 +1743,7 @@ std::string QuestService::actionToString(const char* data) {
 					 const QuestCondition028* cond = reinterpret_cast<const QuestCondition028*>(data);
 					 sprintf(&buffer[strlen(buffer)], "Check clan money %s %i\n", OperationService::operationName(cond->operation), cond->moneyAmount);
 		}
-			break;
-		*/
+		break;
 		//0x880be03.log
 		case 0x1D:
 		{
@@ -1757,14 +1755,12 @@ std::string QuestService::actionToString(const char* data) {
 			sprintf(&buffer[strlen(buffer)], "]\n");
 		}
 		break;
-		/*
 		case 0x1E:
 		{
 					 const QuestCondition030* cond = reinterpret_cast<const QuestCondition030*>(data);
 					 sprintf(&buffer[strlen(buffer)], "Check if clan skill %s %i (%i)\n", OperationService::operationName(cond->operation), cond->skillIdFirst, cond->skillIdSecond);
 		}
 		break;
-		*/
 		default:
 			sprintf(&buffer[strlen(buffer)], "Unknown action format\n");
 	}

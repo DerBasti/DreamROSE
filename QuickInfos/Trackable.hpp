@@ -61,7 +61,7 @@ template<class _Ty, class = typename std::enable_if< std::is_integral<_Ty>::valu
 			this->_size = newLen;
 			this->data = new _Ty[this->_size + 1];
 			
-			memcpy(this->data, newData, this->_size);
+			memcpy(this->data, newData, this->_size * sizeof(_Ty));
 			this->data[this->_size] = 0x00;
 		}
 		//Allow implicit casting on this one.

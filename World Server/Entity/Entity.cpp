@@ -118,23 +118,49 @@ bool Entity::playAnimation() {
 	bool attackSuccess = true;
 	word_t currentFrame = framesAlreadyPlayed;
 	for (; (currentFrame < framesToPlay) && (currentFrame < this->animation.getFrameAmount()); currentFrame++) {
-		switch (this->animation.getFrameType(currentFrame)) {
-		case ZMO::MOTION_MELEE_ATTACK:
-		case ZMO::MOTION_RANGED_ATTACK:
-		case ZMO::MOTION_MAGIC_ATTACK:
-			if (this->isPlayer()) {
-				Player* curPlayer = dynamic_cast<Player*>(this);
-				if (curPlayer->isInDebugMode()) {
-					ChatService::sendDebugMessage(curPlayer, "Proc'ing attack frame [%i of type %i] now (of frames to play: %i).\n", currentFrame, this->animation.getFrameType(currentFrame), framesToPlay);
+		word_t frameType = this->animation.getFrameType(currentFrame);
+		switch (frameType) {
+			case ZMO::MOTION_MELEE_ATTACK:
+			case ZMO::MOTION_RANGED_ATTACK:
+			case ZMO::MOTION_MAGIC_ATTACK:
+			case ZMO::MOTION_SKILL_MELEE_SINGLE:
+				if (this->isPlayer()) {
+					Player* curPlayer = dynamic_cast<Player*>(this);
+					if (curPlayer->isInDebugMode()) {
+						ChatService::sendDebugMessage(curPlayer, "Proc'ing attack frame [%i of type %i] now (of frames to play: %i).\n", currentFrame, this->animation.getFrameType(currentFrame), framesToPlay);
+					}
 				}
-			}
-			attackSuccess = this->attackEnemy();
+				attackSuccess = this->attackEnemy();
 			break;
-		case ZMO::MOTION_SKILL_MELEE:
-
+			case ZMO::MOTION_SKILL_MELEE:
+				if (!this->getCurrentSkill()) {
+					throw NullpointerException("[%s] tried to execute a skill without a valid assignment!\n", this->getName().c_str());
+				}
+				if (this->isPlayer()) {
+					Player* curPlayer = dynamic_cast<Player*>(this);
+					if (curPlayer->isInDebugMode()) {
+						ChatService::sendDebugMessage(curPlayer, "Attacking [%s] with skill %i at [%i of %i]\n", this->getTarget()->getName().c_str(), this->combat.skill->getId(), currentFrame, this->animation.getFrameAmount());
+					}
+				}
+				if (this->getCurrentSkill()->getAOERange() > 0) {
+					float distance = this->getCurrentSkill()->getAOERange();
+					std::vector<Entity*> enemiesInSight = this->getCurrentSkill()->getInitRange() == 0 ? this->getAllVisibleEntitiesWithinDistance(distance, false) : this->getTarget()->getAllVisibleEntitiesWithinDistance(distance, false);
+					for (dword_t i = 0; i < enemiesInSight.size(); i++) {
+						attackSuccess &= this->attackEnemy(enemiesInSight[i]);
+					}
+				}
+				else {
+					attackSuccess = this->attackEnemy();
+				}
 			break;
-		case ZMO::MOTION_SKILL_RANGED:
-
+			case ZMO::MOTION_SKILL_RANGED:
+				if (this->isPlayer()) {
+					Player* curPlayer = dynamic_cast<Player*>(this);
+					if (curPlayer->isInDebugMode()) {
+						ChatService::sendDebugMessage(curPlayer, "Attacking [%s] with skill %i at [%i of %i]\n", this->getTarget()->getName().c_str(), this->combat.skill->getId(), currentFrame, this->animation.getFrameAmount());
+					}
+				}
+				//attackSuccess = this->isSkillForAllies() ? this->buffAllies() : this->attackEnemy();
 			break;
 		}
 	}
@@ -165,7 +191,7 @@ byte_t Entity::movementRoutine() {
 		return Movement::TARGET_REACHED;
 	}
 	byte_t result = Movement::IDLE;
-	bool isAttacking = this->getTarget() != nullptr;
+	bool isAttacking = this->getTarget() != nullptr && !this->getTarget()->isDrop();
 	if (isAttacking) {
 		this->position.destination = this->getTarget()->getPositionCurrent();
 	}
@@ -185,7 +211,7 @@ byte_t Entity::movementRoutine() {
 			}
 #endif
 		}
-		this->position.current = this->position.destination;
+		this->position.destination = this->position.current;
 		this->position.lastCheckTime.update();
 		return result;
 	}
@@ -193,6 +219,7 @@ byte_t Entity::movementRoutine() {
 	float yDiff = this->position.destination.y - this->position.current.y;
 
 	long long timePassed = this->position.lastCheckTime.getDuration();
+	this->position.lastCheckTime.update();
 	float timeNecessary = (distance / static_cast<float>(this->getMovementSpeed()) * 1000.0f);
 	if (timePassed >= timeNecessary) {
 #ifdef __ROSE_DEBUG__
@@ -201,12 +228,14 @@ byte_t Entity::movementRoutine() {
 		}
 #endif
 		this->position.current = this->position.destination;
-		this->position.lastCheckTime.update();
 		return result;
 	}
-	float percentage = timePassed / timeNecessary;
-	position_t newPos((percentage * xDiff) + this->position.current.x,
-		(percentage * yDiff) + this->position.current.y);
+	float totalDiff = sqrt(xDiff*xDiff + yDiff*yDiff);
+	float pathTraveled = timePassed * static_cast<float>(this->getMovementSpeed()) / 1000.0f;
+	float xRatio = pathTraveled * (xDiff / totalDiff);
+	float yRatio = pathTraveled * (yDiff / totalDiff);
+	position_t newPos(xRatio + this->position.current.x,
+		yRatio + this->position.current.y);
 
 #ifdef __ROSE_DEBUG__
 	if (this->isPlayer() && dynamic_cast<Player*>(this)->isInDebugMode()) {
@@ -215,12 +244,11 @@ byte_t Entity::movementRoutine() {
 #endif
 
 	this->position.current = newPos;
-	this->position.lastCheckTime.update();
 	return Movement::IS_MOVING;
 }
 
-bool Entity::attackEnemy() { 
-	Entity *enemy = this->getTarget();
+bool Entity::attackEnemy(Entity* overrideTarget) { 
+	Entity *enemy = this->getTarget() == nullptr ? overrideTarget : this->getTarget();
 	if (!enemy) {
 		return false;
 	}
@@ -310,6 +338,31 @@ Map::Sector* Entity::checkForNewSector() {
 	return nullptr;
 }
 
+bool Entity::isSectorVisible(Map::Sector* sector) const {
+	if (!sector)
+		return false;
+	UniqueSortedList<dword_t, Map::Sector*>& current = this->getVisibleSectors();
+	if (current.find(sector->getId(), sector) >= 0) {
+		return true;
+	}
+	return false;
+}
+
+void Entity::refreshSector(Map::Sector* sectorToRefresh) {
+	if (this->isSectorVisible(sectorToRefresh)) {
+		this->removeSectorVisually(sectorToRefresh);
+	}
+	this->addSectorVisually(sectorToRefresh);
+}
+
+void Entity::refreshVisuality() {
+	UniqueSortedList<dword_t, Map::Sector*>& current = this->getVisibleSectors();
+	for (dword_t i = 0; i < current.size(); i++) {
+		Map::Sector* sector = current.getValueAtPosition(i);
+		this->refreshSector(sector);
+	}
+}
+
 void Entity::checkVisuality() {
 	if(!this->getSector())
 		return;
@@ -365,6 +418,44 @@ void Entity::checkVisuality() {
 		this->visibleSectors.add(sector->getId(), sector);
 	}
 	//visualityLog.putStringWithVarOnly("-=-=-=-=-=-=-=-=-\n\n", sector->getId(), sector->getCenter().x, sector->getCenter().y);
+}
+
+std::vector<Entity*> Entity::getAllVisibleEntities() const {
+	std::vector<Entity*> result;
+	for (unsigned int i = 0; i < this->getVisibleSectors().size(); i++) {
+		Map::Sector* sector = this->getVisibleSectors().getValueAtPosition(i);
+		LinkedList<Entity*>::Node* currentNode = sector->getFirstEntity();
+		while (currentNode != nullptr) {
+			if (currentNode->getValue() != nullptr) {
+				Entity* entity = currentNode->getValue();
+				if (entity->isIngame()) {
+					result.push_back(entity);
+				}
+			}
+			currentNode->getNextNode();
+		}
+	}
+	return result;
+}
+
+std::vector<Entity*> Entity::getAllVisibleEntitiesWithinDistance(const float distance, bool includeDrops) const {
+	std::vector<Entity*> result;
+	for (unsigned int i = 0; i < this->getVisibleSectors().size(); i++) {
+		Map::Sector* sector = this->getVisibleSectors().getValueAtPosition(i);
+		LinkedList<Entity*>::Node* currentNode = sector->getFirstEntity();
+		while (currentNode != nullptr) {
+			if (currentNode->getValue() != nullptr) {
+				Entity* entity = currentNode->getValue();
+				if (entity->isIngame() && this->getPositionCurrent().distanceTo(entity->getPositionCurrent()) <= distance) {
+					if (entity->getEntityType() != Entity::TYPE_DROP || (entity->getEntityType() == Entity::TYPE_DROP && includeDrops)) {
+						result.push_back(entity);
+					}
+				}
+			}
+			currentNode->getNextNode();
+		}
+	}
+	return result;
 }
 
 /*

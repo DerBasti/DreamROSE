@@ -104,6 +104,7 @@ class Map {
 		word_t assignLocalId(Entity*);
 		void freeLocalId(Entity*);
 		__inline Entity* getEntity(const word_t localId) const { return this->clientIDs[localId]; }
+
 		bool hasActivePlayers() const;
 		
 		void createSectors(std::vector<std::string>& ifoFiles);
@@ -150,8 +151,12 @@ class Map {
 		__inline const dword_t getEntityCount() const { 
 			return this->entitiesOnMap.getNodeCount();
 		}
-		class NPC* getNPC(const word_t type);
-		class Player* getPlayer(const word_t localId);
+		class NPC* getNPC(const word_t type) const ;
+		class Player* getPlayer(const word_t localId) const;
+		class Player* getPlayer(std::string& name) const;
+		__inline class Player* getPlayer(const char* name) const {
+			return this->getPlayer(std::string(name));
+		}
 
 		__inline float getSectorWidthAndHeight() const { return this->sectorSize; }
 		__inline void setSectorWidthAndHeight(const dword_t newWH) { 

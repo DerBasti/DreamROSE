@@ -34,7 +34,7 @@ template<class FileType> void ZMO::init(FileType& file) {
 	this->animationInfo.framesPerSecond = static_cast<word_t>(file.read<dword_t>());
 	this->animationInfo.framesInTotal = static_cast<word_t>(file.read<dword_t>())+1;
 
-	this->animationInfo.defaultTime = static_cast<word_t>(static_cast<float>(this->animationInfo.framesInTotal + 1) / static_cast<float>(this->animationInfo.framesPerSecond) * 1000);
+	this->animationInfo.defaultTime = static_cast<word_t>(static_cast<float>(this->animationInfo.framesInTotal) / static_cast<float>(this->animationInfo.framesPerSecond) * 1000);
 
 	//last 4 bytes are the ZMO-version type (e.g. 3ZMO)
 	//The previous 10 bytes: an offset or anything of the sorts seems to be hiddin in there.

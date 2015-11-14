@@ -51,6 +51,7 @@ class WorldServer : public ServerSocket {
 
 		std::vector<NPCData> npcData;
 		std::vector<NPC*> globalNPCs;
+		std::vector<Player*> globalPlayers;
 		std::map<const DWORD, QuestEntry*> questData;
 		FixedArray<Skill*> skillData;
 		FixedArray<class ZON*> zoneData;
@@ -117,6 +118,7 @@ class WorldServer : public ServerSocket {
 
 		bool isValidItem(const byte_t itemType, const word_t itemId);
 
+		__inline dword_t getMapAmount() const { return this->mapData.size(); }
 		Map* getMap(const word_t mapId) const {
 			 if (mapId >= this->mapData.capacity())
 				return nullptr;
@@ -124,6 +126,9 @@ class WorldServer : public ServerSocket {
 		}
 		void changeToMap(Entity* entity, const word_t newMapId);
 		
+		__inline dword_t getPlayerAmount() const { return this->globalPlayers.size(); }
+		__inline Player* getGlobalPlayer(const dword_t num) { return this->globalPlayers.at(num); }
+
 		__inline int getWorldVariable(byte_t varIdx) { return this->worldVar[varIdx]; }
 		__inline int getEconomyVariable(byte_t varIdx) { return this->economyVar[varIdx]; }
 		__inline NPCData* getNPCData(const DWORD& id) { return &this->npcData.at(id); }
@@ -163,6 +168,10 @@ class WorldServer : public ServerSocket {
 		const word_t getQuality(const byte_t itemType, const dword_t itemId);
 		const word_t getSubType(const byte_t itemType, const dword_t itemId);
 		const word_t getWeaponAttackpower(const dword_t itemId);
+		const dword_t getSellPrice(const Item& item) const;
+		__inline const dword_t getSellPrice(const byte_t type, const word_t id) const {
+			return this->getSellPrice(Item(type, id));
+		}
 		const int getWeaponAttackspeed(const dword_t itemId);
 
 		const word_t getMotionId(const word_t basicMotionId, const byte_t motionTypeForEquippedWeapon);

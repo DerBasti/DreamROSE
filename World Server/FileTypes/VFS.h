@@ -10,6 +10,9 @@
 #include "D:\Programmieren\QuickInfos\Trackable.hpp"
 #include "D:\Programmieren\CMyFile\MyFile.h"
 #include "..\..\Common\Definitions.h"
+#include "D:\Programmieren\Listener\Listener.h"
+#include "D:\Programmieren\QuickInfos\Array.h"
+#include "D:\Programmieren\QuickInfos\VirtualFileSystem.h"
 
 typedef DWORD(__stdcall* OpenVFS_FUNCPTR)(const char*, const char*);
 typedef DWORD(__stdcall* CloseVFS_FUNCPTR)(dword_t fileHandle);
@@ -24,71 +27,46 @@ typedef DWORD(__stdcall* ReadFile_FUNCPTR)(void* buffer, dword_t size, dword_t c
 typedef DWORD(__stdcall* GetFileSize_FUNCPTR)(dword_t fileHandle);
 
 struct VFSData {
-	Trackable<char> data;
+	RAII_Array<char> data;
 	std::string filePath;
 };
 
-class VFSTree {
-	public:
-		class Branch {
-			private:
-				friend class VFSTree;
-				std::string name;
-				std::string fullPath;
-				struct _lowerLevel {
-					Branch* first;
-					Branch* end;
-				} lowerLevel;
-				Branch* parent;
-				Branch* nextBranch;
-				Branch* operator=(const Branch* newBranch) {
-					this->name = newBranch->name;
-					this->lowerLevel.first = newBranch->lowerLevel.first;
-					this->lowerLevel.end = newBranch->lowerLevel.end;
-					this->parent = newBranch->parent;
-					this->nextBranch = newBranch->nextBranch;
-					return this;
-				}
-
-				Branch* _getBranchByName(const char* branchName) const;
-				std::vector<std::string> getAllChildren();
-			public:
-				Branch(std::string nodeName, Branch* parentBranch = nullptr);
-
-				bool operator==(const Branch& branch) const;
-				bool operator!=(const Branch& branch) const;
-
-				Branch* appendLeaf(std::string value);
-				const Branch* operator[](const char* branchName) const;
-				const Branch* findBranchByPath(std::string path);
-				std::vector<std::string> getAllNextLowerBranchNames(bool addDirectoryNameToResult, bool includeFolder) const;
-				void establishPath(std::string path);
-
-				__inline const Branch* findBranchByName(const char* branchName) const {
-					return (*this)[branchName];
-				}
-				__inline void establishPath(const char* path) {
-					return this->establishPath(std::string(path));
-				}
-				__inline std::string getName() const { return this->name; }
-				__inline std::string getTotalPath() const { return this->fullPath; }
-				__inline bool hasChildren() const {
-					return (this->lowerLevel.first != nullptr);
-				}
-		};
+template<class _Ty> class Tree {
 	private:
-		Branch* root;
+		VirtualFileSystem<_Ty> *storage;
 	public:
-		VFSTree() {
-			this->root = new Branch("\\");
+		Tree() {
+			storage = new VirtualFileSystem<_Ty>();
 		}
-		__inline Branch* getRoot() const { return this->root; }
-		__inline const Branch* getBranchByPath(std::string value) const { return this->root->findBranchByPath(value); }
-		__inline void appendFile(const char* filePath) { return this->appendFile(std::string(filePath)); }
-		__inline void appendFile(std::string filePath) { this->root->establishPath(filePath); }
-		std::vector<std::string> getFilesInPath(std::string path, const char* contentFilter = nullptr, bool addDirectoryNameToResult = true, bool includeFolder = false);
-		std::vector<std::string> getAllLeafs();
+
+		void appendPath(std::vector<_Ty> path) {
+			typename VirtualFileSystem<_Ty>::Entry* current = storage->getRoot();
+			for (_Ty value : path) {
+				current = current->appendEntry(value);
+			}
+		}
+
+		__inline bool existsPath(std::vector<_Ty> path) const {
+			return storage->exists(path);
+		}
+
+		__inline std::string getExistingValuePath(std::vector<_Ty> path, const char *delimiter = " ") const {
+			return storage->getExistingValuePath(path, delimiter);
+		}
+
+		template<class _Container> typename VirtualFileSystem<_Ty>::Entry *getEntry(_Container path) const {
+			auto current = storage->getRoot();
+			for (_Ty value : path) {
+				current = current->getEntry(value);
+				if (!current) {
+					break;
+				}
+			}
+			return current;
+		}
 };
+
+typedef Tree<std::string> VFSTree;
 
 class VFS {
 	private:

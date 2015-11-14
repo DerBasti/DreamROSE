@@ -7,12 +7,21 @@
 
 long PLAYER_ATTACK_INTERVAL = 125000;
 
+Player::UnionInfo::UnionInfo() {
+	id = rank = fame = 1;
+	points.reserve(UNION_AMOUNT);
+	for (int i = 0; i < 10; i++) {
+		points.addValue((i+1)*5);
+	}
+}
+
 Player::Player(SOCKET sock, ServerSocket* server){ 
 	this->socket = sock;
 	this->serverDelegate = server;
 	this->accountInfo.debugMode = false;
 	this->entityInfo.type = Entity::TYPE_PLAYER;
 	this->entityInfo.ingame = false;
+	this->entityInfo.pkFlagId = 0x02;
 	this->status.updateLastRegen();
 
 	for (unsigned int i = 0; i < PlayerInventory::Slots::MAXIMUM; i++) {
@@ -121,7 +130,7 @@ const byte_t Player::getFreeInventorySlot(const Item& item) {
 		case ItemType::CONSUMABLES:
 			inventoryTab = 0x01;
 		break;
-		case ItemType::JEWELRY:
+		case ItemType::JEWELS:
 		case ItemType::OTHER:
 			inventoryTab = 0x02;
 		break;
@@ -198,7 +207,7 @@ bool Player::pakRemoveEntityVisually(Entity* entity) {
 		entity->setTarget(nullptr);
 		entity->setPositionDest(entity->getPositionCurrent());
 	}
-	Packet pak(PacketID::World::Response::REMOVE_VISIBLE_PLAYER);
+	Packet pak(PacketID::World::Response::REMOVE_VISIBLE_ENTITY);
 	pak.addWord(entity->getLocalId());
 	return this->sendData(pak);
 }
@@ -446,13 +455,14 @@ Item Player::getItemFromInventory(const word_t itemSlot) {
 bool Player::addItemToInventory(const Item& item, byte_t itemSlot) {
 	if (itemSlot == std::numeric_limits<byte_t>::max())
 		itemSlot = this->getFreeInventorySlot(item);
-	if (itemSlot < PlayerInventory::Slots::MAXIMUM) {
-		if (this->inventory[itemSlot].isValid() && !item.isSingleSlot()) {
+	if (itemSlot < PlayerInventory::Slots::MAXIMUM && item.isValid()) {
+		if (!item.isSingleSlot()) {
 			this->inventory[itemSlot].amount += item.amount;
 		}
 		else {
 			this->inventory[itemSlot] = item;
 		}
+		this->pakUpdateInventoryVisually(1, &itemSlot);
 		Packet pak(PacketID::World::Response::REWARD_ITEM);
 		pak.addByte(0x01); //Amount of rewarded items
 		pak.addByte(itemSlot);
@@ -500,8 +510,11 @@ dword_t Player::getSpecialStatType(const word_t statType) {
 		case StatType::MP_RECOVERY_RATE:
 			return 0;
 		case StatType::PK_LEVEL:
+			return this->getPlayerKillFlag();
 		case StatType::RANKING:
+			return this->unionInfo.rank;
 		case StatType::REPUTATION:
+			return this->unionInfo.fame;
 		case StatType::TENDENCY:
 			return 0;
 		case StatType::SENSIBILITY:
@@ -513,7 +526,7 @@ dword_t Player::getSpecialStatType(const word_t statType) {
 		case StatType::STRENGTH:
 			return this->getStrengthTotal();
 		case StatType::UNION_FACTION:
-			return 0;
+			return this->unionInfo.id;
 	}
 	return 0;
 }
@@ -585,9 +598,17 @@ bool Player::changeAbility(const word_t abilityType, const dword_t amount, const
 		break;
 		case StatType::MP_CONSUMPTION_RATE:
 		case StatType::MP_RECOVERY_RATE:
+			return false;
 		case StatType::PK_LEVEL:
+			this->setPlayerKillFlag(OperationService::resultOperation(this->getPlayerKillFlag(), static_cast<const word_t>(amount), operation));
+			result = this->getPlayerKillFlag();
 		case StatType::RANKING:
+			this->unionInfo.rank = OperationService::resultOperation(this->unionInfo.rank, static_cast<const byte_t>(amount), operation);
+			result = this->unionInfo.rank;
+		break;
 		case StatType::REPUTATION:
+			this->unionInfo.fame = OperationService::resultOperation(this->unionInfo.fame, static_cast<const byte_t>(amount), operation);
+			result = this->unionInfo.fame;
 		case StatType::TENDENCY:
 			return false;
 		case StatType::SENSIBILITY:
@@ -607,7 +628,9 @@ bool Player::changeAbility(const word_t abilityType, const dword_t amount, const
 			result = this->attributes.strength;
 		break;
 		case StatType::UNION_FACTION:
-			return false;
+			this->unionInfo.id = OperationService::resultOperation(this->unionInfo.id, static_cast<const byte_t>(amount), operation);
+			result = this->unionInfo.id;
+		break;
 	}
 	if (sendPacket) {
 		Packet pak(packetID);
@@ -642,8 +665,9 @@ word_t Player::checkClothesForStats(const word_t statAmount, ...) {
 		stats.push_back(va_arg(ap, dword_t));
 	}
 	for(unsigned int i=1;i<=PlayerInventory::Slots::SHIELD;i++) {
-		if(!this->inventory[i].isValid())
+		if (!this->inventory[i].isValid()) {
 			continue;
+		}
 		try {
 			STBEntry& entry = mainServer->getEquipmentEntry( this->inventory[i].type, this->inventory[i].id );
 			word_t firstStatType = entry.getColumn<word_t>( EquipmentSTB::STAT_FIRST_TYPE );
@@ -673,12 +697,14 @@ word_t Player::checkSkillsForStats(const word_t basicAmount, const word_t statAm
 		stats.push_back(va_arg(ap, dword_t));
 	}
 	for(unsigned int i=0;i<this->skills.size();i++) {
-		if(!this->skills[i])
+		if (!this->skills[i]) {
 			continue;
+		}
 		
 		Skill* currentSkill = this->skills[i];
-		if(currentSkill->getType() != SkillType::PASSIVE)
+		if (currentSkill->getType() != SkillType::PASSIVE) {
 			continue;
+		}
 		for(unsigned int j=0;j<3;j++) {
 			for(unsigned int k=0;k<stats.size();k++) {
 				if(currentSkill->getBuffType(j) == stats.at(k)) {
@@ -779,8 +805,9 @@ void Player::updateAttackpower() {
 			weaponAtkParts[2] = static_cast<word_t>((this->attributes.getIntelligenceTotal() * 0.05 + 29) * weaponAtkPower / 30.0);
 		break;
 	}
-	for(unsigned int i=0;i<5;i++)
+	for (unsigned int i = 0; i < 5; i++) {
 		totalAttackpower += weaponAtkParts[i];
+	}
 
 	totalAttackpower += this->getBuffAmount( Buffs::Visuality::ATTACKPOWER_UP );
 	totalAttackpower -= this->getBuffAmount( Buffs::Visuality::ATTACKPOWER_DOWN );
@@ -962,8 +989,9 @@ bool Player::getAttackAnimation() {
 
 void Player::updateDefense() {
 	word_t defense = 0x00;
-	if(this->getJob() & 0x17) //Second tier jobs
+	if (this->getJob() & 0x10) {//Second tier jobs (x21/x22)
 		defense += 25;
+	}
 
 	defense += static_cast<word_t>((this->attributes.getStrengthTotal() + 5) * 0.35);
 	defense += static_cast<word_t>((this->getLevel() + 15) * 0.7);
@@ -1061,7 +1089,8 @@ void Player::updateMaxHP() {
 	maxHp += ( this->attributes.getStrengthTotal() << 1 );
 
 	word_t additionalMaxHP = 0x00;
-	if(this->getJob() & 0x17) { //Second Jobs: X2Y = X ClassType, Y = SubClass (e.g. Scout)
+	//BUGGED
+	if(this->getJob() & 0x10) { //Second Jobs: X2Y = X ClassType, Y = SubClass (e.g. Scout)
 		additionalMaxHP = 300;
 	}
 	additionalMaxHP += this->checkClothesForStats(1, StatType::MAX_HP);
@@ -1080,23 +1109,50 @@ void Player::updateCritrate() {
 }
 
 void Player::updateMovementSpeed() {
-	this->stats.movementSpeed = 425;
+	Item& shoes = this->inventory[PlayerInventory::fromItemType(ItemType::SHOES)];
+	switch (this->getStance().asBYTE()) {
+		case Stance::WALKING:
+			this->stats.movementSpeed = 200;
+		break;
+		case Stance::RUNNING:
+			this->stats.movementSpeed = 425;
+			if (shoes.isValid()) {
+				STBEntry& entry = mainServer->getEquipmentEntry(ItemType::SHOES, shoes.id);
+				word_t shoeSpeed = entry.getColumn<word_t>(EquipmentSTB::MOVEMENT_SPEED) - 50;
+				this->stats.movementSpeed += shoeSpeed;
+			}
+		break;
+		case Stance::DRIVING:
+			this->stats.movementSpeed = 1200;
+		break;
+		default:
+			GlobalLogger::warning("'%s' has selected an invalid stance: %i", this->getName().c_str(), this->getStance().asBYTE());
+	}
 }
 
 float Player::getAttackRange() const {
-
-	float range = 100.0f;
-	if (this->inventory[PlayerInventory::Slots::WEAPON].amount > 0x00) {
-		STBEntry& weapon = mainServer->getEquipmentEntry(ItemType::WEAPON, this->inventory[PlayerInventory::Slots::WEAPON].id);
-		range = std::max(100.0f, weapon.getColumn<float>(EquipmentSTB::ATTACK_RANGE));
+	//Basic range
+	float range = 150.0f;
+	if (this->getTarget() != nullptr && this->getTarget()->getEntityType() == Entity::TYPE_DROP) {
+		return range;
 	}
-	if (this->combat.type == Combat::SKILL) {
-		if (this->combat.skill == nullptr) {
-			throw NullpointerException("Skill is not set!");
-		}
-		if (this->combat.skill->getInitRange() > 0) {
-			range = static_cast<float>(this->combat.skill->getInitRange());
-		}
+
+	//Weapon range enhances the basic range
+	switch (this->combat.type) {
+		case Combat::NORMAL:
+			if (this->inventory[PlayerInventory::Slots::WEAPON].isValid()) {
+				STBEntry& weapon = mainServer->getEquipmentEntry(ItemType::WEAPON, this->inventory[PlayerInventory::Slots::WEAPON].id);
+				range += weapon.getColumn<float>(EquipmentSTB::ATTACK_RANGE);
+			}
+		break;
+		case Combat::SKILL:
+			if (this->combat.skill == nullptr) {
+				throw NullpointerException("Skill is not set!");
+			}
+			if (this->combat.skill->getInitRange() > 0) {
+				range += static_cast<float>(this->combat.skill->getInitRange());
+			}
+		break;
 	}
 	return range;
 }
@@ -1266,9 +1322,9 @@ bool Player::pakPlayerInfos() {
 	pak.addByte(0x00); //BIRTHSTONE
 	pak.addWord(0x00); //BIRTHPLACE?
 	pak.addWord(this->getJob());
-	pak.addByte(0x00); //UNION
-	pak.addByte(0x00); //RANK
-	pak.addByte(0x00); //FAME
+	pak.addByte(this->unionInfo.id); //UNION
+	pak.addByte(this->unionInfo.rank); //RANK
+	pak.addByte(this->unionInfo.fame); //FAME
 
 	pak.addWord(this->attributes.strength);
 	pak.addWord(this->attributes.dexterity);
@@ -1288,18 +1344,9 @@ bool Player::pakPlayerInfos() {
 	pak.addDWord(0x00);
 	pak.addDWord(0x00);
 
-	//UNION POINTS for each fraction
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	pak.addWord(0x00);
-	//END: UNION POINTS for each fraction
+	for (dword_t i = 0; i < UnionInfo::UNION_AMOUNT; i++) {
+		pak.addWord(this->unionInfo.points[i]);
+	}
 
 	pak.addDWord(0x00);
 	pak.addDWord(0x00);
@@ -1328,7 +1375,7 @@ bool Player::pakPlayerInfos() {
 	}
 	*/
 	for (unsigned int i = 0; i < 32; i++) {
-		pak.addWord(0x00); //QUICK BAR
+		pak.addWord(this->quickbar[i]); //QUICK BAR
 	}
 
 	pak.addDWord(this->charInfo.id);
@@ -1370,8 +1417,9 @@ bool Player::pakQuestData() {
 		pak.addWord(quest->getQuestId()); //QuestID
 		pak.addDWord(quest->getPassedTime()); //QuestTime
 
-		for (unsigned int j = 0; j < PlayerQuest::QUEST_VAR_MAX; j++) 
+		for (unsigned int j = 0; j < PlayerQuest::QUEST_VAR_MAX; j++) {
 			pak.addWord(quest->getVar(j)); //VARS
+		}
 		
 		pak.addDWord(quest->getAllSwitches()); //SWITCHES
 		for (unsigned int j = 0; j < PlayerQuest::QUEST_ITEMS_MAX; j++) {
@@ -1379,11 +1427,12 @@ bool Player::pakQuestData() {
 			pak.addDWord(quest->getItem(j).getPakData()); //ITEM DATA
 		}
 	}
-	for (unsigned int i = 0; i < 0x10; i++)
+	for (unsigned int i = 0; i < 0x10; i++) {
 		pak.addDWord(this->quest.dwFlag[i]);
+	}
 
 	for (unsigned int i = 0; i < 30; i++) {
-		pak.addWord(0x00); //ITEM HEAD
+		pak.addWord(0x00); //ITEM HEAD WISHLIST
 		pak.addDWord(0x00);
 	}
 	//220.452kb
@@ -1399,12 +1448,7 @@ bool Player::pakQuestAction() {
 	dword_t executedQuestHash = 0x00;
 	switch (action) {
 		case 0x01:
-			try {
-				throw TraceableException("QuestAction(): REQUEST_ADD - questPart %i, questHash = %i", questPart, questHash);
-			}
-			catch (std::exception& ex) {
-				std::cout << ex.what() << "\n";
-			}
+			GlobalLogger::fatal("QuestAction(): REQUEST_ADD - questPart %i, questHash = %i", questPart, questHash);
 		break;
 		case 0x02:
 			if (this->searchAndSelectQuest(questHash)) {
@@ -1529,7 +1573,7 @@ bool Player::saveInfos() {
 	}
 	for (unsigned int i = 1; i<PlayerInventory::Slots::MAXIMUM; i++) {
 		if (this->inventory[i].isValid()) {
-			if(!mainServer->sqlInsert("INSERT INTO inventory (charId, slot, itemId, durability, lifespan, count, refine) VALUES(%i, %i, %i, %i, %i, %i, %i)", this->charInfo.id, i, this->inventory[i].type * 10000 + this->inventory[i].id, this->inventory[i].durability, this->inventory[i].lifespan, this->inventory[i].amount, this->inventory[i].refine)) {
+			if(!mainServer->sqlInsert("INSERT INTO inventory (charId, slot, itemId, durability, lifespan, count, refine) VALUES(%i, %i, %i, %i, %i, %i, %i)", this->charInfo.id, i, this->inventory[i].type * 10000 + this->inventory[i].id, this->inventory[i].durability, this->inventory[i].lifespan, this->inventory[i].amount.get(), this->inventory[i].refine)) {
 				GlobalLogger::warning("Couldn't insert inventory slot %i [%i] into the inventory table!\n", i, this->inventory[i].type * 10000 + this->inventory[i].id);
 			}
 		}
@@ -1726,19 +1770,28 @@ bool Player::pakRespawnTown() {
 	return true;
 }
 
+bool Player::pakUpdateEquipmentVisually() {
+	bool result = true;
+	for (byte_t i = 1; i <= PlayerInventory::Slots::SHIELD; i++) {
+		if (i == 6) { //no item?
+			continue;
+		}
+		result &= this->pakUpdateInventoryVisually(1, &i);
+	}
+	return result;
+}
+
 bool Player::pakUpdateInventoryVisually( const byte_t slotAmount, const byte_t* slotIds ) {
 	Packet pak(PacketID::World::Response::UPDATE_INVENTORY);
 	pak.addByte( slotAmount );
-	for(unsigned int i=0;i<slotAmount;i++) {
+	for (byte_t i = 0; i<slotAmount; i++) {
 		pak.addByte( slotIds[i] );
-		if(this->inventory[ slotIds[i] ].amount == 0)
-			this->inventory[ slotIds[i] ].clear();
 		pak.addWord( this->inventory[ slotIds[i] ].getPakHeader() );
 		pak.addDWord( this->inventory[ slotIds[i] ].getPakData() );
 	}
 	bool result = this->sendData(pak);
 
-	for(unsigned int j=0;j<slotAmount;j++) {
+	for(byte_t j=0;j<slotAmount;j++) {
 		if (slotIds[j] == 0 || slotIds[j] >= PlayerInventory::Slots::SHIELD)
 			continue;
 		Packet pak( PacketID::World::Response::EQUIPMENT_CHANGE);
@@ -1748,6 +1801,9 @@ bool Player::pakUpdateInventoryVisually( const byte_t slotAmount, const byte_t* 
 		pak.addWord( this->getMovementSpeed() );
 		this->sendToVisible( pak );
 	}
+
+	this->updateStats();
+
 	return result;
 }
 
@@ -1779,9 +1835,8 @@ bool Player::pakIdentify() {
 	if (!this->loadInfos())
 		return false;
 
-	this->pakPlayerInfos();
-	this->pakInventory();
-	this->pakQuestData();
+	if (!this->pakPlayerInfos() || !this->pakInventory() || !this->pakQuestData())
+		return false;
 
 	pak.newPacket(PacketID::World::Response::GAMING_PLAN);
 	pak.addWord(0x1001); //?
@@ -1808,13 +1863,17 @@ bool Player::pakReturnToCharServer() {
 bool Player::pakAssignID() {
 	this->updateStats();
 
+	QuestService::runQuest(this, ::makeQuestHash(mainServer->getZoneSTB()->getQuestString(this->getMapId()).c_str()));
+
+	/*
 	Packet pak(PacketID::World::Response::CHANGE_ABILITY);
 	pak.addWord(StatType::PK_LEVEL);
 	pak.addDWord(0x02);
 	if(!this->sendData(pak))
 		return false;
+	*/
 
-	pak.newPacket(PacketID::World::Response::ASSIGN_ID);
+	Packet pak(PacketID::World::Response::ASSIGN_ID);
 	pak.addWord(this->entityInfo.id);
 	pak.addWord(this->stats.curHP);
 	pak.addWord(this->stats.curMP);
@@ -1836,8 +1895,7 @@ bool Player::pakAssignID() {
 	pak.addDWord(mainServer->getMapTime(this->getMapId()));
 
 	//White icon (friendly)
-	pak.addWord(0x02);
-	pak.addWord(0x00);
+	pak.addDWord(this->getPlayerKillFlag());
 
 	if (!this->sendData(pak))
 		return false;
@@ -1884,8 +1942,9 @@ bool Player::pakSetEmotion() {
 
 bool Player::pakMoveCharacter() {
 	this->combat.clear();
-	this->combat.setTarget( mainServer->getEntity(this->getMapId(), this->packet.getWord(0x00) ) );
-	if (this->getTarget() != nullptr) {
+	Entity* entity = mainServer->getEntity(this->getMapId(), this->packet.getWord(0x00));
+	if (entity != nullptr) {
+		this->combat.setTarget(entity);
 		this->combat.type = Combat::NORMAL;
 	}
 	this->setPositionDest(position_t(this->packet.getFloat(0x02), this->packet.getFloat(0x06)));
@@ -1955,6 +2014,8 @@ bool Player::pakChangeStance() {
 	}
 	stanceType = this->getStance().asBYTE();
 
+	this->updateStats();
+
 	Packet pak(PacketID::World::Response::CHANGE_STANCE);
 	pak.addWord(this->getLocalId());
 	pak.addByte( stanceType );
@@ -2002,16 +2063,9 @@ bool Player::pakSpawnPlayer(Player* player) {
 		default:
 			pak.addByte( EntitySpawnsVisually::STANCE_HITCHHIKER );
 	}
+	pak.addDWord( player->getCurrentHP() );
+	pak.addDWord( player->getPlayerKillFlag() );
 	pak.addDWord( player->getBuffsVisuality() );
-	byte_t pvpMapType = 0x00; //mainServer->isPVPMap(this->getMapId())
-	if(pvpMapType) {
-		//TODO:
-		pak.addWord( EntitySpawnsVisually::IS_FRIENDLY );
-	} else {
-		pak.addWord( EntitySpawnsVisually::IS_FRIENDLY );
-	}
-	pak.addWord(0x00);
-	pak.addDWord(0x00);
 	pak.addByte( player->getVisualTraits().sex );
 	pak.addWord( player->getMovementSpeed() );
 	pak.addWord( player->getAttackSpeed() );
@@ -2078,8 +2132,7 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 	pak.addWord(npc->getTarget() != nullptr ? npc->getTarget()->getLocalId() : 0x00);
 	pak.addByte( 0x00 ); //Stance
 	pak.addDWord( npc->getCurrentHP() );
-	pak.addWord(0x01);
-	pak.addWord(0x00);
+	pak.addDWord(npc->getPlayerKillFlag());
 	pak.addDWord( npc->getBuffsVisuality() );
 	pak.addWord(npc->getTypeId());
 	if(npc->hasDialogId())
@@ -2088,8 +2141,7 @@ bool Player::pakSpawnNPC( NPC* npc ) {
 		pak.addWord(npc->getTypeId() - 900);
 	
 	pak.addFloat(npc->getDirection());
-	pak.addByte(0x00); //CLANFIELD OPEN/CLOSED FOR BURLAND (NPC: 1115)
-	pak.addByte(0x00);
+	pak.addWord(0x00); //CLANFIELD OPEN/CLOSED FOR BURLAND (NPC: 1115)
 	
 	return this->sendData(pak);
 }
@@ -2113,7 +2165,7 @@ bool Player::pakSpawnMonster(Monster* monster) {
 	pak.addWord(monster->getTarget() != nullptr ? monster->getTarget()->getLocalId() : 0x00);
 	pak.addByte(monster->getStance().asBYTE());
 	pak.addDWord(monster->getCurrentHP());
-	pak.addDWord(0x64); //ENEMY
+	pak.addDWord(monster->getPlayerKillFlag()); //ENEMY
 	pak.addDWord( monster->getBuffsVisuality() );
 	pak.addWord(monster->getTypeId());
 	pak.addWord(0x00); //Quest?
@@ -2124,8 +2176,10 @@ bool Player::pakShowMonsterHP() {
 	const word_t localMonId = this->packet.getWord(0x00);
 	Entity *entity = mainServer->getMap(this->getMapId())->getEntity(localMonId);
 	if (!entity) {
-		GlobalLogger::fatal("Selected monster was NOT found.\n");
-		return false;
+		GlobalLogger::fatal("Selected monster was NOT found. Updating visuality...\n");
+		this->refreshVisuality();
+		ChatService::sendWhisper("Server", this, "Targeted monster wasn't found. Refreshing visuality...");
+		return true;
 	}
 	if (entity->getEntityType() != Entity::TYPE_MONSTER) {
 		GlobalLogger::warning("Entity of type %i was selected!\n", entity->getEntityType());
@@ -2229,13 +2283,11 @@ bool Player::pakPickUpDrop() {
 
 	word_t dropId = this->packet.getWord(0x00);
 	Entity *entityDrop = mainServer->getEntity(this->getMapId(), dropId);
-	if(!entityDrop || entityDrop->getEntityType() != Entity::TYPE_DROP)
-		return true;
-	Drop* drop = dynamic_cast<Drop*>(entityDrop);
-	if (!drop) {
+	if (!entityDrop || entityDrop->getEntityType() != Entity::TYPE_DROP) {
 		GlobalLogger::warning("Player %s tried to pick a non-existing drop (%i)!\n", this->getName().c_str(), dropId);
-		return false;
+		return true;
 	}
+	Drop* drop = dynamic_cast<Drop*>(entityDrop);
 
 	this->combat.clear();
 	this->position.destination = this->position.current;
@@ -2277,18 +2329,46 @@ bool Player::pakPickUpDrop() {
 
 }
 
-bool Player::pakBuyFromNPC() {
+bool Player::pakNPCTrade() {
 	word_t npcType = this->packet.getWord(0x00);
 	NPC* npc = mainServer->getMap(this->getMapId())->getNPC(npcType);
-	if(!npc)
+	if (!npc || !npc->isNPC()) {
+		GlobalLogger::warning("'%s' tried to sell items to an invalid NPC [npcType: %i]", this->getName().c_str(), npcType);
 		return false;
+	}
+	else if (this->getPositionCurrent().distanceTo(npc->getPositionCurrent()) >= 1000) {
+		GlobalLogger::warning("'%s' tried to sell items while being too far away from NPC '%s'", this->getName().c_str(), npc->getName().c_str());
+	}
+
+	byte_t boughtItemAmount = this->packet.getByte(0x02);
+	byte_t soldItemAmount = this->packet.getByte(0x03);
+
+	ChatService::sendWhisper("Server", this, "Buy: %i, Sell: %i", boughtItemAmount, soldItemAmount);
+
+	Packet pak(PacketID::World::Response::NPC_TRADE);
+	pak.addQWord(this->inventory[0].amount);
+	pak.addByte(0x00);
+
+	for (byte_t i = 0; i < soldItemAmount; i++) {
+		word_t itemOffset = 8 + (boughtItemAmount * 4) + (i * 3);
+		byte_t slot = this->packet.getByte(itemOffset);
+		word_t amount = this->packet.getWord(itemOffset + 1);
+
+		Item itemToSell(this->inventory[slot]);
+		if (itemToSell.amount > amount) {
+			GlobalLogger::warning("'%s' tried to sell item [%i;%i] %i times, but has only %i of it.", this->getName().c_str(), itemToSell.type, itemToSell.id, amount, itemToSell.amount);
+			continue;
+		}
+		itemToSell.amount = amount;
+		dword_t totalPrice = mainServer->getSellPrice(itemToSell);
+
+		this->inventory[0x00].amount += totalPrice;
+		this->inventory[slot].amount -= amount;
+	}
 
 	return true;
 }
 
-bool Player::pakSellToNPC() {
-	return true;
-}
 
 bool Player::pakLearnSkill() {
 	const word_t skillId = this->packet.getWord(0x00);
@@ -2481,7 +2561,13 @@ bool Player::pakConsumeItem() {
 			byte_t statusRef = consumeEntry->getColumn<byte_t>(ConsumeSTB::STATUS_STB_REFERENCE);
 			if (statusRef == 0x00) {
 				//if there's no actual status operation, consume it immediately as whole (e.g. pills)
-				this->changeAbility(consumeEntry->getColumn<word_t>(ConsumeSTB::STAT_TYPE_ADD), consumeEntry->getColumnAsInt(ConsumeSTB::STAT_VALUE_ADD), OperationService::OPERATION_ADDITION, false);
+				word_t statAffected = consumeEntry->getColumn<word_t>(ConsumeSTB::STAT_TYPE_ADD);
+				if (statAffected == 0) { //Add a skill, I guess.
+					this->addSkill(mainServer->getSkill(consumeEntry->getColumn<word_t>(ConsumeSTB::STAT_VALUE_ADD)));
+				}
+				else {
+					this->changeAbility(consumeEntry->getColumn<word_t>(ConsumeSTB::STAT_TYPE_ADD), consumeEntry->getColumnAsInt(ConsumeSTB::STAT_VALUE_ADD), OperationService::OPERATION_ADDITION, false);
+				}
 			}
 			else {
 				//If there's a status entry, look up how much of a given stat will be added over each second
@@ -2497,10 +2583,7 @@ bool Player::pakConsumeItem() {
 		default:
 			std::cout << "ItemID " << this->inventory[inventorySlot].id << " has an unknown execution type: " << executionType << "\n";
 	}
-	this->inventory[inventorySlot].amount--;
-	if (this->inventory[inventorySlot].amount == 0x00)
-		this->inventory[inventorySlot].clear();
-
+	this->inventory[inventorySlot].amount -= 1;
 
 	Packet visualityPak(PacketID::World::Response::USE_CONSUMABLE);
 	visualityPak.addWord(this->getLocalId());
@@ -2551,7 +2634,7 @@ bool Player::pakTelegate(const word_t mapId, const position_t& pos) {
 }
 
 bool Player::handlePacket() {
-	std::cout << "[IN] New Packet: " << std::hex << this->packet.getCommand() << " with Length " << std::dec << this->packet.getLength() << "\n";
+	GlobalLogger::debug("[IN] Packet 0x%x (Length: %i) from '%s'\n", this->packet.getCommand(), this->packet.getLength(), this->getName().c_str());
 	switch (this->packet.getCommand()) {
 		case PacketID::World::Request::PING:
 			return true;

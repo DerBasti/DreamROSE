@@ -7,6 +7,7 @@ void Drop::construct(Entity* giver, const position_t& pos, bool isPublicDomain) 
 	else
 		this->owner = nullptr;
 	
+	this->entityInfo.pkFlagId = giver->getPlayerKillFlag();
 	this->setMapId(giver->getMapId());
 	this->position.current = pos;
 	this->position.destination = pos;

@@ -94,6 +94,16 @@ class Player : public Entity, public ClientSocket {
 			}
 		} charInfo;
 
+		struct UnionInfo {
+			const static byte_t UNION_AMOUNT = 10;
+
+			byte_t id;
+			byte_t rank;
+			byte_t fame;
+			FixedArray<word_t> points;
+			UnionInfo();
+		} unionInfo;
+
 		struct ConsumedItem {
 			dword_t maxRate;
 			dword_t valueConsumed;
@@ -152,6 +162,7 @@ class Player : public Entity, public ClientSocket {
 		bool pakSpawnMonster(class Monster* monster);
 		bool pakSpawnDrop(class Drop* drop);
 		bool pakRemoveEntityVisually(Entity* entity);
+		bool pakUpdateEquipmentVisually();
 		bool pakUpdateInventoryVisually( const byte_t slotAmount, const byte_t* slotIds );
 
 		//Packets which are requested to be handled
@@ -182,8 +193,7 @@ class Player : public Entity, public ClientSocket {
 		bool pakQuickbarAction();
 		bool pakPickUpDrop();
 		bool pakDropFromInventory();
-		bool pakBuyFromNPC();
-		bool pakSellToNPC();
+		bool pakNPCTrade();
 		bool pakConsumeItem();
 		
 		void addEntityVisually(Entity* entity);
@@ -229,7 +239,6 @@ class Player : public Entity, public ClientSocket {
 		void updateDodgerate();
 		void updateCritrate();
 		void updateMovementSpeed();
-		void updateIntervalBetweenAttacks();
 		bool updateZulies(const qword_t newAmount);
 		__inline qword_t getZulies() const { return this->inventory[0x00].amount; }
 		void checkRegeneration();
@@ -316,7 +325,7 @@ class Player : public Entity, public ClientSocket {
 		//@Return Value: if a skillslot was assignable as well as the successful notification of the client, it will return true. In all other instances false.
 		bool addSkill(Skill* skillToAdd);
 
-		__inline bool isWeaponEquipped() const { return this->inventory[PlayerInventory::Slots::WEAPON].amount > 0; }
+		__inline bool isWeaponEquipped() const { return this->inventory[PlayerInventory::Slots::WEAPON].isValid(); }
 		bool addItemToInventory(const Item& item, byte_t slotId = std::numeric_limits<byte_t>::max());
 		Item getItemFromInventory(const word_t itemSlot); 
 		Item getQuestItem(const dword_t itemId);

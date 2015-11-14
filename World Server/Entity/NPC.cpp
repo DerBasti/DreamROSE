@@ -12,6 +12,7 @@ void NPC::constructor(const NPCData* newData, const AIP* newAi, const word_t map
 
 	this->entityInfo.ingame = true;
 	this->entityInfo.type = Entity::TYPE_NPC;
+	this->entityInfo.pkFlagId = 0x01;
 	this->entityInfo.setMapId(mapId);
 	this->position.source = pos;
 	this->setPositionCurrent(pos);

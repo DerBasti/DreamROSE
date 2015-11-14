@@ -247,6 +247,9 @@ class ItemType {
 	private:
 		ItemType() { };
 		~ItemType() { };
+
+		//Defined at WorldServer.cpp
+		static const char *typeNames[];
 	public:
 		const static word_t FACE = 1;
 		const static word_t HEADGEAR = 2;
@@ -263,6 +266,15 @@ class ItemType {
 		const static word_t QUEST = 13;
 		const static word_t PAT = 14;
 		const static word_t MONEY = 31; //6 Bits
+		static const char* toString(byte_t itemType) {
+			if (itemType <= PAT) {
+				return typeNames[itemType];
+			}
+			else if (itemType == MONEY) {
+				return typeNames[MONEY];
+			}
+			return typeNames[0x00];
+		}
 };
 
 class WeaponType {
@@ -393,41 +405,45 @@ struct Item {
 	bool isAppraised;
 	bool isSocketed;
 	word_t lifespan;
-	dword_t amount;
+	Observable<dword_t> amount;
 	byte_t durability;
 	word_t refine;
 	word_t gem;
 	word_t stats;
 
-	Item() {
-		this->clear();
-	}
-	Item(const dword_t itemId) {
-		this->clear();
-		this->id = static_cast<word_t>(itemId % 1000);
-		this->type = static_cast<byte_t>(itemId / 1000);
-		this->amount = 0x01;
-	}
+	Item() : Item(0) { }
+	Item(const dword_t itemId) : Item(static_cast<byte_t>(itemId / 1000), static_cast<word_t>(itemId % 1000)) { }
 	Item(const byte_t itemType, const word_t itemId, const byte_t durability = 120, const word_t amount = 0x01) {
 		this->clear();
 		this->id = itemId;
 		this->type = itemType;
 		this->durability = durability;
 		this->amount = amount;
+		this->refine = 0x00;
+
+		this->amount.addListener(ChangeListener([&](EventObject& e) {
+			if (this->amount == 0) {
+				this->clear();
+			}
+		}));
 	}
 	void clear() {
-		this->type = 0x00;		
-		this->gem = this->stats = this->refine = 0x00;
-		this->id = 0x00;
-		this->isAppraised = true;
-		this->isSocketed = false;
-		this->amount = 0x00;
-		this->durability = 0x30;
-		this->lifespan = 1000;
+		if (this->type != ItemType::MONEY) {
+			this->type = 0x00;
+			this->gem = this->stats = this->refine = 0x00;
+			this->id = 0x00;
+			this->isAppraised = true;
+			this->isSocketed = false;
+			this->durability = 0x30;
+			this->lifespan = 1000;
+		}
+		if (this->amount != 0x00) {
+			this->amount = 0x00;
+		}
 	}
 	bool isValid() const {
 		if((this->type > 0 && this->type < ItemType::PAT) || this->type == ItemType::MONEY) {
-			if(this->amount>0)
+			if(this->amount > 0 && this->id > 0)
 				return true;
 		}
 		return false;
@@ -440,20 +456,20 @@ struct Item {
 	}
 	const dword_t getPakVisuality() const {
 		dword_t basicResult = (this->id | this->refine * 0x10000);
-		if (this->gem == 0) {
-			return basicResult;
+		if (this->gem != 0) {
+			basicResult |= 0xd0000 + ((this->gem - 320) * 0x400);
 		}
-		return ((0xd0000) + ((this->gem - 320) * 0x400) | basicResult);
+		return basicResult;
 	}
 	const word_t getPakHeader() const {
-		if (this->amount == 0x00)
+		if (this->amount.get() == 0x00)
 			return 0;
 		word_t result = static_cast<word_t>((this->id << 5) & 0xFFE0);
 		return static_cast<word_t>(result | (this->type & 0x1F));
 	}
 	const dword_t getPakData() const {
-		if ((this->type >= ItemType::CONSUMABLES && this->type <= ItemType::QUEST) || this->type == ItemType::MONEY || this->amount == 0) {
-			return this->amount;
+		if ((this->type >= ItemType::CONSUMABLES && this->type <= ItemType::QUEST) || this->type == ItemType::MONEY || this->amount.get() == 0) {
+			return this->amount.get();
 		}
 
 		//0101 1111 1001 0000
@@ -480,9 +496,9 @@ class PlayerInventory {
 				const static word_t FACE = 1;
 				const static word_t HEADGEAR = 2;
 				const static word_t ARMOR = 3;
-				const static word_t GLOVES = 6;
-				const static word_t SHOES = 4;
-				const static word_t BACK = 5;
+				const static word_t GLOVES = 5;
+				const static word_t BACK = 4;
+				const static word_t SHOES = 6;
 				const static word_t WEAPON = 7;
 				const static word_t SHIELD = 8;
 

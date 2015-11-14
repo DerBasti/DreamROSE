@@ -7,6 +7,7 @@ Monster::Monster(const NPCData* newData, const AIP* newAi, const word_t mapId, c
 	this->constructor(newData, newAi, mapId, pos);
 	this->spawn = spawn;
 	this->entityInfo.type = Entity::TYPE_MONSTER;
+	this->entityInfo.pkFlagId = 0x64;
 	this->updateStats();
 
 	this->owner = nullptr;
@@ -113,10 +114,10 @@ void Monster::onDeath() {
 			}
 		}
 		if (toDrop.type == ItemType::MONEY) {
-			new Drop(dropOwner, this->getPositionCurrent(), toDrop.amount, dropOwner != nullptr);
+			new Drop(dropOwner, this->getPositionCurrent().calcNewPositionWithinRadius(200.0f), toDrop.amount, dropOwner != nullptr);
 		}
 		else {
-			new Drop(dropOwner, this->getPositionCurrent(), toDrop, dropOwner != nullptr);
+			new Drop(dropOwner, this->getPositionCurrent().calcNewPositionWithinRadius(200.0f), toDrop, dropOwner != nullptr);
 		}
 		if (dropOwner->isPlayer()) {
 			dynamic_cast<Player*>(dropOwner)->sendQuestTriggerViaMonster(this->getTypeId());

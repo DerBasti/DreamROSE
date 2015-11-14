@@ -3,6 +3,7 @@
 #include "..\Common\PacketIDs.h"
 
 #include "D:\Programmieren\ConfigReader\Config.h"
+#include "D:\Programmieren\GlobalLogger\GlobalLogger.h"
 
 CharClient::CharClient(SOCKET sock, ServerSocket* newServer) {
 	this->accountInfo.isLoggedIn = false;
@@ -53,7 +54,7 @@ bool CharClient::pakGetCharacters() {
 	if (!mainServer->sqlRequest("SELECT * from characters WHERE acc_id=%i", this->accountInfo.id))
 		return false;
 	
-	//Character Amount - will never be bigger than BYTE (255)
+	//Character Amount - will never be bigger than BYTE (255)	
 	pak.addByte(static_cast<BYTE>(mainServer->sqlGetRowCount()));
 	for (unsigned int i = 0; i < mainServer->sqlGetRowCount(); i++) {
 		MYSQL_ROW row = mainServer->sqlGetNextRow();
@@ -199,6 +200,22 @@ bool CharClient::pakGetWorldserverIp() {
 	return this->sendData(pak);
 }
 
+bool CharClient::pakUnknown() {
+	byte_t type = this->packet.getByte(0x00);
+	Packet pak(PacketID::Character::Response::UNKNOWN);
+	switch (type) {
+		case 0x03:
+			pak.addByte(0x01);
+			pak.addWord(0x00);
+			if (!this->sendData(pak))
+				return false;
+		break;
+		default:
+			GlobalLogger::info("[PacketId 0x7e5 (Length: %i)] Unknown switch-case type: %i", this->packet.getLength(), type);
+	}
+	return true;
+}
+
 bool CharClient::handlePacket() {
 	std::cout << "New Packet: " << std::hex << this->packet.getCommand() << " with Length " << std::dec << this->packet.getLength() << "\n";
 	switch (this->packet.getCommand()) {
@@ -222,6 +239,9 @@ bool CharClient::handlePacket() {
 
 		case PacketID::Character::Request::MESSAGE_MANAGER:
 			return true;
+
+		case PacketID::Character::Request::UNKNOWN:
+			return this->pakUnknown();
 	}
 	return false;
 }

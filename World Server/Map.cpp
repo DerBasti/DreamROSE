@@ -186,7 +186,7 @@ Map::Sector* Map::getSector(const position_t& pos) const {
 	return nullptr;
 }
 
-Player* Map::getPlayer(const word_t localId) {
+Player* Map::getPlayer(const word_t localId) const {
 	LinkedList<Entity*>::Node* nNode = this->getFirstEntity();
 	for (; nNode; nNode = nNode->getNextNode()) {
 		Entity* entity = nNode->getValue();
@@ -199,7 +199,7 @@ Player* Map::getPlayer(const word_t localId) {
 	return nullptr;
 }
 
-NPC* Map::getNPC(const word_t type) {
+NPC* Map::getNPC(const word_t type) const {
 	LinkedList<Entity*>::Node* nNode = this->getFirstEntity();
 	for(;nNode;nNode = nNode->getNextNode()) {
 		Entity* entity = nNode->getValue();
@@ -208,6 +208,21 @@ NPC* Map::getNPC(const word_t type) {
 		NPC* curNpc = dynamic_cast<NPC*>(entity);
 		if(curNpc->getTypeId() == type)
 			return curNpc;
+	}
+	return nullptr;
+}
+
+Player* Map::getPlayer(std::string& name) const {
+	LinkedList<Entity*>::Node* nNode = this->getFirstEntity();
+	for (; nNode; nNode = nNode->getNextNode()) {
+		Entity* entity = nNode->getValue();
+		if (!entity || entity->getEntityType() != Entity::TYPE_PLAYER) {
+			continue;
+		}
+		Player* curPlayer = dynamic_cast<Player*>(entity);
+		if (curPlayer->getName().find(name) >= 0) {
+			return curPlayer;
+		}
 	}
 	return nullptr;
 }

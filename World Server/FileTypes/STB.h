@@ -121,7 +121,7 @@ template<class _STBEntry = ::STBEntry> class STBFile_Template {
 		}
 #ifdef __ROSE_USE_VFS__
 		void read(VFS* pVFS, bool applySTL = true) {
-			GlobalLogger::debug("Loading STB: %s\n", this->filePath.c_str());
+			GlobalLogger::debug("Loading STB: %s", this->filePath.c_str());
 			VFSData vfsData; pVFS->readFile(this->filePath.c_str(), vfsData);
 			CMyBufferedFileReader<char> reader(vfsData.data, vfsData.data.size());
 			this->construction<CMyBufferedFileReader<char>>(reader);
@@ -264,6 +264,7 @@ class ZoneSTB : public STBFile {
 		const static word_t NOON_BEGIN = 0x0F;
 		const static word_t EVENING_BEGIN = 0x10;
 		const static word_t NIGHT_BEGIN = 0x11;
+		const static word_t QUEST_STRING = 0x16;
 		const static word_t ZONESIZE_COLUMN = 0x19;
 #ifdef __ROSE_USE_VFS__
 		ZoneSTB(VFS* pVFS, std::string pathInVFS) {
@@ -274,15 +275,16 @@ class ZoneSTB : public STBFile {
 			this->read(filePath);
 #endif
 		}
-		__inline word_t getId(const WORD& row) { return row; }
-		__inline std::string getZoneFile(const word_t row) { return std::string(this->entries.at(row).getColumn(ZoneSTB::ZONE_COLUMN)); }
-		__inline bool getIsNightOnly(const word_t row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NIGHT_ONLY_COLUMN) > 0; }
-		__inline word_t getDayLength(const word_t row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::DAYCYCLE_LENGTH); }
-		__inline word_t getMorningTime(const word_t row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::MORNING_BEGIN); }
-		__inline word_t getNoonTime(const word_t row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NOON_BEGIN); }
-		__inline word_t getEveningTime(const word_t row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::EVENING_BEGIN); }
-		__inline word_t getNight(const word_t row) { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NIGHT_BEGIN); }
-		__inline dword_t getZoneSize(const word_t row) {
+		__inline word_t getId(const WORD& row) const { return row; }
+		__inline std::string getZoneFile(const word_t row) const { return std::string(this->entries.at(row).getColumn(ZoneSTB::ZONE_COLUMN)); }
+		__inline bool getIsNightOnly(const word_t row) const { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NIGHT_ONLY_COLUMN) > 0; }
+		__inline word_t getDayLength(const word_t row) const { return this->entries.at(row).getColumn<WORD>(ZoneSTB::DAYCYCLE_LENGTH); }
+		__inline word_t getMorningTime(const word_t row) const { return this->entries.at(row).getColumn<WORD>(ZoneSTB::MORNING_BEGIN); }
+		__inline word_t getNoonTime(const word_t row) const { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NOON_BEGIN); }
+		__inline word_t getEveningTime(const word_t row) const { return this->entries.at(row).getColumn<WORD>(ZoneSTB::EVENING_BEGIN); }
+		__inline word_t getNight(const word_t row) const { return this->entries.at(row).getColumn<WORD>(ZoneSTB::NIGHT_BEGIN); }
+		__inline std::string getQuestString(const word_t row) const { return this->entries.at(row).getColumn(ZoneSTB::QUEST_STRING); }
+		__inline dword_t getZoneSize(const word_t row) const {
 			try {
 				return this->entries.at(row).getColumn<DWORD>(ZoneSTB::ZONESIZE_COLUMN);
 			}
@@ -423,8 +425,11 @@ class SkillEntry : public STBEntry {
 		const static byte_t COLUMN_REQUIRED_CONDITION_TYPE_LAST = 0x30;
 		const static byte_t COLUMN_REQUIRED_CONDITION_AMOUNT_FIRST = 0x2E;
 		const static byte_t COLUMN_REQUIRED_CONDITION_AMOUNT_LAST = 0x31;
-		const static byte_t COLUMN_ANIMATION_ID = 0x34;
-		const static byte_t COLUMN_ANIMATION_SPEED = 0x35;
+		const static byte_t COLUMN_ANIMATION_PRECAST_ID = 0x34;
+		const static byte_t COLUMN_ANIMATION_PRECAST_SPEED = 0x35;
+
+		const static byte_t COLUMN_ANIMATION_ID = 0x44;
+		const static byte_t COLUMN_ANIMATION_SPEED = 0x45;
 
 		const static byte_t COLUMN_REQUIRED_ZULIES = 0x55;
 

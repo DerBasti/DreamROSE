@@ -47,12 +47,16 @@ std::vector<std::string> VFSTree::getAllLeafs() {
 	return this->root->getAllChildren();
 }
 
-VFSTree::Branch* VFSTree::Branch::_getBranchByName(const char* branchName) const {
+VFSTree::Branch* VFSTree::Branch::_getBranchByName(const char* branch) const {
+	std::string branchName = std::string(branch);
+	std::transform(branchName.begin(), branchName.end(), branchName.begin(), ::toupper);
+	dword_t generatedHash = std::hash<std::string>()(branchName);
 	if (this->lowerLevel.end != nullptr) {
 		Branch* currentLeaf = this->lowerLevel.first;
 		while (currentLeaf != nullptr) {
-			if (_stricmp(currentLeaf->getName().c_str(), branchName) == 0)
+			if (currentLeaf->hash == generatedHash) {
 				return currentLeaf;
+			}
 			currentLeaf = currentLeaf->nextBranch;
 		}
 	}
@@ -60,14 +64,22 @@ VFSTree::Branch* VFSTree::Branch::_getBranchByName(const char* branchName) const
 }
 
 VFSTree::Branch::Branch(std::string nodeName, Branch* parentBranch) {
+
+	this->name.addListener(ChangeListener([&](EventObject& e) {
+		Observable<std::string>* s = reinterpret_cast<Observable<std::string>*>(e.source);
+		dword_t prevHash = this->hash;
+		this->hash = std::hash<std::string>()(s->get());
+		//GlobalLogger::debug("Hash of %s was changed from 0x%x to 0x%x", s->get().c_str(), prevHash, this->hash);
+	}));
+
 	this->name = nodeName.find("\\") != -1 ? nodeName.substr(0, nodeName.find("\\")) : nodeName;
 	this->lowerLevel.first = this->lowerLevel.end = nullptr;
 	this->parent = parentBranch;
 	this->nextBranch = nullptr;
 
-	this->fullPath = this->name;
+	this->fullPath = this->name.get();
 	if (this->parent) {
-		this->fullPath = this->parent->fullPath + std::string("\\") + this->name;
+		this->fullPath = this->parent->fullPath + std::string("\\") + this->name.get();
 	}
 }
 
@@ -82,7 +94,7 @@ bool VFSTree::Branch::operator!=(const Branch& branch) const {
 
 VFSTree::Branch* VFSTree::Branch::appendLeaf(std::string value) {
 	if (this->lowerLevel.first == nullptr) {
-		this->name += std::string("\\");
+		this->name = this->name.get() + std::string("\\");
 		this->lowerLevel.first = new Branch(value, this);
 		this->lowerLevel.end = this->lowerLevel.first;
 		return this->lowerLevel.first;
@@ -143,7 +155,7 @@ std::vector<std::string> VFSTree::Branch::getAllNextLowerBranchNames(bool addDir
 				currentLeaf = currentLeaf->nextBranch;
 				continue;
 			}
-			addDirectoryNameToResult ? result.push_back(currentLeaf->fullPath) : result.push_back(currentLeaf->name);
+			addDirectoryNameToResult ? result.push_back(currentLeaf->fullPath) : result.push_back(currentLeaf->name.get());
 			currentLeaf = currentLeaf->nextBranch;
 		}
 		//addDirectoryNameToResult ? result.push_back(this->lowerLevel.end->fullPath) : result.push_back(this->lowerLevel.end->name);
@@ -151,7 +163,8 @@ std::vector<std::string> VFSTree::Branch::getAllNextLowerBranchNames(bool addDir
 	return result;
 }
 
-void VFSTree::Branch::establishPath(std::string path) {
+void VFSTree::Branch::establishPath(const char *str) {
+	std::string path = std::string(str);
 	if (path.length() > 0) {
 		if (path.find("\\") != -1) {
 			//Remove a prepending slash
@@ -265,7 +278,7 @@ void VFS::closeCurrentFile() {
 }
 
 void VFS::readFilePathsFromVFS(std::vector<std::string> vfsNames) {
-	GlobalLogger::info("Indexing all VFS files.\n");
+	GlobalLogger::info("Indexing all VFS files.");
 	this->fileIndex = new VFSTree();
 
 	std::vector<std::string> allFiles;
@@ -286,7 +299,6 @@ void VFS::readFilePathsFromVFS(std::vector<std::string> vfsNames) {
 		this->GetFileNames(this->vfsHandle, vfsNames[i].c_str(), file, fileCount, 0x100);
 
 		GlobalLogger::debug("[%s] Indexed 0 out of %i files\r", vfsNames[i].c_str(), fileCount);
-		dword_t percentage = 0;
 		allFiles.reserve(allFiles.size() + fileCount);
 		for (dword_t j = 0; j < fileCount; j++) {
 			allFiles.push_back(file[j]);
@@ -296,11 +308,11 @@ void VFS::readFilePathsFromVFS(std::vector<std::string> vfsNames) {
 		}
 		delete[] file;
 		file = nullptr;
-		GlobalLogger::debug("Indexing of %s finished!                     \n", vfsNames[i].c_str());
+		GlobalLogger::debug("Indexing of %s finished!                     ", vfsNames[i].c_str());
 	}
 
 	std::string serverPath = ""; QuickInfo::getPath(&serverPath);
-	GlobalLogger::info("Indexing finished. Establishing an index-file [%s] for later use.\n", (serverPath + "\\vfsIndex.idx").c_str());
+	GlobalLogger::info("Indexing finished. Establishing an index-file [%s] for later use.", (serverPath + "\\vfsIndex.idx").c_str());
 	CMyFileWriter<char> writer((serverPath + "\\vfsIndex.idx").c_str(), true);
 	writer.clear();
 
@@ -315,23 +327,22 @@ void VFS::readFilePathsFromVFS(std::vector<std::string> vfsNames) {
 	for (dword_t i = 0; i < allFiles.size(); i++) {
 		writer.putStringWithVar("%s\n", allFiles.at(i).c_str());
 	}
-	GlobalLogger::info("Index-file fully saved.\n");
+	GlobalLogger::info("Index-file fully saved.");
 }
 
 void VFS::readFilePathsFromLog(CMyFileReader<char>* reader) {
 	if (!reader || !reader->exists())
 		throw TraceableException("FileReader invalid!");
-	GlobalLogger::info("Reading VFS-Index file...\n");
+	GlobalLogger::info("Reading VFS-Index file...");
 	dword_t fileAmount = reader->read<dword_t>();
 	this->fileIndex = new VFSTree();
-	GlobalLogger::debug("A total of %i files are indexed...\n", fileAmount);
+	GlobalLogger::debug("A total of %i files are indexed...", fileAmount);
 
-	dword_t percentage = 0;
 	for (dword_t i = 0; i < fileAmount; i++) {
 		std::string file = reader->readLine();
 		this->fileIndex->appendFile(file);
 	}
-	GlobalLogger::info("Finished indexing the VFS-Contents!                          \n");
+	GlobalLogger::info("Finished indexing the VFS-Contents!                          ");
 }
 
 bool VFS::isLastIndexUpTodate(std::vector<std::string> vfsNames, CMyFileReader<char>* reader) {
@@ -340,7 +351,7 @@ bool VFS::isLastIndexUpTodate(std::vector<std::string> vfsNames, CMyFileReader<c
 
 	byte_t vfsDatesCount = reader->read<byte_t>();
 	if (vfsNames.size() != vfsDatesCount) {
-		GlobalLogger::debug("The amount of currently existing VFS' are different from previous starts.\nSwitching over to Refresh-Mode.\n");
+		GlobalLogger::debug("The amount of currently existing VFS' are different from previous starts.\nSwitching over to Refresh-Mode.");
 		return false;
 	}
 	dword_t* vfsDates = new dword_t[vfsDatesCount];
@@ -349,7 +360,7 @@ bool VFS::isLastIndexUpTodate(std::vector<std::string> vfsNames, CMyFileReader<c
 	for (dword_t i = 0; i < vfsDatesCount; i++) {
 		vfsDates[i] = reader->read<dword_t>();
 		if (vfsDates[i] != QuickInfo::getFileLastChangeTime((this->filePath + "\\" + vfsNames.at(i)).c_str())) {
-			GlobalLogger::debug("The timestamp of the last file change was refreshed.\nSwitching over to Refresh-Mode.\n");
+			GlobalLogger::debug("The timestamp of the last file change was refreshed.\nSwitching over to Refresh-Mode.");
 			success = false;
 			break;
 		}
@@ -377,7 +388,7 @@ void VFS::readFile(const char *pathInVFS, VFSData& buf) {
 	dword_t len = this->readFile(pathInVFS, &tmpBuf);
 
 	buf.filePath = pathInVFS;
-	buf.data.init(tmpBuf, len);
+	buf.data
 }
 
 dword_t VFS::readFile(const char *pathInVFS, char** ppBuffer) {

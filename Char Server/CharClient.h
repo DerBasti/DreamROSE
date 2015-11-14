@@ -105,6 +105,7 @@ class CharClient : public ClientSocket {
 		bool pakCreateCharacter();
 		bool pakDeleteCharacter();
 		bool pakGetWorldserverIp();
+		bool pakUnknown();
 	public:
 		CharClient(SOCKET sock, ServerSocket* newServer);
 		~CharClient();

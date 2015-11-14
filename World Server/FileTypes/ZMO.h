@@ -23,7 +23,8 @@ class ZMO {
 		const static word_t MOTION_MELEE_ATTACK = 21;
 		const static word_t MOTION_RANGED_ATTACK = 22;
 		const static word_t MOTION_MAGIC_ATTACK = 23;
-		const static word_t MOTION_SKILL_MELEE = 24;
+		const static word_t MOTION_SKILL_MELEE = 34;
+		const static word_t MOTION_SKILL_MELEE_SINGLE = 35;
 		const static word_t MOTION_SKILL_RANGED = 26;
 
 		class AnimationInfo {
@@ -120,7 +121,8 @@ class ZMO {
 			if (frame >= this->content.size())
 				return 0;
 
-			return this->content[frame];
+			word_t frameType = this->content[frame];
+			return frameType;
 		}
 		__inline const TimingInfo& getTimingInfo() const { return this->timingInfo; }
 		__inline const AnimationInfo& getInfo() const { return this->animationInfo; }
